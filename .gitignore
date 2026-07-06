@@ -1,0 +1,13 @@
+# Secretos y entorno — NUNCA versionar (lección GSH)
+.env
+.env.*
+!.env.example
+secrets/*
+!secrets/.gitkeep
+
+# Artefactos
+node_modules/
+*.docx
+*.pdf
+nohup.out
+*.log

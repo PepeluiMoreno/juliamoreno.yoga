@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://juliamoreno.yoga/</loc>
+    <xhtml:link rel="alternate" hreflang="es" href="https://juliamoreno.yoga/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://juliamoreno.yoga/en/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://juliamoreno.yoga/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://juliamoreno.yoga/de/"/>
+  </url>
+  <url>
+    <loc>https://juliamoreno.yoga/en/</loc>
+    <xhtml:link rel="alternate" hreflang="es" href="https://juliamoreno.yoga/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://juliamoreno.yoga/en/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://juliamoreno.yoga/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://juliamoreno.yoga/de/"/>
+  </url>
+  <url>
+    <loc>https://juliamoreno.yoga/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="es" href="https://juliamoreno.yoga/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://juliamoreno.yoga/en/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://juliamoreno.yoga/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://juliamoreno.yoga/de/"/>
+  </url>
+  <url>
+    <loc>https://juliamoreno.yoga/de/</loc>
+    <xhtml:link rel="alternate" hreflang="es" href="https://juliamoreno.yoga/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://juliamoreno.yoga/en/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://juliamoreno.yoga/fr/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://juliamoreno.yoga/de/"/>
+  </url>
+</urlset>
