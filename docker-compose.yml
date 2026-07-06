@@ -153,6 +153,10 @@ volumes:
   pgdata:
   n8ndata:
   nocodata:
+  injadb:
+  injadata:
+  redisdata:
+  kumadata:
 
 secrets:
   pg_password:
@@ -162,3 +166,92 @@ networks:
   interna:
   proxy:
     external: true
+
+  # ---------- PERFIL gestion ----------
+
+  invoiceninja-db:
+    image: mariadb:11
+    container_name: jmy-facturas-db
+    restart: unless-stopped
+    profiles: [gestion, todo]
+    environment:
+      MARIADB_ROOT_PASSWORD: ${IN_DB_PASSWORD}
+      MARIADB_DATABASE: ninja
+      MARIADB_USER: ninja
+      MARIADB_PASSWORD: ${IN_DB_PASSWORD}
+    volumes:
+      - injadb:/var/lib/mysql
+    networks: [interna]
+
+  invoiceninja:
+    # AVISO: antes de facturar en producción, confirmar con el gestor el
+    # encaje Verifactu/antifraude 2026 del software de facturación.
+    image: invoiceninja/invoiceninja-debian:latest
+    container_name: jmy-facturas
+    restart: unless-stopped
+    profiles: [gestion, todo]
+    environment:
+      APP_KEY: ${IN_APP_KEY}          # base64:$(openssl rand -base64 32)
+      APP_URL: https://facturas.juliamoreno.yoga
+      DB_HOST: invoiceninja-db
+      DB_DATABASE: ninja
+      DB_USERNAME: ninja
+      DB_PASSWORD: ${IN_DB_PASSWORD}
+    volumes:
+      - injadata:/var/www/html/storage
+    depends_on: [invoiceninja-db]
+    networks: [interna, proxy]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jmy-inv.rule=Host(`facturas.juliamoreno.yoga`)
+      - traefik.http.routers.jmy-inv.entrypoints=websecure
+      - traefik.http.routers.jmy-inv.tls.certresolver=letsencrypt
+      - traefik.http.services.jmy-inv.loadbalancer.server.port=8000
+
+  redis:
+    image: redis:7-alpine
+    container_name: jmy-redis
+    restart: unless-stopped
+    profiles: [gestion, todo]
+    volumes:
+      - redisdata:/data
+    networks: [interna]
+
+  postiz:
+    image: ghcr.io/gitroomhq/postiz-app:latest
+    container_name: jmy-postiz
+    restart: unless-stopped
+    profiles: [gestion, todo]
+    environment:
+      MAIN_URL: https://social.juliamoreno.yoga
+      FRONTEND_URL: https://social.juliamoreno.yoga
+      NEXT_PUBLIC_BACKEND_URL: https://social.juliamoreno.yoga/api
+      BACKEND_INTERNAL_URL: http://localhost:3000
+      JWT_SECRET: ${POSTIZ_JWT}
+      DATABASE_URL: postgresql://julia:${PG_PASSWORD}@pg:5432/postiz
+      REDIS_URL: redis://redis:6379
+      IS_GENERAL: "true"
+      DISABLE_REGISTRATION: "true"
+    depends_on: [pg, redis]
+    networks: [interna, proxy]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jmy-postiz.rule=Host(`social.juliamoreno.yoga`)
+      - traefik.http.routers.jmy-postiz.entrypoints=websecure
+      - traefik.http.routers.jmy-postiz.tls.certresolver=letsencrypt
+      - traefik.http.services.jmy-postiz.loadbalancer.server.port=5000
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: jmy-estado
+    restart: unless-stopped
+    profiles: [gestion, todo]
+    volumes:
+      - kumadata:/app/data
+    networks: [proxy]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jmy-kuma.rule=Host(`estado.juliamoreno.yoga`)
+      - traefik.http.routers.jmy-kuma.entrypoints=websecure
+      - traefik.http.routers.jmy-kuma.tls.certresolver=letsencrypt
+      - traefik.http.services.jmy-kuma.loadbalancer.server.port=3001
