@@ -1,0 +1,50 @@
+# Traefik v3 — proxy común del VPS (este stack se levanta UNA vez y sirve
+# a todos los proyectos conectados a la red externa "proxy").
+# Antes de arrancar:
+#   docker network create proxy
+#   touch acme.json && chmod 600 acme.json
+#   htpasswd -nb admin 'CONTRASEÑA' > usersfile   (apache2-utils)
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    ports:
+      - "80:80"
+      - "443:443"
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=proxy
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # HTTP -> HTTPS global
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      # Let's Encrypt
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      # API solo interna, expuesta únicamente vía router protegido
+      - --api.dashboard=true
+      - --log.level=INFO
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./acme.json:/acme.json
+      - ./usersfile:/usersfile:ro
+    networks: [proxy]
+    labels:
+      - traefik.enable=true
+      # Panel en panel.juliamoreno.yoga con basic auth (lección vps2:
+      # jamás un dashboard de Traefik sin proteger)
+      - traefik.http.routers.traefik.rule=Host(`panel.juliamoreno.yoga`)
+      - traefik.http.routers.traefik.entrypoints=websecure
+      - traefik.http.routers.traefik.tls.certresolver=letsencrypt
+      - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.middlewares.panel-auth.basicauth.usersfile=/usersfile
+      - traefik.http.routers.traefik.middlewares=panel-auth
+
+networks:
+  proxy:
+    external: true
