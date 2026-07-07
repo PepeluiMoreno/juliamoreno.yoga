@@ -1,0 +1,38 @@
+{
+  "name": "Reservas y bonos (Cal.com -> NocoDB)",
+  "nodes": [
+    {"parameters": {"httpMethod": "POST", "path": "calcom", "options": {}},
+     "name": "Webhook Cal.com", "type": "n8n-nodes-base.webhook",
+     "typeVersion": 2, "position": [0, 0], "webhookId": "calcom"},
+    {"parameters": {"conditions": {"string": [{"value1": "={{$json.triggerEvent}}", "value2": "BOOKING_CREATED"}]}},
+     "name": "¿Reserva creada?", "type": "n8n-nodes-base.if",
+     "typeVersion": 2, "position": [220, 0]},
+    {"parameters": {"operation": "getAll", "table": "Alumnos",
+      "options": {"where": "=(Email,eq,{{$json.payload.attendees[0].email}})"}},
+     "name": "Buscar alumno", "type": "n8n-nodes-base.nocoDb",
+     "typeVersion": 3, "position": [440, -80],
+     "notes": "Rellenar credencial y proyecto NocoDB"},
+    {"parameters": {"operation": "create", "table": "Asistencias",
+      "dataToSend": "autoMapInputData"},
+     "name": "Registrar asistencia", "type": "n8n-nodes-base.nocoDb",
+     "typeVersion": 3, "position": [660, -80]},
+    {"parameters": {"operation": "update", "table": "Bonos",
+      "dataToSend": "defineBelow",
+      "fieldsUi": {"fieldValues": [{"fieldName": "CreditosRestantes", "fieldValue": "={{$json.CreditosRestantes - 1}}"}]}},
+     "name": "Descontar crédito", "type": "n8n-nodes-base.nocoDb",
+     "typeVersion": 3, "position": [880, -80],
+     "notes": "Previamente: nodo que selecciona el bono activo más antiguo con saldo"},
+    {"parameters": {"chatId": "RELLENAR", "text": "=Alumno sin bono con saldo: {{$json.payload.attendees[0].name}} — cobrar suelta o vender bono"},
+     "name": "Aviso sin bono", "type": "n8n-nodes-base.telegram",
+     "typeVersion": 1.2, "position": [880, 80],
+     "notes": "Alternativa: nodo de correo"}
+  ],
+  "connections": {
+    "Webhook Cal.com": {"main": [[{"node": "¿Reserva creada?", "type": "main", "index": 0}]]},
+    "¿Reserva creada?": {"main": [[{"node": "Buscar alumno", "type": "main", "index": 0}]]},
+    "Buscar alumno": {"main": [[{"node": "Registrar asistencia", "type": "main", "index": 0}]]},
+    "Registrar asistencia": {"main": [[{"node": "Descontar crédito", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "meta": {"templateNote": "Esqueleto orientativo: completar credenciales, selección de bono activo y ramas de cancelación/caducidad según docs/reservas-y-bonos.md"}
+}
