@@ -1,5 +1,5 @@
 # juliamoreno.yoga — web + herramientas de negocio
-# Requiere: red externa "proxy" con Traefik (entrypoint websecure,
+# Requiere: red externa "traefik_public" con Traefik (entrypoint websecure,
 # certresolver letsencrypt) y fichero .env (ver .env.example).
 #
 # Perfiles:
@@ -19,7 +19,7 @@ services:
     volumes:
       - ./sitio:/usr/share/nginx/html:ro
       - ./nginx/sitio.conf:/etc/nginx/conf.d/default.conf:ro
-    networks: [proxy]
+    networks: [traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-web.rule=Host(`juliamoreno.yoga`) || Host(`www.juliamoreno.yoga`) || Host(`juliamorenoyoga.com`) || Host(`www.juliamorenoyoga.com`)
@@ -56,7 +56,7 @@ services:
       DATABASE_URL: postgresql://julia:${PG_PASSWORD}@pg:5432/umami
       APP_SECRET: ${UMAMI_SECRET}
     depends_on: [pg]
-    networks: [interna, proxy]
+    networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-umami.rule=Host(`stats.juliamoreno.yoga`)
@@ -75,7 +75,7 @@ services:
       CALENDSO_ENCRYPTION_KEY: ${CALCOM_ENC_KEY}
       NEXT_PUBLIC_WEBAPP_URL: https://reservas.juliamoreno.yoga
     depends_on: [pg]
-    networks: [interna, proxy]
+    networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-cal.rule=Host(`reservas.juliamoreno.yoga`)
@@ -97,7 +97,7 @@ services:
       LISTMONK_db__database: listmonk
       LISTMONK_db__ssl_mode: disable
     depends_on: [pg]
-    networks: [interna, proxy]
+    networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-lm.rule=Host(`correo.juliamoreno.yoga`)
@@ -123,7 +123,7 @@ services:
     volumes:
       - n8ndata:/home/node/.n8n
     depends_on: [pg]
-    networks: [interna, proxy]
+    networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-n8n.rule=Host(`auto.juliamoreno.yoga`)
@@ -141,31 +141,13 @@ services:
     volumes:
       - nocodata:/usr/app/data
     depends_on: [pg]
-    networks: [interna, proxy]
+    networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-nc.rule=Host(`datos.juliamoreno.yoga`)
       - traefik.http.routers.jmy-nc.entrypoints=websecure
       - traefik.http.routers.jmy-nc.tls.certresolver=letsencrypt
       - traefik.http.services.jmy-nc.loadbalancer.server.port=8080
-
-volumes:
-  pgdata:
-  n8ndata:
-  nocodata:
-  injadb:
-  injadata:
-  redisdata:
-  kumadata:
-
-secrets:
-  pg_password:
-    file: ./secrets/pg_password.txt
-
-networks:
-  interna:
-  proxy:
-    external: true
 
   # ---------- PERFIL gestion ----------
 
@@ -200,7 +182,7 @@ networks:
     volumes:
       - injadata:/var/www/html/storage
     depends_on: [invoiceninja-db]
-    networks: [interna, proxy]
+    networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-inv.rule=Host(`facturas.juliamoreno.yoga`)
@@ -233,7 +215,7 @@ networks:
       IS_GENERAL: "true"
       DISABLE_REGISTRATION: "true"
     depends_on: [pg, redis]
-    networks: [interna, proxy]
+    networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-postiz.rule=Host(`social.juliamoreno.yoga`)
@@ -248,10 +230,28 @@ networks:
     profiles: [gestion, todo]
     volumes:
       - kumadata:/app/data
-    networks: [proxy]
+    networks: [traefik_public]
     labels:
       - traefik.enable=true
       - traefik.http.routers.jmy-kuma.rule=Host(`estado.juliamoreno.yoga`)
       - traefik.http.routers.jmy-kuma.entrypoints=websecure
       - traefik.http.routers.jmy-kuma.tls.certresolver=letsencrypt
       - traefik.http.services.jmy-kuma.loadbalancer.server.port=3001
+
+volumes:
+  pgdata:
+  n8ndata:
+  nocodata:
+  injadb:
+  injadata:
+  redisdata:
+  kumadata:
+
+secrets:
+  pg_password:
+    file: ./secrets/pg_password.txt
+
+networks:
+  interna:
+  traefik_public:
+    external: true
