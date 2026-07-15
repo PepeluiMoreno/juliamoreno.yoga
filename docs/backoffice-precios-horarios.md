@@ -1,0 +1,51 @@
+# Backoffice de precios y horarios (NocoDB → web)
+
+Permite a Julia cambiar precios, y activar/desactivar franjas de horario,
+sin editar la web. Ella solo toca VALORES; los idiomas los mantiene el
+soporte técnico en data/contenido.json.
+
+## Piezas
+- `data/contenido.json` — fuente de verdad. Etiquetas en 4 idiomas (fijas)
+  + valores editables (precio, visible).
+- `scripts/build-web.py` — regenera las secciones de horarios y precios
+  de los 4 HTML, solo entre `<!-- CONTENIDO:INICIO -->` y `<!-- CONTENIDO:FIN -->`.
+- NocoDB (perfil negocio) — dos tablas que edita Julia.
+- n8n (perfil todo) — al guardar en NocoDB, dispara el rebuild.
+
+## Qué edita Julia en NocoDB
+Tabla **Precios**: columnas `id` (fijo: suelta, bono4, bono8, infantil,
+privada, bonopriv), `valor` (lo que cambia: "15", "72", "10 / 35"),
+`visible` (sí/no). No hay columnas de idioma: el nombre de cada concepto
+lo pone el generador en los 4 idiomas.
+
+Tabla **Horarios**: `id` (fijo: nerja, maro, almunecar), `visible` (sí/no).
+Para cambiar los textos de clases por ubicación (multiidioma) se edita
+data/contenido.json (soporte técnico), no NocoDB.
+
+## Flujo de actualización
+1. Julia cambia un precio en NocoDB y guarda.
+2. NocoDB dispara un webhook → n8n (workflow stack/n8n/flujo-rebuild-web.json).
+3. n8n ejecuta en el contenedor del sitio:
+   `python3 /srv/scripts/build-web.py --from-nocodb`
+   (lee NocoDB, actualiza contenido.json y regenera los HTML).
+4. La web (servida por nginx desde ./sitio) refleja el cambio en segundos.
+
+## Puesta en marcha
+1. Crear en NocoDB las tablas Precios y Horarios con las columnas de arriba
+   e importar los `id` iniciales (ver data/contenido.json).
+2. Generar un token de API en NocoDB.
+3. Definir en el .env del VPS:
+   NOCODB_URL=https://datos.juliamoreno.yoga/api/v2/tables/<id>/records
+   NOCODB_TOKEN=<token>
+   (o las variables NOCODB_TBL_PRECIOS / NOCODB_TBL_HORARIOS si se usan
+   nombres en lugar de IDs de tabla)
+4. Importar stack/n8n/flujo-rebuild-web.json en n8n y activar el webhook.
+5. Configurar en NocoDB un webhook "After Insert/Update" de ambas tablas
+   apuntando a la URL del webhook de n8n.
+
+## Ejecución manual (sin esperar al webhook)
+```
+cd /opt/docker/apps/juliamoreno
+python3 scripts/build-web.py              # desde el JSON
+python3 scripts/build-web.py --from-nocodb  # sincroniza desde NocoDB
+```
