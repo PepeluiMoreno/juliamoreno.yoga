@@ -28,7 +28,7 @@ services:
       - traefik.http.services.jmy-web.loadbalancer.server.port=80
       # canónico: todo -> https://juliamoreno.yoga
       - traefik.http.middlewares.jmy-canon.redirectregex.regex=^https?://www\.juliamoreno\.yoga/(.*)
-      - traefik.http.middlewares.jmy-canon.redirectregex.replacement=https://juliamoreno.yoga/$${3}
+      - traefik.http.middlewares.jmy-canon.redirectregex.replacement=https://juliamoreno.yoga/$${1}
       - traefik.http.middlewares.jmy-canon.redirectregex.permanent=true
       - traefik.http.routers.jmy-web.middlewares=jmy-canon
 
