@@ -28,7 +28,7 @@
      "typeVersion": 2, "position": [660,0],
      "notes": "Escribe titulo_en/fr/de y texto_en/fr/de de vuelta en la fila de NocoDB via su API (nodo NocoDB update)."},
 
-    {"parameters": {"command": "cd /opt/docker/apps/juliamoreno && python3 scripts/build-web.py --from-nocodb"},
+    {"parameters": {"command": "cd /opt/docker/apps/juliamoreno && python3 scripts/build-web.py"},
      "name": "Rebuild web", "type": "n8n-nodes-base.executeCommand",
      "typeVersion": 1, "position": [880,0]}
   ],

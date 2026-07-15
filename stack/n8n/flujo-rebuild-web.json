@@ -4,7 +4,7 @@
     {"parameters": {"httpMethod": "POST", "path": "rebuild-web", "options": {}},
      "name": "Webhook NocoDB", "type": "n8n-nodes-base.webhook",
      "typeVersion": 2, "position": [0,0], "webhookId": "rebuild-web"},
-    {"parameters": {"command": "cd /opt/docker/apps/juliamoreno && python3 scripts/build-web.py --from-nocodb"},
+    {"parameters": {"command": "cd /opt/docker/apps/juliamoreno && python3 scripts/build-web.py"},
      "name": "Regenerar web", "type": "n8n-nodes-base.executeCommand",
      "typeVersion": 1, "position": [240,0],
      "notes": "Requiere que n8n tenga acceso al repo y a python3. Alternativa: nodo SSH al host, o un pequeno servicio HTTP en el contenedor del sitio que ejecute el generador."}

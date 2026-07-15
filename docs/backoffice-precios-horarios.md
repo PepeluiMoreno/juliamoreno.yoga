@@ -26,7 +26,7 @@ data/contenido.json (soporte técnico), no NocoDB.
 1. Julia cambia un precio en NocoDB y guarda.
 2. NocoDB dispara un webhook → n8n (workflow stack/n8n/flujo-rebuild-web.json).
 3. n8n ejecuta en el contenedor del sitio:
-   `python3 /srv/scripts/build-web.py --from-nocodb`
+   `python3 /srv/scripts/build-web.py`
    (lee NocoDB, actualiza contenido.json y regenera los HTML).
 4. La web (servida por nginx desde ./sitio) refleja el cambio en segundos.
 
@@ -47,5 +47,5 @@ data/contenido.json (soporte técnico), no NocoDB.
 ```
 cd /opt/docker/apps/juliamoreno
 python3 scripts/build-web.py              # desde el JSON
-python3 scripts/build-web.py --from-nocodb  # sincroniza desde NocoDB
+python3 scripts/build-web.py  # sincroniza desde NocoDB
 ```

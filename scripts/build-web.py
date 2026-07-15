@@ -4,14 +4,17 @@ build-web.py — regenera las secciones de horarios y precios de la web
 en los cuatro idiomas a partir de data/contenido.json.
 
 Fuente de datos:
-  - Por defecto lee data/contenido.json (el fichero versionado).
-  - Si se define NOCODB_URL + NOCODB_TOKEN, lee de NocoDB (lo que Julia
-    edita) y vuelca sobre contenido.json antes de generar, de modo que
-    el repo queda siempre como copia de lo que hay en NocoDB.
+  - NocoDB es la FUENTE DE VERDAD: si NOCODB_URL + NOCODB_TOKEN están
+    definidos, se lee de NocoDB en cada build y se vuelca sobre
+    data/contenido.json (que queda como caché / último-conocido y como
+    fallback si NocoDB no responde).
+  - data/contenido.json ya NO se edita a mano para precios/horarios/
+    actividades (eso se hace en NocoDB). Sí conserva las etiquetas
+    multiidioma fijas de la interfaz.
 
 Uso:
-  python3 scripts/build-web.py            # genera desde el JSON
-  python3 scripts/build-web.py --from-nocodb   # sincroniza desde NocoDB y genera
+  python3 scripts/build-web.py             # lee NocoDB (por defecto) y genera
+  python3 scripts/build-web.py --solo-json # ignora NocoDB (pruebas/fallback)
 
 Sólo toca el bloque entre <!-- CONTENIDO:INICIO --> y <!-- CONTENIDO:FIN -->
 de cada HTML; el resto de la página no se modifica.
@@ -241,11 +244,18 @@ def desde_nocodb(data):
 
 def main():
     data = json.loads(JSON.read_text(encoding="utf-8"))
-    if "--from-nocodb" in sys.argv:
-        if "NOCODB_URL" in os.environ and "NOCODB_TOKEN" in os.environ:
+    # NocoDB es la fuente de verdad. Se lee siempre que esté configurado.
+    # --solo-json fuerza a ignorar NocoDB (para pruebas o si NocoDB está caído).
+    usa_nocodb = ("--solo-json" not in sys.argv
+                  and os.environ.get("NOCODB_URL") and os.environ.get("NOCODB_TOKEN"))
+    if usa_nocodb:
+        try:
             desde_nocodb(data)
-        else:
-            print("NOCODB_URL/NOCODB_TOKEN no definidos; genero desde el JSON local.")
+            print("datos leídos de NocoDB")
+        except Exception as e:
+            print(f"AVISO: no se pudo leer NocoDB ({e}); uso el último JSON conocido.")
+    else:
+        print("NocoDB no configurado o --solo-json: uso data/contenido.json.")
     for idioma, ruta in PAGS.items():
         aplica(idioma, ruta, data)
         print(f"generado {ruta.relative_to(RAIZ)}")
