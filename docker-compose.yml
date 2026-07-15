@@ -135,7 +135,7 @@ services:
     image: nocodb/nocodb:latest
     container_name: jmy-nocodb
     restart: unless-stopped
-    profiles: [todo]
+    profiles: [negocio, todo]
     environment:
       NC_DB: pg://pg:5432?u=julia&p=${PG_PASSWORD}&d=nocodb
     volumes:
