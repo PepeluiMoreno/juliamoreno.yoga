@@ -122,7 +122,7 @@ def seccion_actividades(data, idioma):
       const fr=[...f.querySelectorAll('input[name=franja]:checked')].map(x=>x.value);
       const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:fr,idioma:document.documentElement.lang};
       try{
-        await fetch('https://auto.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        await fetch('https://api.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         f.querySelector('.ok').hidden=false;
         f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
       }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}

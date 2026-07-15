@@ -241,6 +241,30 @@ services:
       - traefik.http.routers.jmy-kuma.tls.certresolver=letsencrypt
       - traefik.http.services.jmy-kuma.loadbalancer.server.port=3001
 
+  captador:
+    image: python:3.12-alpine
+    container_name: jmy-captador
+    restart: unless-stopped
+    profiles: [negocio, todo]
+    working_dir: /app
+    command: python3 scripts/captador.py
+    environment:
+      NOCODB_URL: http://nocodb:8080
+      NOCODB_TOKEN: ${NOCODB_TOKEN}
+      NOCODB_BASE: ${NOCODB_BASE:-Yoga}
+      CAPTADOR_ORIGIN: https://juliamoreno.yoga
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./data:/app/data:ro
+    depends_on: [nocodb]
+    networks: [interna, traefik_public]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jmy-cap.rule=Host(`api.juliamoreno.yoga`)
+      - traefik.http.routers.jmy-cap.entrypoints=websecure
+      - traefik.http.routers.jmy-cap.tls.certresolver=letsencrypt
+      - traefik.http.services.jmy-cap.loadbalancer.server.port=8090
+
 volumes:
   pgdata:
   n8ndata:
