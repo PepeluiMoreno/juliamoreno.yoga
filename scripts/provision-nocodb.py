@@ -1,61 +1,31 @@
 #!/usr/bin/env python3
 """
-provision-nocodb.py — crea y puebla las tablas del backoffice en NocoDB
-vía su API REST (v2). Idempotente: si una tabla ya existe, no la duplica;
-si una fila (por 'id') ya existe, la respeta.
+provision-nocodb.py — crea y puebla el backoffice en NocoDB. IDEMPOTENTE:
+- crea la base si no existe;
+- crea las tablas que falten;
+- añade a las tablas existentes las columnas que falten (no borra nada);
+- siembra datos iniciales SOLO en tablas vacías (Precios, Horarios y una
+  actividad de ejemplo).
 
-Requiere en el entorno (.env del VPS o export):
-  NOCODB_URL    p.ej. https://datos.juliamoreno.yoga
-  NOCODB_TOKEN  token de API generado en NocoDB (Account Settings -> Tokens)
-  NOCODB_BASE   nombre de la base a usar/crear (por defecto: Yoga)
+Config: NOCODB_URL, NOCODB_TOKEN, NOCODB_BASE en el .env del proyecto
+(el script carga el .env por sí mismo; no hace falta `source`).
 
-Uso:
-  python3 scripts/provision-nocodb.py
-
-Crea las tablas: Precios, Horarios, Actividades, Interesados
-y siembra Precios y Horarios desde data/contenido.json.
-Las traducciones (titulo_en/fr/de, etc.) las rellena luego n8n+DeepL;
-aquí solo se crean las columnas.
+Uso:  python3 scripts/provision-nocodb.py
 """
-import json, os, sys, urllib.request, urllib.error, pathlib
+import json, sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import nocolib as nc
 
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
-JSON = RAIZ / "data" / "contenido.json"
-URL = os.environ.get("NOCODB_URL", "").rstrip("/")
-TOKEN = os.environ.get("NOCODB_TOKEN", "")
-BASE_NAME = os.environ.get("NOCODB_BASE", "Yoga")
-
-if not URL or not TOKEN:
-    sys.exit("Faltan NOCODB_URL y/o NOCODB_TOKEN en el entorno.")
-
-H = {"xc-token": TOKEN, "Content-Type": "application/json"}
+DATA = json.loads((RAIZ / "data" / "contenido.json").read_text(encoding="utf-8"))
 
 
-def api(method, path, body=None):
-    req = urllib.request.Request(URL + path, method=method, headers=H,
-                                 data=json.dumps(body).encode() if body else None)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            t = r.read().decode()
-            return json.loads(t) if t else {}
-    except urllib.error.HTTPError as e:
-        print(f"  ! {method} {path} -> {e.code}: {e.read().decode()[:200]}")
-        raise
-
-
-# ---- Definición de columnas por tabla ----
-def col(title, uidt="SingleLineText", **extra):
-    c = {"title": title, "uidt": uidt}
-    c.update(extra)
-    return c
+def col(title, uidt="SingleLineText"):
+    return {"title": title, "column_name": title, "uidt": uidt}
 
 TABLAS = {
-    "Precios": [
-        col("id"), col("valor"), col("visible", "Checkbox"),
-    ],
-    "Horarios": [
-        col("id"), col("visible", "Checkbox"),
-    ],
+    "Precios": [col("id"), col("valor"), col("visible", "Checkbox")],
+    "Horarios": [col("id"), col("visible", "Checkbox")],
     "Actividades": [
         col("id"), col("estado"), col("umbral", "Number"),
         col("interesados", "Number"), col("plazas", "Number"),
@@ -65,8 +35,7 @@ TABLAS = {
         col("titulo_en", "LongText"), col("texto_en", "LongText"),
         col("titulo_fr", "LongText"), col("texto_fr", "LongText"),
         col("titulo_de", "LongText"), col("texto_de", "LongText"),
-        col("franjas", "LongText"),   # JSON de franjas (id,tipo,etiquetas)
-        col("revisado", "SingleLineText"),  # idiomas revisados a mano
+        col("franjas", "LongText"), col("revisado"),
     ],
     "Interesados": [
         col("actividad"), col("nombre"), col("contacto"),
@@ -74,48 +43,20 @@ TABLAS = {
     ],
 }
 
-
-def base_id():
-    bases = api("GET", "/api/v2/meta/bases").get("list", [])
-    for b in bases:
-        if b.get("title") == BASE_NAME:
-            print(f"base '{BASE_NAME}' encontrada")
-            return b["id"]
-    r = api("POST", "/api/v2/meta/bases", {"title": BASE_NAME})
-    print(f"base '{BASE_NAME}' creada")
-    return r["id"]
-
-
-def tablas_existentes(bid):
-    ts = api("GET", f"/api/v2/meta/bases/{bid}/tables").get("list", [])
-    return {t["title"]: t["id"] for t in ts}
-
-
-def crea_tabla(bid, nombre, columnas):
-    body = {"table_name": nombre, "title": nombre,
-            "columns": [dict(c, column_name=c["title"]) for c in columnas]}
-    r = api("POST", f"/api/v2/meta/bases/{bid}/tables", body)
-    print(f"  tabla '{nombre}' creada ({len(columnas)} columnas)")
-    return r["id"]
-
-
-def siembra_precios(tid, data):
-    filas = [{"id": ln["id"], "valor": ln["valor"], "visible": ln.get("visible", True)}
-             for ln in data["precios"]["lineas"]]
-    api("POST", f"/api/v2/tables/{tid}/records", filas)
-    print(f"  Precios: {len(filas)} filas sembradas")
-
-
-def siembra_horarios(tid, data):
-    filas = [{"id": ln["id"], "visible": ln.get("visible", True)}
-             for ln in data["horarios"]["lineas"]]
-    api("POST", f"/api/v2/tables/{tid}/records", filas)
-    print(f"  Horarios: {len(filas)} filas sembradas")
-
-
-def siembra_actividades(tid):
-    """Una actividad de ejemplo, tentativa, con franjas (genérica + fecha)."""
-    franjas = [
+ACTIVIDAD_EJEMPLO = {
+    "id": "taller-respiracion",
+    "estado": "tentativa",
+    "umbral": 8,
+    "interesados": 0,
+    "plazas": 12,
+    "mostrar_contador": True,
+    "visible": True,
+    "titulo_es": "Taller de respiración consciente",
+    "texto_es": ("Una mañana dedicada a la respiración como herramienta de calma "
+                 "y energía. Técnicas de pranayama adaptadas con criterio científico, "
+                 "aptas para todos los niveles. Si reunimos grupo, lo montamos: "
+                 "dime cuándo te vendría bien."),
+    "franjas": json.dumps([
         {"id": "sab_manana", "tipo": "generica",
          "etiqueta": {"es": "Sábados por la mañana", "en": "Saturday mornings",
                       "fr": "Samedis matin", "de": "Samstagvormittags"}},
@@ -125,49 +66,63 @@ def siembra_actividades(tid):
         {"id": "f_2026_03_21", "tipo": "fecha",
          "etiqueta": {"es": "Sábado 21 de marzo, 10:00", "en": "Saturday 21 March, 10:00",
                       "fr": "Samedi 21 mars, 10h00", "de": "Samstag, 21. März, 10:00"}},
-    ]
-    fila = {
-        "id": "taller-respiracion",
-        "estado": "tentativa",
-        "umbral": 8,
-        "interesados": 0,
-        "plazas": 12,
-        "mostrar_contador": True,
-        "visible": True,
-        "titulo_es": "Taller de respiración consciente",
-        "texto_es": ("Una mañana dedicada a la respiración como herramienta de calma y energía. "
-                     "Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. "
-                     "Si reunimos grupo, lo montamos: dime cuándo te vendría bien."),
-        "franjas": json.dumps(franjas, ensure_ascii=False),
-    }
-    api("POST", f"/api/v2/tables/{tid}/records", [fila])
-    print("  Actividades: 1 actividad de ejemplo sembrada (taller-respiracion)")
+    ], ensure_ascii=False),
+}
 
 
 def main():
-    data = json.loads(JSON.read_text(encoding="utf-8"))
-    bid = base_id()
-    existentes = tablas_existentes(bid)
+    url, tok, base = nc.cfg()
+    bid = nc.base_id(url, tok, base)
+    if bid:
+        print(f"base '{base}': OK")
+    else:
+        bid = nc.api(url, tok, "POST", "/api/v2/meta/bases", {"title": base})["id"]
+        print(f"base '{base}': creada")
+
+    existentes = nc.tablas(url, tok, bid)
     ids = {}
     for nombre, cols in TABLAS.items():
-        if nombre in existentes:
-            print(f"  tabla '{nombre}' ya existe, no se recrea")
-            ids[nombre] = existentes[nombre]
+        if nombre not in existentes:
+            r = nc.api(url, tok, "POST", f"/api/v2/meta/bases/{bid}/tables",
+                       {"table_name": nombre, "title": nombre, "columns": cols})
+            ids[nombre] = r["id"]
+            print(f"tabla '{nombre}': creada ({len(cols)} columnas)")
         else:
-            ids[nombre] = crea_tabla(bid, nombre, cols)
-    # Sembrar solo si están recién creadas y vacías
-    def vacia(tid):
-        r = api("GET", f"/api/v2/tables/{tid}/records?limit=1")
-        return not r.get("list")
-    if vacia(ids["Precios"]):
-        siembra_precios(ids["Precios"], data)
-    if vacia(ids["Horarios"]):
-        siembra_horarios(ids["Horarios"], data)
-    if vacia(ids["Actividades"]):
-        siembra_actividades(ids["Actividades"])
-    print("\nOK. IDs de tabla (guardar para el .env de build-web / n8n):")
-    for n, i in ids.items():
-        print(f"  {n} = {i}")
+            ids[nombre] = existentes[nombre]
+            # idempotencia de columnas: añadir las que falten
+            actuales = nc.columnas(url, tok, ids[nombre])
+            faltan = [c for c in cols if c["title"] not in actuales]
+            for c in faltan:
+                nc.api(url, tok, "POST",
+                       f"/api/v2/meta/tables/{ids[nombre]}/columns", c)
+            print(f"tabla '{nombre}': OK"
+                  + (f" (+{len(faltan)} columnas añadidas)" if faltan else ""))
+
+    # Siembra solo en tablas vacías
+    if not nc.records(url, tok, ids["Precios"], 1):
+        filas = [{"id": l["id"], "valor": l["valor"], "visible": l.get("visible", True)}
+                 for l in DATA["precios"]["lineas"]]
+        nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Precios']}/records", filas)
+        print(f"Precios: {len(filas)} filas sembradas")
+    else:
+        print("Precios: ya tiene datos")
+
+    if not nc.records(url, tok, ids["Horarios"], 1):
+        filas = [{"id": l["id"], "visible": l.get("visible", True)}
+                 for l in DATA["horarios"]["lineas"]]
+        nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Horarios']}/records", filas)
+        print(f"Horarios: {len(filas)} filas sembradas")
+    else:
+        print("Horarios: ya tiene datos")
+
+    if not nc.records(url, tok, ids["Actividades"], 1):
+        nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Actividades']}/records",
+               [ACTIVIDAD_EJEMPLO])
+        print("Actividades: 1 actividad de ejemplo sembrada (taller-respiracion)")
+    else:
+        print("Actividades: ya tiene datos")
+
+    print("\nPROVISION OK")
 
 
 if __name__ == "__main__":

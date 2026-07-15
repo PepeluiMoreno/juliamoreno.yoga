@@ -192,70 +192,64 @@ def aplica(idioma, ruta, data):
 
 
 def desde_nocodb(data):
-    """Vuelca a data los valores editables leidos de NocoDB, si esta configurado."""
-    import urllib.request
-    base = os.environ["NOCODB_URL"].rstrip("/")
-    tok = os.environ["NOCODB_TOKEN"]
-    def get(tabla):
-        req = urllib.request.Request(f"{base}/api/v2/tables/{tabla}/records?limit=200",
-                                     headers={"xc-token": tok})
-        with urllib.request.urlopen(req, timeout=15) as r:
-            return json.load(r).get("list", [])
-    # Precios: filas con id + valor + visible
-    for fila in get(os.environ.get("NOCODB_TBL_PRECIOS", "Precios")):
+    """Lee precios/horarios/actividades de NocoDB (fuente de verdad) y los
+    vuelca en data. Descubre las tablas por nombre; no requiere IDs."""
+    import sys as _sys, pathlib as _pl
+    _sys.path.insert(0, str(_pl.Path(__file__).resolve().parent))
+    import nocolib as nc
+    url, tok, base = nc.cfg()
+    bid = nc.base_id(url, tok, base)
+    if not bid:
+        raise RuntimeError(f"la base '{base}' no existe en NocoDB")
+    ids = nc.tablas(url, tok, bid)
+    for t in ("Precios", "Horarios", "Actividades"):
+        if t not in ids:
+            raise RuntimeError(f"falta la tabla '{t}' (ejecute provision-nocodb.py)")
+    # Precios
+    for fila in nc.records(url, tok, ids["Precios"]):
         for ln in data["precios"]["lineas"]:
             if ln["id"] == fila.get("id"):
-                ln["valor"] = str(fila.get("valor", ln["valor"]))
-                ln["visible"] = bool(fila.get("visible", True))
-    # Horarios: filas con id + dia/hora/clases + visible (solo valores, no idiomas)
-    for fila in get(os.environ.get("NOCODB_TBL_HORARIOS", "Horarios")):
+                ln["valor"] = str(fila.get("valor") or ln["valor"])
+                ln["visible"] = bool(fila.get("visible"))
+    # Horarios
+    for fila in nc.records(url, tok, ids["Horarios"]):
         for ln in data["horarios"]["lineas"]:
             if ln["id"] == fila.get("id"):
-                ln["visible"] = bool(fila.get("visible", True))
-    # Actividades: se reconstruye la lista entera desde NocoDB
-    tbl_act = os.environ.get("NOCODB_TBL_ACTIVIDADES")
-    if tbl_act:
-        nuevas = []
-        for fila in get(tbl_act):
-            try:
-                franjas = json.loads(fila.get("franjas") or "[]")
-            except Exception:
-                franjas = []
-            def campo_idiomas(base):
-                return {i: (fila.get(f"{base}_{i}") or fila.get(f"{base}_es") or "")
-                        for i in ("es", "en", "fr", "de")}
-            nuevas.append({
-                "id": fila.get("id"),
-                "estado": fila.get("estado", "tentativa"),
-                "umbral": fila.get("umbral", 0),
-                "interesados": fila.get("interesados", 0),
-                "plazas": fila.get("plazas", 0),
-                "foto": fila.get("foto", ""),
-                "mostrar_contador": bool(fila.get("mostrar_contador", False)),
-                "visible": bool(fila.get("visible", True)),
-                "titulo": campo_idiomas("titulo"),
-                "texto": campo_idiomas("texto"),
-                "franjas": franjas,
-            })
-        if nuevas:
-            data["actividades"]["lineas"] = nuevas
+                ln["visible"] = bool(fila.get("visible"))
+    # Actividades: la lista entera viene de NocoDB
+    nuevas = []
+    for fila in nc.records(url, tok, ids["Actividades"]):
+        try:
+            franjas = json.loads(fila.get("franjas") or "[]")
+        except Exception:
+            franjas = []
+        idi = lambda b: {i: (fila.get(f"{b}_{i}") or fila.get(f"{b}_es") or "")
+                         for i in ("es", "en", "fr", "de")}
+        nuevas.append({
+            "id": fila.get("id"), "estado": fila.get("estado") or "tentativa",
+            "umbral": fila.get("umbral") or 0,
+            "interesados": fila.get("interesados") or 0,
+            "plazas": fila.get("plazas") or 0, "foto": fila.get("foto") or "",
+            "mostrar_contador": bool(fila.get("mostrar_contador")),
+            "visible": bool(fila.get("visible")),
+            "titulo": idi("titulo"), "texto": idi("texto"), "franjas": franjas,
+        })
+    data["actividades"]["lineas"] = nuevas
     JSON.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def main():
     data = json.loads(JSON.read_text(encoding="utf-8"))
-    # NocoDB es la fuente de verdad. Se lee siempre que esté configurado.
-    # --solo-json fuerza a ignorar NocoDB (para pruebas o si NocoDB está caído).
-    usa_nocodb = ("--solo-json" not in sys.argv
-                  and os.environ.get("NOCODB_URL") and os.environ.get("NOCODB_TOKEN"))
-    if usa_nocodb:
+    # NocoDB es la fuente de verdad; el .env lo carga nocolib por sí mismo.
+    # --solo-json fuerza a ignorar NocoDB (pruebas o si NocoDB está caído).
+    if "--solo-json" in sys.argv:
+        print("--solo-json: uso data/contenido.json.")
+    else:
         try:
             desde_nocodb(data)
             print("datos leídos de NocoDB")
         except Exception as e:
             print(f"AVISO: no se pudo leer NocoDB ({e}); uso el último JSON conocido.")
-    else:
-        print("NocoDB no configurado o --solo-json: uso data/contenido.json.")
     for idioma, ruta in PAGS.items():
         aplica(idioma, ruta, data)
         print(f"generado {ruta.relative_to(RAIZ)}")

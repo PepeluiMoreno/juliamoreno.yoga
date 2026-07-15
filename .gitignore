@@ -11,3 +11,4 @@ node_modules/
 *.pdf
 nohup.out
 *.log
+__pycache__/
