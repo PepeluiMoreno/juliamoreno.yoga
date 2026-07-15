@@ -138,7 +138,6 @@ footer a{color:inherit}
 
 @media (max-width:760px){
   .dos-col{grid-template-columns:1fr}
-  .menu{gap:1rem;flex-wrap:wrap}
   section{padding:3.6rem 0}
   .hero{padding:4.2rem 0 3rem}
   .hero-texto p.lead{font-size:1.05rem}
@@ -160,3 +159,25 @@ form.interes fieldset.franjas{border:1px solid var(--linea);border-radius:8px;pa
 form.interes fieldset.franjas legend{font-size:.82rem;color:var(--mar);font-weight:700;padding:0 .3rem}
 form.interes fieldset.franjas label{display:flex;align-items:center;gap:.5rem;font-size:.9rem;padding:.2rem 0;cursor:pointer}
 form.interes fieldset.franjas input{width:auto;padding:0}
+
+/* --- Menú móvil (hamburguesa CSS puro) --- */
+nav{position:relative}
+.menu-check{display:none}
+.menu-btn{display:none;cursor:pointer;padding:4px;z-index:30}
+.menu-btn span{display:block;width:26px;height:3px;background:var(--tinta);border-radius:2px;margin:5px 0;transition:transform .25s,opacity .25s}
+li.idiomas{display:flex;gap:1.2rem;align-items:center}
+@media (max-width:760px){
+  .menu-btn{display:block}
+  .menu{display:none;position:absolute;top:100%;left:0;right:0;
+    flex-direction:column;gap:0;padding:.4rem 0 1rem;
+    background:rgba(252,251,248,.98);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--linea);box-shadow:0 14px 28px rgba(29,89,117,.08)}
+  .menu li{width:100%;text-align:center}
+  .menu a{display:block;padding:.85rem 0;font-size:1.02rem}
+  li.idiomas{justify-content:center;gap:1.6rem;padding-top:.4rem}
+  li.idiomas a{display:inline-block;padding:.5rem .2rem}
+  .menu-check:checked ~ .menu{display:flex}
+  .menu-check:checked ~ .menu-btn span:nth-child(1){transform:translateY(8px) rotate(45deg)}
+  .menu-check:checked ~ .menu-btn span:nth-child(2){opacity:0}
+  .menu-check:checked ~ .menu-btn span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
+}
