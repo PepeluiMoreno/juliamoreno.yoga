@@ -52,5 +52,5 @@ Julia edita en NocoDB (datos.juliamoreno.yoga); la web se regenera sola.
 - Despliegue automático de código: docs/cicd-despliegue.md
 
 Flujos:
-- CONTENIDO (Julia, NocoDB) -> n8n -> build-web.py --from-nocodb
+- CONTENIDO (Julia, NocoDB) -> n8n -> build-web.py
 - CÓDIGO (Jose/soporte, git push) -> CI/CD -> build-web.py
