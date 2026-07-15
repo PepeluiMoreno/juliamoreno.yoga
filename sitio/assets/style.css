@@ -184,3 +184,10 @@ li.idiomas{display:flex;gap:1.2rem;align-items:center}
   .menu-check:checked ~ .menu-btn span:nth-child(2){opacity:0}
   .menu-check:checked ~ .menu-btn span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
 }
+/* Campos del formulario sobre el fondo azul de contacto */
+.contacto form.interes input,
+.contacto form.interes textarea{background:#fcfbf8;color:var(--tinta);border:1px solid rgba(255,255,255,.4)}
+.contacto form.interes input::placeholder,
+.contacto form.interes textarea::placeholder{color:#7b8791}
+.contacto form.interes input:focus,
+.contacto form.interes textarea:focus{outline:2px solid #a7cddd;background:#fff}
