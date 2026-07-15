@@ -36,3 +36,16 @@ y certresolver `letsencrypt`; DNS del dominio y subdominios
   otro middleware de autenticación en Traefik: son internos.
 - Marcadores pendientes en `sitio/`: [TELÉFONO], [DIRECCIÓN],
   [DÍA]/[HORA], [PRECIO], usuario de Instagram.
+
+## Backoffice de contenido (precios, horarios, actividades)
+Julia edita en NocoDB (datos.juliamoreno.yoga); la web se regenera sola.
+- Precios y horarios: valores en tablas; ver docs/backoffice-precios-horarios.md
+- Actividades y talleres: Julia escribe en español; n8n traduce a EN/FR/DE
+  con DeepL y regenera; ver docs/traduccion-cambiar-motor.md para cambiar
+  el motor de traducción.
+- Generador: scripts/build-web.py (solo toca las secciones entre marcadores).
+- Despliegue automático de código: docs/cicd-despliegue.md
+
+Flujos:
+- CONTENIDO (Julia, NocoDB) -> n8n -> build-web.py --from-nocodb
+- CÓDIGO (Jose/soporte, git push) -> CI/CD -> build-web.py

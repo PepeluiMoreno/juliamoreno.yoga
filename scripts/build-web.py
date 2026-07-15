@@ -23,6 +23,63 @@ JSON = RAIZ / "data" / "contenido.json"
 PAGS = {"es": RAIZ/"sitio"/"index.html", "en": RAIZ/"sitio"/"en"/"index.html",
         "fr": RAIZ/"sitio"/"fr"/"index.html", "de": RAIZ/"sitio"/"de"/"index.html"}
 INI, FIN = "<!-- CONTENIDO:INICIO", "<!-- CONTENIDO:FIN -->"
+INI_ACT, FIN_ACT = "<!-- ACTIVIDADES:INICIO", "<!-- ACTIVIDADES:FIN -->"
+
+MESES = {
+    "es": ["", "enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"],
+    "en": ["", "January","February","March","April","May","June","July","August","September","October","November","December"],
+    "fr": ["", "janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"],
+    "de": ["", "Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"],
+}
+
+
+def fecha_legible(iso, idioma):
+    """2026-09-20 -> '20 de septiembre de 2026' / '20 September 2026' etc."""
+    if not iso:
+        return ""
+    try:
+        a, m, d = iso.split("-")
+        mes = MESES[idioma][int(m)]
+        dia = int(d)
+        if idioma == "es":
+            return f"{dia} de {mes} de {a}"
+        if idioma == "fr":
+            return f"{dia} {mes} {a}"
+        if idioma == "de":
+            return f"{dia}. {mes} {a}"
+        return f"{mes} {dia}, {a}"
+    except Exception:
+        return iso
+
+
+def seccion_actividades(data, idioma):
+    a = data.get("actividades")
+    if not a:
+        return ""
+    visibles = [ln for ln in a["lineas"] if ln.get("visible", False)]
+    out = [f'    <p class="eyebrow">{a["titulo_seccion"][idioma]}</p>',
+           f'    <h2>{a["titulo_seccion"][idioma]}</h2>']
+    if not visibles:
+        out.append(f'    <p>{a["vacio"][idioma]}</p>')
+        return "\n".join(out)
+    out.append('    <div class="clases-grid">')
+    for ln in visibles:
+        titulo = ln["titulo"].get(idioma) or ln["titulo"]["es"]
+        texto = ln["texto"].get(idioma) or ln["texto"]["es"]
+        fecha = fecha_legible(ln.get("fecha", ""), idioma)
+        precio = ln.get("precio", "").strip()
+        out.append('      <article class="clase">')
+        if ln.get("foto"):
+            out.append(f'        <img src="{ln["foto"]}" alt="{titulo}" style="border-radius:10px;margin-bottom:.8rem">')
+        out.append(f'        <h3>{titulo}</h3>')
+        if fecha:
+            out.append(f'        <p style="color:var(--mar);font-weight:700;margin-bottom:.4rem">{fecha}</p>')
+        out.append(f'        <p>{texto}</p>')
+        if precio:
+            out.append(f'        <p style="font-weight:700;margin-bottom:0">{precio} €</p>')
+        out.append('      </article>')
+    out.append('    </div>')
+    return "\n".join(out)
 
 
 def esc(t):
@@ -70,11 +127,18 @@ def seccion(data, idioma):
 
 def aplica(idioma, ruta, data):
     html = ruta.read_text(encoding="utf-8")
+    # Bloque precios/horarios
     ini = html.index(INI)
     ini_fin = html.index("-->", ini) + 3
     fin = html.index(FIN)
-    nuevo = (html[:ini_fin] + "\n" + seccion(data, idioma) + "\n    " + html[fin:])
-    ruta.write_text(nuevo, encoding="utf-8")
+    html = (html[:ini_fin] + "\n" + seccion(data, idioma) + "\n    " + html[fin:])
+    # Bloque actividades
+    if INI_ACT in html:
+        ai = html.index(INI_ACT)
+        ai_fin = html.index("-->", ai) + 3
+        af = html.index(FIN_ACT)
+        html = (html[:ai_fin] + "\n" + seccion_actividades(data, idioma) + "\n    " + html[af:])
+    ruta.write_text(html, encoding="utf-8")
 
 
 def desde_nocodb(data):

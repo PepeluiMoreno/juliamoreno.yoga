@@ -4,57 +4,202 @@
     "trial": {
       "visible": true,
       "gratis": true,
-      "label": {"es": "Primera clase de prueba gratuita", "en": "First trial class free", "fr": "Premier cours d'essai gratuit", "de": "Erste Probestunde kostenlos"}
+      "label": {
+        "es": "Primera clase de prueba gratuita",
+        "en": "First trial class free",
+        "fr": "Premier cours d'essai gratuit",
+        "de": "Erste Probestunde kostenlos"
+      }
     },
     "lineas": [
-      {"id": "suelta", "valor": "15", "visible": true,
-       "label": {"es": "Clase suelta", "en": "Drop-in class", "fr": "Cours à l'unité", "de": "Einzelstunde"}},
-      {"id": "bono4", "valor": "48", "visible": true,
-       "label": {"es": "Bono de 4 clases al mes", "en": "4-class monthly pass", "fr": "Carnet de 4 cours par mois", "de": "4er-Karte pro Monat"}},
-      {"id": "bono8", "valor": "72", "visible": true,
-       "label": {"es": "Bono de 8 clases al mes", "en": "8-class monthly pass", "fr": "Carnet de 8 cours par mois", "de": "8er-Karte pro Monat"}},
-      {"id": "infantil", "valor": "10 / 35", "visible": true,
-       "label": {"es": "Yoga infantil (clase / mes)", "en": "Kids yoga (class / month)", "fr": "Yoga enfants (cours / mois)", "de": "Kinderyoga (Stunde / Monat)"}},
-      {"id": "privada", "valor": "60", "visible": true,
-       "label": {"es": "Clase privada", "en": "Private class", "fr": "Cours particulier", "de": "Privatstunde"}},
-      {"id": "bonopriv", "valor": "220", "visible": true,
-       "label": {"es": "Bono de 4 clases privadas", "en": "4 private classes pass", "fr": "Carnet de 4 cours particuliers", "de": "4er-Karte Privatstunden"}}
+      {
+        "id": "suelta",
+        "valor": "15",
+        "visible": true,
+        "label": {
+          "es": "Clase suelta",
+          "en": "Drop-in class",
+          "fr": "Cours à l'unité",
+          "de": "Einzelstunde"
+        }
+      },
+      {
+        "id": "bono4",
+        "valor": "48",
+        "visible": true,
+        "label": {
+          "es": "Bono de 4 clases al mes",
+          "en": "4-class monthly pass",
+          "fr": "Carnet de 4 cours par mois",
+          "de": "4er-Karte pro Monat"
+        }
+      },
+      {
+        "id": "bono8",
+        "valor": "72",
+        "visible": true,
+        "label": {
+          "es": "Bono de 8 clases al mes",
+          "en": "8-class monthly pass",
+          "fr": "Carnet de 8 cours par mois",
+          "de": "8er-Karte pro Monat"
+        }
+      },
+      {
+        "id": "infantil",
+        "valor": "10 / 35",
+        "visible": true,
+        "label": {
+          "es": "Yoga infantil (clase / mes)",
+          "en": "Kids yoga (class / month)",
+          "fr": "Yoga enfants (cours / mois)",
+          "de": "Kinderyoga (Stunde / Monat)"
+        }
+      },
+      {
+        "id": "privada",
+        "valor": "60",
+        "visible": true,
+        "label": {
+          "es": "Clase privada",
+          "en": "Private class",
+          "fr": "Cours particulier",
+          "de": "Privatstunde"
+        }
+      },
+      {
+        "id": "bonopriv",
+        "valor": "220",
+        "visible": true,
+        "label": {
+          "es": "Bono de 4 clases privadas",
+          "en": "4 private classes pass",
+          "fr": "Carnet de 4 cours particuliers",
+          "de": "4er-Karte Privatstunden"
+        }
+      }
     ],
-    "cabecera": {"es": "Modalidad|Precio", "en": "Option|Price", "fr": "Formule|Prix", "de": "Angebot|Preis"},
-    "nota": {"es": "Los bonos mensuales tienen validez de un mes. Clases para grupos, empresas y talleres, bajo petición.",
-             "en": "Monthly passes are valid for one month. Group, corporate and workshop sessions on request.",
-             "fr": "Les carnets mensuels sont valables un mois. Cours de groupe, en entreprise et ateliers sur demande.",
-             "de": "Monatskarten sind einen Monat gültig. Gruppen-, Firmen- und Workshop-Stunden auf Anfrage."}
+    "cabecera": {
+      "es": "Modalidad|Precio",
+      "en": "Option|Price",
+      "fr": "Formule|Prix",
+      "de": "Angebot|Preis"
+    },
+    "nota": {
+      "es": "Los bonos mensuales tienen validez de un mes. Clases para grupos, empresas y talleres, bajo petición.",
+      "en": "Monthly passes are valid for one month. Group, corporate and workshop sessions on request.",
+      "fr": "Les carnets mensuels sont valables un mois. Cours de groupe, en entreprise et ateliers sur demande.",
+      "de": "Monatskarten sind einen Monat gültig. Gruppen-, Firmen- und Workshop-Stunden auf Anfrage."
+    }
   },
   "horarios": {
-    "cabecera": {"es": "Lugar|Clases", "en": "Location|Classes", "fr": "Lieu|Cours", "de": "Ort|Kurse"},
-    "intro": {"es": "Atención de <strong>lunes a viernes, de 9:00 a 13:00 y de 15:00 a 20:00</strong>. Clases en tres ubicaciones:",
-              "en": "Open <strong>Monday to Friday, 9:00–13:00 and 15:00–20:00</strong>. Classes in three locations:",
-              "fr": "Ouvert du <strong>lundi au vendredi, de 9h00 à 13h00 et de 15h00 à 20h00</strong>. Cours dans trois lieux :",
-              "de": "Geöffnet <strong>Montag bis Freitag, 9:00–13:00 und 15:00–20:00 Uhr</strong>. Kurse an drei Orten:"},
+    "cabecera": {
+      "es": "Lugar|Clases",
+      "en": "Location|Classes",
+      "fr": "Lieu|Cours",
+      "de": "Ort|Kurse"
+    },
+    "intro": {
+      "es": "Atención de <strong>lunes a viernes, de 9:00 a 13:00 y de 15:00 a 20:00</strong>. Clases en tres ubicaciones:",
+      "en": "Open <strong>Monday to Friday, 9:00–13:00 and 15:00–20:00</strong>. Classes in three locations:",
+      "fr": "Ouvert du <strong>lundi au vendredi, de 9h00 à 13h00 et de 15h00 à 20h00</strong>. Cours dans trois lieux :",
+      "de": "Geöffnet <strong>Montag bis Freitag, 9:00–13:00 und 15:00–20:00 Uhr</strong>. Kurse an drei Orten:"
+    },
     "lineas": [
-      {"id": "nerja", "visible": true,
-       "lugar": {"es": "Nerja", "en": "Nerja", "fr": "Nerja", "de": "Nerja"},
-       "clases": {"es": "Hatha yoga · Yoga para mayores · Espalda sana · Yoga infantil",
-                  "en": "Hatha yoga · Yoga for seniors · Healthy back · Kids yoga",
-                  "fr": "Hatha yoga · Yoga pour seniors · Dos en bonne santé · Yoga pour enfants",
-                  "de": "Hatha Yoga · Yoga für Senioren · Gesunder Rücken · Kinderyoga"}},
-      {"id": "maro", "visible": true,
-       "lugar": {"es": "Maro (local municipal)", "en": "Maro (municipal hall)", "fr": "Maro (salle municipale)", "de": "Maro (Gemeindesaal)"},
-       "clases": {"es": "Hatha yoga · todos los niveles (dos días por semana)",
-                  "en": "Hatha yoga · all levels (twice a week)",
-                  "fr": "Hatha yoga · tous niveaux (deux jours par semaine)",
-                  "de": "Hatha Yoga · alle Niveaus (zweimal wöchentlich)"}},
-      {"id": "almunecar", "visible": true,
-       "lugar": {"es": "Almuñécar (Centro Profesional de Danza Juan Pablo García)", "en": "Almuñécar (Centro Profesional de Danza Juan Pablo García)", "fr": "Almuñécar (Centro Profesional de Danza Juan Pablo García)", "de": "Almuñécar (Centro Profesional de Danza Juan Pablo García)"},
-       "clases": {"es": "Hatha yoga · todos los niveles (viernes)",
-                  "en": "Hatha yoga · all levels (Fridays)",
-                  "fr": "Hatha yoga · tous niveaux (vendredis)",
-                  "de": "Hatha Yoga · alle Niveaus (freitags)"}}
+      {
+        "id": "nerja",
+        "visible": true,
+        "lugar": {
+          "es": "Nerja",
+          "en": "Nerja",
+          "fr": "Nerja",
+          "de": "Nerja"
+        },
+        "clases": {
+          "es": "Hatha yoga · Yoga para mayores · Espalda sana · Yoga infantil",
+          "en": "Hatha yoga · Yoga for seniors · Healthy back · Kids yoga",
+          "fr": "Hatha yoga · Yoga pour seniors · Dos en bonne santé · Yoga pour enfants",
+          "de": "Hatha Yoga · Yoga für Senioren · Gesunder Rücken · Kinderyoga"
+        }
+      },
+      {
+        "id": "maro",
+        "visible": true,
+        "lugar": {
+          "es": "Maro (local municipal)",
+          "en": "Maro (municipal hall)",
+          "fr": "Maro (salle municipale)",
+          "de": "Maro (Gemeindesaal)"
+        },
+        "clases": {
+          "es": "Hatha yoga · todos los niveles (dos días por semana)",
+          "en": "Hatha yoga · all levels (twice a week)",
+          "fr": "Hatha yoga · tous niveaux (deux jours par semaine)",
+          "de": "Hatha Yoga · alle Niveaus (zweimal wöchentlich)"
+        }
+      },
+      {
+        "id": "almunecar",
+        "visible": true,
+        "lugar": {
+          "es": "Almuñécar (Centro Profesional de Danza Juan Pablo García)",
+          "en": "Almuñécar (Centro Profesional de Danza Juan Pablo García)",
+          "fr": "Almuñécar (Centro Profesional de Danza Juan Pablo García)",
+          "de": "Almuñécar (Centro Profesional de Danza Juan Pablo García)"
+        },
+        "clases": {
+          "es": "Hatha yoga · todos los niveles (viernes)",
+          "en": "Hatha yoga · all levels (Fridays)",
+          "fr": "Hatha yoga · tous niveaux (vendredis)",
+          "de": "Hatha Yoga · alle Niveaus (freitags)"
+        }
+      }
     ],
-    "nota": {"es": "Escríbeme por WhatsApp para conocer los horarios concretos de cada clase y reservar tu plaza.",
-             "en": "Message me on WhatsApp for the exact class times and to book your spot.",
-             "fr": "Écrivez-moi sur WhatsApp pour connaître les horaires précis et réserver votre place.",
-             "de": "Schreiben Sie mir auf WhatsApp für die genauen Kurszeiten und um Ihren Platz zu reservieren."}
+    "nota": {
+      "es": "Escríbeme por WhatsApp para conocer los horarios concretos de cada clase y reservar tu plaza.",
+      "en": "Message me on WhatsApp for the exact class times and to book your spot.",
+      "fr": "Écrivez-moi sur WhatsApp pour connaître les horaires précis et réserver votre place.",
+      "de": "Schreiben Sie mir auf WhatsApp für die genauen Kurszeiten und um Ihren Platz zu reservieren."
+    }
+  },
+  "actividades": {
+    "titulo_seccion": {
+      "es": "Actividades y talleres",
+      "en": "Events & workshops",
+      "fr": "Activités et ateliers",
+      "de": "Aktivitäten & Workshops"
+    },
+    "vacio": {
+      "es": "Pronto anunciaré nuevas actividades y talleres. Escríbeme por WhatsApp para estar al día.",
+      "en": "New events and workshops coming soon. Message me on WhatsApp to stay updated.",
+      "fr": "De nouvelles activités et ateliers seront bientôt annoncés. Écrivez-moi sur WhatsApp pour rester informé.",
+      "de": "Neue Aktivitäten und Workshops folgen bald. Schreiben Sie mir auf WhatsApp, um auf dem Laufenden zu bleiben."
+    },
+    "lineas": [
+      {
+        "id": "ejemplo-retiro",
+        "visible": false,
+        "fecha": "2026-09-20",
+        "foto": "",
+        "precio": "45",
+        "titulo": {
+          "es": "Retiro de fin de semana (ejemplo)",
+          "en": "",
+          "fr": "",
+          "de": ""
+        },
+        "texto": {
+          "es": "Un fin de semana de práctica intensiva junto al mar. Plazas limitadas.",
+          "en": "",
+          "fr": "",
+          "de": ""
+        },
+        "revisado": {
+          "en": false,
+          "fr": false,
+          "de": false
+        }
+      }
+    ]
   }
 }

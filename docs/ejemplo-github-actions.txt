@@ -1,0 +1,20 @@
+# Ejemplo de .github/workflows/deploy.yml (crear a mano si se usa la Via A)
+name: Desplegar en el VPS
+on:
+  push:
+    branches: [main]
+    paths: ['sitio/**','data/**','scripts/**','docker-compose.yml','nginx/**']
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/docker/apps/juliamoreno
+            git pull --ff-only
+            python3 scripts/build-web.py
+            docker compose --profile web up -d

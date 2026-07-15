@@ -1,0 +1,43 @@
+{
+  "name": "Actividades multiidioma (NocoDB -> DeepL -> rebuild)",
+  "nodes": [
+    {"parameters": {"httpMethod": "POST", "path": "actividad", "options": {}},
+     "name": "Webhook NocoDB", "type": "n8n-nodes-base.webhook",
+     "typeVersion": 2, "position": [0,0], "webhookId": "actividad",
+     "notes": "NocoDB dispara aqui al guardar una fila de Actividades (After Insert/Update)."},
+
+    {"parameters": {"jsCode": "// Prepara los textos en espanol a traducir, respetando 'revisado'\nconst row = $json.body.data || $json.body.rows?.[0] || $json.body;\nconst campos = ['titulo','texto'];\nconst idiomas = ['EN','FR','DE'];\nconst tareas = [];\nfor (const c of campos) {\n  const es = row[c+'_es'];\n  if (!es) continue;\n  for (const i of idiomas) {\n    const rev = row['revisado_'+i.toLowerCase()];\n    if (rev) continue; // no pisar traducciones revisadas a mano\n    tareas.push({ id: row.id || row.Id, campo: c, idioma: i, texto: es });\n  }\n}\nreturn tareas.map(t => ({json:t}));"},
+     "name": "Preparar tareas", "type": "n8n-nodes-base.code",
+     "typeVersion": 2, "position": [220,0]},
+
+    {"parameters": {"method": "POST", "url": "https://api-free.deepl.com/v2/translate",
+      "sendHeaders": true,
+      "headerParameters": {"parameters": [
+        {"name": "Authorization", "value": "DeepL-Auth-Key {{$env.DEEPL_KEY}}"}]},
+      "sendBody": true, "contentType": "form-urlencoded",
+      "bodyParameters": {"parameters": [
+        {"name": "text", "value": "={{$json.texto}}"},
+        {"name": "target_lang", "value": "={{$json.idioma}}"},
+        {"name": "source_lang", "value": "ES"}]}},
+     "name": "Traducir (DeepL)", "type": "n8n-nodes-base.httpRequest",
+     "typeVersion": 4.2, "position": [440,0],
+     "notes": "MOTOR DE TRADUCCION INTERCAMBIABLE. Ver docs/traduccion-cambiar-motor.md para sustituir DeepL por otro."},
+
+    {"parameters": {"jsCode": "// Reagrupa las traducciones por fila y construye el update para NocoDB\nconst items = $input.all();\nconst porFila = {};\nfor (const it of items) {\n  const t = it.json;\n  const tr = it.json.translations ? it.json.translations[0].text : (it.json.text || '');\n  const meta = it.json; // arrastra id/campo/idioma del nodo previo via pairedItem\n}\n// Nota: en produccion, usar pairedItem para casar entrada->salida.\nreturn items;"},
+     "name": "Reagrupar", "type": "n8n-nodes-base.code",
+     "typeVersion": 2, "position": [660,0],
+     "notes": "Escribe titulo_en/fr/de y texto_en/fr/de de vuelta en la fila de NocoDB via su API (nodo NocoDB update)."},
+
+    {"parameters": {"command": "cd /opt/docker/apps/juliamoreno && python3 scripts/build-web.py --from-nocodb"},
+     "name": "Rebuild web", "type": "n8n-nodes-base.executeCommand",
+     "typeVersion": 1, "position": [880,0]}
+  ],
+  "connections": {
+    "Webhook NocoDB": {"main": [[{"node": "Preparar tareas", "type": "main", "index": 0}]]},
+    "Preparar tareas": {"main": [[{"node": "Traducir (DeepL)", "type": "main", "index": 0}]]},
+    "Traducir (DeepL)": {"main": [[{"node": "Reagrupar", "type": "main", "index": 0}]]},
+    "Reagrupar": {"main": [[{"node": "Rebuild web", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "meta": {"templateNote": "Esqueleto funcional. Completar: nodo NocoDB update en 'Reagrupar' con credenciales, y pairedItem para casar traducciones. DEEPL_KEY en el entorno de n8n. Motor intercambiable: docs/traduccion-cambiar-motor.md"}
+}
