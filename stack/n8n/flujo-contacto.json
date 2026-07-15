@@ -1,22 +1,62 @@
 {
-  "name": "Formulario de contacto (web -> NocoDB -> aviso)",
+  "name": "Contacto web",
   "nodes": [
-    {"parameters": {"httpMethod": "POST", "path": "contacto", "options": {}},
-     "name": "Webhook contacto", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [0,0], "webhookId": "contacto"},
-    {"parameters": {"jsCode": "const b=$json.body||$json;\nif(!b.nombre||!b.telefono||!b.asunto||b.nombre.length>80||/https?:\\/\\//i.test(b.nombre+b.asunto)){return [];}\nreturn [{json:{nombre:b.nombre.trim(),telefono:b.telefono.trim(),asunto:b.asunto.trim().slice(0,500),idioma:b.idioma||'es',fecha:new Date().toISOString(),atendido:false}}];"},
-     "name": "Validar", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [200,0]},
-    {"parameters": {"operation": "create", "table": "Contactos", "dataToSend": "autoMapInputData"},
-     "name": "Guardar contacto", "type": "n8n-nodes-base.nocoDb", "typeVersion": 3, "position": [400,0],
-     "notes": "Credencial NocoDB + base Yoga. La tabla la crea provision-nocodb.py."},
-    {"parameters": {"chatId": "RELLENAR_TELEGRAM_JULIA", "text": "=📞 Nueva consulta de {{$json.nombre}} ({{$json.telefono}}): {{$json.asunto}}"},
-     "name": "Avisar a Julia", "type": "n8n-nodes-base.telegram", "typeVersion": 1.2, "position": [600,0],
-     "notes": "Alternativa: nodo de email. Julia marca 'atendido' en NocoDB al responder."}
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "contacto",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-contacto",
+      "name": "Webhook contacto",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "contacto"
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $json.body || $json;\nconst nombre = (b.nombre || '').trim();\nconst telefono = (b.telefono || '').trim();\nconst asunto = (b.asunto || '').trim();\nif (!nombre || !telefono || !asunto || nombre.length > 80 || /https?:\\/\\//i.test(nombre + asunto)) {\n  return [];\n}\nreturn [{ json: {\n  nombre,\n  telefono,\n  asunto: asunto.slice(0, 500),\n  idioma: (b.idioma || 'es').slice(0, 5),\n  fecha: new Date().toISOString(),\n  atendido: false\n} }];"
+      },
+      "id": "validar-contacto",
+      "name": "Validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "projectId": "Yoga",
+        "table": "Contactos",
+        "dataToSend": "autoMapInputData",
+        "options": {}
+      },
+      "id": "guardar-contacto",
+      "name": "Guardar en NocoDB",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 3,
+      "position": [440, 0],
+      "notes": "Elegir credencial NocoDB y, en Project/Base, seleccionar Yoga; en Table, Contactos."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true }",
+        "options": {}
+      },
+      "id": "responder-contacto",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [660, 0]
+    }
   ],
   "connections": {
-    "Webhook contacto": {"main": [[{"node":"Validar","type":"main","index":0}]]},
-    "Validar": {"main": [[{"node":"Guardar contacto","type":"main","index":0}]]},
-    "Guardar contacto": {"main": [[{"node":"Avisar a Julia","type":"main","index":0}]]}
+    "Webhook contacto": { "main": [[{ "node": "Validar", "type": "main", "index": 0 }]] },
+    "Validar": { "main": [[{ "node": "Guardar en NocoDB", "type": "main", "index": 0 }]] },
+    "Guardar en NocoDB": { "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]] }
   },
-  "settings": {"executionOrder": "v1"},
-  "meta": {"templateNote": "Consultas del formulario de contacto de la web. Bandeja = tabla Contactos en NocoDB con checkbox 'atendido'."}
+  "settings": { "executionOrder": "v1" }
 }
