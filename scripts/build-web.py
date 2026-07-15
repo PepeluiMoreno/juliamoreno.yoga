@@ -194,7 +194,7 @@ def desde_nocodb(data):
     base = os.environ["NOCODB_URL"].rstrip("/")
     tok = os.environ["NOCODB_TOKEN"]
     def get(tabla):
-        req = urllib.request.Request(f"{base}/{tabla}?limit=200",
+        req = urllib.request.Request(f"{base}/api/v2/tables/{tabla}/records?limit=200",
                                      headers={"xc-token": tok})
         with urllib.request.urlopen(req, timeout=15) as r:
             return json.load(r).get("list", [])
