@@ -41,6 +41,10 @@ TABLAS = {
         col("actividad"), col("nombre"), col("contacto"),
         col("franjas"), col("idioma"), col("fecha", "DateTime"),
     ],
+    "Contactos": [
+        col("nombre"), col("telefono"), col("asunto", "LongText"),
+        col("idioma"), col("fecha", "DateTime"), col("atendido", "Checkbox"),
+    ],
 }
 
 ACTIVIDAD_EJEMPLO = {

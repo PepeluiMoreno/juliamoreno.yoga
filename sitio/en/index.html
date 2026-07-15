@@ -253,6 +253,26 @@
     <p>Message me on WhatsApp and I'll send you the schedule, prices and which class suits you best. I reply the same day.</p>
     <a class="btn claro" href="https://wa.me/34646290355?text=Hi%20Julia,%20I%27d%20like%20some%20information%20about%20yoga%20classes%20in%20Nerja">WhatsApp: 646 29 03 55</a>
     <p style="margin-top:1.2rem;font-size:.9rem">Also on Instagram: <a href="https://instagram.com/[USERNAME]" style="color:#fff">@[USERNAME]</a></p>
+    <form class="interes contacto-form" onsubmit="return enviarContacto(this)" style="max-width:480px;margin:1.6rem auto 0;text-align:left">
+      <p style="font-weight:700;color:#fff;margin-bottom:.2rem">Or leave me your enquiry</p>
+      <input type="text" name="nombre" placeholder="Your name" required>
+      <input type="tel" name="telefono" placeholder="Your phone" required>
+      <textarea name="asunto" placeholder="What would you like to ask about?" rows="3" required style="padding:.6rem .8rem;border:1px solid var(--linea);border-radius:8px;font-size:.95rem;font-family:inherit"></textarea>
+      <button type="submit" class="btn claro" style="border:none;cursor:pointer">Send</button>
+      <p class="consent" style="color:#cfe4ee">By sending you agree that Julia Moreno stores these details to answer your enquiry.</p>
+      <p class="ok" hidden style="color:#fff">Thanks! I'll call or message you very soon.</p>
+    </form>
+    <script>
+    async function enviarContacto(f){
+      const d={nombre:f.nombre.value,telefono:f.telefono.value,asunto:f.asunto.value,idioma:document.documentElement.lang};
+      try{
+        await fetch('https://auto.juliamoreno.yoga/webhook/contacto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        f.querySelector('.ok').hidden=false;
+        f.nombre.disabled=f.telefono.disabled=f.asunto.disabled=f.querySelector('button').disabled=true;
+      }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}
+      return false;
+    }
+    </script>
   </div>
 </section>
 

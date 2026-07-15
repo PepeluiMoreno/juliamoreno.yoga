@@ -69,3 +69,10 @@ Así Julia sabe no solo si montar la actividad, sino a qué hora.
 
 Si una actividad no define franjas, el formulario solo pide nombre y
 contacto (sondeo simple), como antes.
+## Formulario de contacto general
+Además del sondeo por actividad, la sección Contacto de la web lleva un
+formulario general (nombre, teléfono, asunto) que postea a
+https://auto.juliamoreno.yoga/webhook/contacto (flujo-contacto.json):
+se guarda en la tabla Contactos (con checkbox "atendido" como bandeja
+de Julia) y n8n le avisa. Mismo patrón que el sondeo; RGPD con frase de
+consentimiento en los 4 idiomas.

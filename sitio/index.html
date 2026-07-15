@@ -253,6 +253,26 @@
     <p>Escríbeme por WhatsApp y te cuento horarios, precios y qué clase encaja mejor contigo. Respondo el mismo día.</p>
     <a class="btn claro" href="https://wa.me/34646290355?text=Hola%20Julia,%20quiero%20informaci%C3%B3n%20sobre%20las%20clases%20de%20yoga%20en%20Nerja">WhatsApp: 646 29 03 55</a>
     <p style="margin-top:1.2rem;font-size:.9rem">También en Instagram: <a href="https://instagram.com/[USUARIO]" style="color:#fff">@[USUARIO]</a></p>
+    <form class="interes contacto-form" onsubmit="return enviarContacto(this)" style="max-width:480px;margin:1.6rem auto 0;text-align:left">
+      <p style="font-weight:700;color:#fff;margin-bottom:.2rem">O déjame tu consulta</p>
+      <input type="text" name="nombre" placeholder="Tu nombre" required>
+      <input type="tel" name="telefono" placeholder="Tu teléfono" required>
+      <textarea name="asunto" placeholder="¿Sobre qué quieres preguntar o informarte?" rows="3" required style="padding:.6rem .8rem;border:1px solid var(--linea);border-radius:8px;font-size:.95rem;font-family:inherit"></textarea>
+      <button type="submit" class="btn claro" style="border:none;cursor:pointer">Enviar</button>
+      <p class="consent" style="color:#cfe4ee">Al enviar aceptas que Julia Moreno guarde estos datos para responder a tu consulta.</p>
+      <p class="ok" hidden style="color:#fff">¡Gracias! Te llamo o te escribo muy pronto.</p>
+    </form>
+    <script>
+    async function enviarContacto(f){
+      const d={nombre:f.nombre.value,telefono:f.telefono.value,asunto:f.asunto.value,idioma:document.documentElement.lang};
+      try{
+        await fetch('https://auto.juliamoreno.yoga/webhook/contacto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        f.querySelector('.ok').hidden=false;
+        f.nombre.disabled=f.telefono.disabled=f.asunto.disabled=f.querySelector('button').disabled=true;
+      }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}
+      return false;
+    }
+    </script>
   </div>
 </section>
 
