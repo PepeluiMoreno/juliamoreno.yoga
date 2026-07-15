@@ -200,6 +200,63 @@
           "de": false
         }
       }
-    ]
+    ],
+    "ui": {
+      "interesa": {
+        "es": "Me interesa",
+        "en": "I'm interested",
+        "fr": "Ça m'intéresse",
+        "de": "Interessiert mich"
+      },
+      "faltan": {
+        "es": "Faltan {n} personas para que se monte",
+        "en": "{n} more people needed to run it",
+        "fr": "Encore {n} personnes pour lancer l'activité",
+        "de": "Noch {n} Personen, damit es stattfindet"
+      },
+      "confirmada": {
+        "es": "¡Grupo confirmado! Plazas limitadas",
+        "en": "Group confirmed! Limited places",
+        "fr": "Groupe confirmé ! Places limitées",
+        "de": "Gruppe bestätigt! Begrenzte Plätze"
+      },
+      "tentativa": {
+        "es": "Actividad en formación",
+        "en": "Forming — register your interest",
+        "fr": "En cours de formation",
+        "de": "In Bildung"
+      },
+      "form_nombre": {
+        "es": "Tu nombre",
+        "en": "Your name",
+        "fr": "Votre nom",
+        "de": "Ihr Name"
+      },
+      "form_contacto": {
+        "es": "WhatsApp o email",
+        "en": "WhatsApp or email",
+        "fr": "WhatsApp ou e-mail",
+        "de": "WhatsApp oder E-Mail"
+      },
+      "form_enviar": {
+        "es": "Enviar",
+        "en": "Send",
+        "fr": "Envoyer",
+        "de": "Senden"
+      },
+      "form_ok": {
+        "es": "¡Gracias! Te avisaré en cuanto se monte el grupo.",
+        "en": "Thanks! I'll let you know as soon as the group is confirmed.",
+        "fr": "Merci ! Je vous préviens dès que le groupe est confirmé.",
+        "de": "Danke! Ich melde mich, sobald die Gruppe zustande kommt."
+      },
+      "form_consent": {
+        "es": "Al enviar aceptas que Julia Moreno guarde tu nombre y contacto para avisarte sobre esta actividad.",
+        "en": "By sending you agree that Julia Moreno stores your name and contact to notify you about this activity.",
+        "fr": "En envoyant, vous acceptez que Julia Moreno conserve votre nom et contact pour vous informer sur cette activité.",
+        "de": "Mit dem Absenden erlauben Sie Julia Moreno, Ihren Namen und Kontakt zu speichern, um Sie über diese Aktivität zu informieren."
+      }
+    },
+    "_esquema_linea": "id, estado(tentativa|confirmada|completada), umbral(int), interesados(int, lo lleva n8n), plazas(int opc), fecha, foto(url opc), titulo_{es,en,fr,de}, texto_{es,en,fr,de}, mostrar_contador(bool)"
   }
 }

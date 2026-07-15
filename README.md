@@ -30,6 +30,11 @@ Requisitos: Traefik en la red externa `proxy` con entrypoint `websecure`
 y certresolver `letsencrypt`; DNS del dominio y subdominios
 (stats, reservas, correo, auto, datos) apuntando al VPS.
 
+## Contenido dinámico
+- Precios y horarios: data/contenido.json + scripts/build-web.py (ver docs/backoffice-precios-horarios.md).
+- Actividades con sondeo de demanda: docs/actividades-sondeo.md.
+- Traducción es→en/fr/de vía n8n+DeepL: docs/traduccion-cambiar-motor.md.
+
 ## Reglas del repo
 - Ni `.env` ni `secrets/` se versionan jamás (ver .gitignore).
 - Los paneles `auto.` y `datos.` deben protegerse con Authelia u

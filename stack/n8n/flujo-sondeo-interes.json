@@ -1,0 +1,35 @@
+{
+  "name": "Sondeo de interes (web -> NocoDB -> aviso al umbral)",
+  "nodes": [
+    {"parameters": {"httpMethod": "POST", "path": "interes", "options": {"responseData": "allEntries"}},
+     "name": "Webhook Me interesa", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [0,0], "webhookId": "interes"},
+    {"parameters": {"jsCode": "// antispam basico: descartar si falta nombre/contacto o parece bot\nconst b=$json.body||$json;\nif(!b.nombre||!b.contacto||b.nombre.length>80||/https?:\\/\\//i.test(b.nombre)){return [];}\nreturn [{json:{actividad:b.actividad,nombre:b.nombre.trim(),contacto:b.contacto.trim(),idioma:b.idioma||'es',fecha:new Date().toISOString()}}];"},
+     "name": "Validar", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [200,0]},
+    {"parameters": {"operation": "create", "table": "Interesados", "dataToSend": "autoMapInputData"},
+     "name": "Guardar interesado", "type": "n8n-nodes-base.nocoDb", "typeVersion": 3, "position": [400,0],
+     "notes": "Rellenar credencial y proyecto NocoDB. Tabla Interesados: actividad, nombre, contacto, idioma, fecha."},
+    {"parameters": {"operation": "getAll", "table": "Interesados", "options": {"where": "=(actividad,eq,{{$json.actividad}})"}},
+     "name": "Contar interesados", "type": "n8n-nodes-base.nocoDb", "typeVersion": 3, "position": [600,0]},
+    {"parameters": {"operation": "get", "table": "Actividades", "id": "={{$json.actividad}}"},
+     "name": "Leer actividad", "type": "n8n-nodes-base.nocoDb", "typeVersion": 3, "position": [800,0],
+     "notes": "Para conocer el umbral y el estado actual"},
+    {"parameters": {"conditions": {"number": [{"value1": "={{$node['Contar interesados'].json.length}}", "operation": "largerEqual", "value2": "={{$json.umbral}}"}], "string":[{"value1":"={{$json.estado}}","value2":"tentativa"}]}},
+     "name": "¿Umbral alcanzado?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [1000,0]},
+    {"parameters": {"chatId": "RELLENAR_TELEGRAM_JULIA", "text": "=🎉 La actividad «{{$json.titulo_es}}» ha alcanzado {{$node['Contar interesados'].json.length}} interesados (umbral {{$json.umbral}}). Puedes montarla y confirmar el grupo."},
+     "name": "Avisar a Julia", "type": "n8n-nodes-base.telegram", "typeVersion": 1.2, "position": [1220,-60],
+     "notes": "Alternativa: nodo Email o mensaje de WhatsApp"},
+    {"parameters": {"operation": "update", "table": "Actividades", "id": "={{$json.id}}", "dataToSend": "defineBelow", "fieldsUi": {"fieldValues": [{"fieldName": "interesados", "fieldValue": "={{$node['Contar interesados'].json.length}}"}]}},
+     "name": "Actualizar contador", "type": "n8n-nodes-base.nocoDb", "typeVersion": 3, "position": [1220,80],
+     "notes": "Deja el contador al dia en la tabla; el rebuild de la web lo reflejara"}
+  ],
+  "connections": {
+    "Webhook Me interesa": {"main": [[{"node":"Validar","type":"main","index":0}]]},
+    "Validar": {"main": [[{"node":"Guardar interesado","type":"main","index":0}]]},
+    "Guardar interesado": {"main": [[{"node":"Contar interesados","type":"main","index":0}]]},
+    "Contar interesados": {"main": [[{"node":"Leer actividad","type":"main","index":0}]]},
+    "Leer actividad": {"main": [[{"node":"¿Umbral alcanzado?","type":"main","index":0}]]},
+    "¿Umbral alcanzado?": {"main": [[{"node":"Avisar a Julia","type":"main","index":0}],[{"node":"Actualizar contador","type":"main","index":0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "meta": {"templateNote": "Sondeo de demanda. La rama TRUE avisa a Julia; ambas ramas actualizan el contador. Ver docs/actividades-sondeo.md"}
+}

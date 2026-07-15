@@ -62,23 +62,60 @@ def seccion_actividades(data, idioma):
     if not visibles:
         out.append(f'    <p>{a["vacio"][idioma]}</p>')
         return "\n".join(out)
+    ui = a.get("ui", {})
+    def t(clave):
+        return ui.get(clave, {}).get(idioma, ui.get(clave, {}).get("es", ""))
     out.append('    <div class="clases-grid">')
     for ln in visibles:
         titulo = ln["titulo"].get(idioma) or ln["titulo"]["es"]
         texto = ln["texto"].get(idioma) or ln["texto"]["es"]
         fecha = fecha_legible(ln.get("fecha", ""), idioma)
         precio = ln.get("precio", "").strip()
+        estado = ln.get("estado", "tentativa")
+        umbral = int(ln.get("umbral", 0) or 0)
+        interes = int(ln.get("interesados", 0) or 0)
+        aid = ln.get("id", "")
         out.append('      <article class="clase">')
         if ln.get("foto"):
             out.append(f'        <img src="{ln["foto"]}" alt="{titulo}" style="border-radius:10px;margin-bottom:.8rem">')
+        # Badge de estado
+        if estado == "tentativa":
+            out.append(f'        <p class="badge badge-tent">{t("tentativa")}</p>')
+        elif estado == "confirmada":
+            out.append(f'        <p class="badge badge-conf">{t("confirmada")}</p>')
         out.append(f'        <h3>{titulo}</h3>')
         if fecha:
             out.append(f'        <p style="color:var(--mar);font-weight:700;margin-bottom:.4rem">{fecha}</p>')
         out.append(f'        <p>{texto}</p>')
         if precio:
-            out.append(f'        <p style="font-weight:700;margin-bottom:0">{precio} €</p>')
+            out.append(f'        <p style="font-weight:700;margin-bottom:.6rem">{precio} €</p>')
+        # Sondeo: contador (solo si va bien) + formulario "Me interesa"
+        if estado == "tentativa":
+            # "solo cuando va bien": mostrar si mostrar_contador y ya hay >=50% del umbral
+            if ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
+                faltan = umbral - interes
+                out.append(f'        <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
+            out.append(f'        <form class="interes" data-actividad="{aid}" onsubmit="return enviarInteres(this)">')
+            out.append(f'          <input type="text" name="nombre" placeholder="{t("form_nombre")}" required>')
+            out.append(f'          <input type="text" name="contacto" placeholder="{t("form_contacto")}" required>')
+            out.append(f'          <button type="submit" class="btn">{t("interesa")}</button>')
+            out.append(f'          <p class="consent">{t("form_consent")}</p>')
+            out.append(f'          <p class="ok" hidden>{t("form_ok")}</p>')
+            out.append('        </form>')
         out.append('      </article>')
     out.append('    </div>')
+    # Script de envío (una sola vez por página; idempotente al regenerar)
+    out.append('''    <script>
+    async function enviarInteres(f){
+      const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,idioma:document.documentElement.lang};
+      try{
+        await fetch('https://auto.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        f.querySelector('.ok').hidden=false;
+        f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
+      }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}
+      return false;
+    }
+    </script>''')
     return "\n".join(out)
 
 
