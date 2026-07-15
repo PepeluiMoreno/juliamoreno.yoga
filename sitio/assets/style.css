@@ -191,3 +191,5 @@ li.idiomas{display:flex;gap:1.2rem;align-items:center}
 .contacto form.interes textarea::placeholder{color:#7b8791}
 .contacto form.interes input:focus,
 .contacto form.interes textarea:focus{outline:2px solid #a7cddd;background:#fff}
+.contacto form.interes .btn{background:#fcfbf8;color:var(--mar);box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.contacto form.interes .btn:hover{background:#fff}
