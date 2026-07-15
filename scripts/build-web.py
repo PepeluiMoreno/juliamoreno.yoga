@@ -209,6 +209,33 @@ def desde_nocodb(data):
         for ln in data["horarios"]["lineas"]:
             if ln["id"] == fila.get("id"):
                 ln["visible"] = bool(fila.get("visible", True))
+    # Actividades: se reconstruye la lista entera desde NocoDB
+    tbl_act = os.environ.get("NOCODB_TBL_ACTIVIDADES")
+    if tbl_act:
+        nuevas = []
+        for fila in get(tbl_act):
+            try:
+                franjas = json.loads(fila.get("franjas") or "[]")
+            except Exception:
+                franjas = []
+            def campo_idiomas(base):
+                return {i: (fila.get(f"{base}_{i}") or fila.get(f"{base}_es") or "")
+                        for i in ("es", "en", "fr", "de")}
+            nuevas.append({
+                "id": fila.get("id"),
+                "estado": fila.get("estado", "tentativa"),
+                "umbral": fila.get("umbral", 0),
+                "interesados": fila.get("interesados", 0),
+                "plazas": fila.get("plazas", 0),
+                "foto": fila.get("foto", ""),
+                "mostrar_contador": bool(fila.get("mostrar_contador", False)),
+                "visible": bool(fila.get("visible", True)),
+                "titulo": campo_idiomas("titulo"),
+                "texto": campo_idiomas("texto"),
+                "franjas": franjas,
+            })
+        if nuevas:
+            data["actividades"]["lineas"] = nuevas
     JSON.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 

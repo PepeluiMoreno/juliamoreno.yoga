@@ -113,6 +113,37 @@ def siembra_horarios(tid, data):
     print(f"  Horarios: {len(filas)} filas sembradas")
 
 
+def siembra_actividades(tid):
+    """Una actividad de ejemplo, tentativa, con franjas (genérica + fecha)."""
+    franjas = [
+        {"id": "sab_manana", "tipo": "generica",
+         "etiqueta": {"es": "Sábados por la mañana", "en": "Saturday mornings",
+                      "fr": "Samedis matin", "de": "Samstagvormittags"}},
+        {"id": "vie_tarde", "tipo": "generica",
+         "etiqueta": {"es": "Viernes por la tarde", "en": "Friday afternoons",
+                      "fr": "Vendredis après-midi", "de": "Freitagnachmittags"}},
+        {"id": "f_2026_03_21", "tipo": "fecha",
+         "etiqueta": {"es": "Sábado 21 de marzo, 10:00", "en": "Saturday 21 March, 10:00",
+                      "fr": "Samedi 21 mars, 10h00", "de": "Samstag, 21. März, 10:00"}},
+    ]
+    fila = {
+        "id": "taller-respiracion",
+        "estado": "tentativa",
+        "umbral": 8,
+        "interesados": 0,
+        "plazas": 12,
+        "mostrar_contador": True,
+        "visible": True,
+        "titulo_es": "Taller de respiración consciente",
+        "texto_es": ("Una mañana dedicada a la respiración como herramienta de calma y energía. "
+                     "Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. "
+                     "Si reunimos grupo, lo montamos: dime cuándo te vendría bien."),
+        "franjas": json.dumps(franjas, ensure_ascii=False),
+    }
+    api("POST", f"/api/v2/tables/{tid}/records", [fila])
+    print("  Actividades: 1 actividad de ejemplo sembrada (taller-respiracion)")
+
+
 def main():
     data = json.loads(JSON.read_text(encoding="utf-8"))
     bid = base_id()
@@ -132,6 +163,8 @@ def main():
         siembra_precios(ids["Precios"], data)
     if vacia(ids["Horarios"]):
         siembra_horarios(ids["Horarios"], data)
+    if vacia(ids["Actividades"]):
+        siembra_actividades(ids["Actividades"])
     print("\nOK. IDs de tabla (guardar para el .env de build-web / n8n):")
     for n, i in ids.items():
         print(f"  {n} = {i}")
