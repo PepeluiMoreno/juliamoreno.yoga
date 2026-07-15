@@ -122,11 +122,14 @@ th{font-family:'Marcellus',serif;font-weight:400;color:#fff;background:var(--mar
 tbody tr:nth-child(even){background:var(--cal)}
 
 /* FAQ */
-details{border-bottom:1px solid var(--linea);padding:1.05rem 0}
-summary{cursor:pointer;font-weight:700;color:var(--tinta);list-style-position:outside}
+details{border-bottom:1px solid var(--linea);padding:1.05rem 0 1.05rem .4rem}
+summary{cursor:pointer;font-weight:700;color:var(--tinta);list-style:none;position:relative;padding-left:1.5rem}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▸';position:absolute;left:.1rem;color:var(--mar);transition:transform .2s}
+details[open] summary::before{transform:rotate(90deg)}
 summary:hover{color:var(--mar)}
 details[open] summary{color:var(--mar)}
-details p{margin-top:.7rem;margin-bottom:0;color:#46545f}
+details p{margin-top:.7rem;margin-bottom:0;color:#46545f;padding-left:1.5rem}
 
 /* Contacto / pie */
 .contacto{background:linear-gradient(180deg,var(--mar) 0%,var(--mar-osc) 100%)}
