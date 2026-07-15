@@ -46,3 +46,26 @@ docs/rgpd-consentimiento.md.
 Cuando Julia confirme un grupo y quiera inscripción con plazas y
 recordatorios, se reutiliza Cal.com (evento con aforo) enlazado desde la
 tarjeta. No requiere backend nuevo. Se abordará si el negocio lo pide.
+
+
+## Franjas horarias (disponibilidad)
+Cada actividad puede definir franjas entre las que el cliente marca las
+que le sirven (opción A: Julia define, cliente elige, n8n encuentra la
+ganadora). Dos tipos, combinables en una misma actividad:
+- **genérica**: recurrente, p. ej. "sábados por la mañana" (para grupos
+  regulares). Se traduce a los 4 idiomas.
+- **fecha**: puntual, p. ej. "sábado 15 de marzo, 10:00" (para talleres
+  únicos). La etiqueta suele ser igual en los 4 idiomas.
+
+Modelo:
+- `Actividades.franjas`: lista de {id, tipo, etiqueta_{es,en,fr,de}}.
+- `Interesados.franjas`: las que marcó cada persona (ids separados por coma).
+
+n8n cuenta el interés TOTAL y también POR FRANJA. Avisa a Julia cuando:
+- el total alcanza el umbral (hay demanda), y/o
+- una franja concreta alcanza el umbral (hay demanda a una hora viable) —
+  este es el aviso más útil: "8 personas pueden el sábado por la mañana".
+Así Julia sabe no solo si montar la actividad, sino a qué hora.
+
+Si una actividad no define franjas, el formulario solo pide nombre y
+contacto (sondeo simple), como antes.

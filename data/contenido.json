@@ -255,8 +255,20 @@
         "en": "By sending you agree that Julia Moreno stores your name and contact to notify you about this activity.",
         "fr": "En envoyant, vous acceptez que Julia Moreno conserve votre nom et contact pour vous informer sur cette activité.",
         "de": "Mit dem Absenden erlauben Sie Julia Moreno, Ihren Namen und Kontakt zu speichern, um Sie über diese Aktivität zu informieren."
+      },
+      "elige_franja": {
+        "es": "¿Cuándo te vendría bien? (marca las que puedas)",
+        "en": "When would suit you? (tick all that work)",
+        "fr": "Quand cela vous conviendrait-il ? (cochez tout ce qui marche)",
+        "de": "Wann würde es Ihnen passen? (alle Zutreffenden ankreuzen)"
+      },
+      "franja_gana": {
+        "es": "La franja «{f}» ya reúne suficiente gente",
+        "en": "The «{f}» slot already has enough people",
+        "fr": "Le créneau « {f} » réunit déjà assez de personnes",
+        "de": "Der Zeitraum «{f}» hat bereits genug Teilnehmer"
       }
     },
-    "_esquema_linea": "id, estado(tentativa|confirmada|completada), umbral(int), interesados(int, lo lleva n8n), plazas(int opc), fecha, foto(url opc), titulo_{es,en,fr,de}, texto_{es,en,fr,de}, mostrar_contador(bool)"
+    "_esquema_linea": "id, estado(tentativa|confirmada|completada), umbral(int), interesados(int, n8n), plazas(int opc), foto(url opc), mostrar_contador(bool), visible(bool), titulo_{es,en,fr,de}, texto_{es,en,fr,de}, franjas: lista de {id, tipo(generica|fecha), etiqueta_{es,en,fr,de}}. Para tipo=fecha la etiqueta suele ser la misma en los 4 idiomas (fecha/hora); para generica se traduce."
   }
 }

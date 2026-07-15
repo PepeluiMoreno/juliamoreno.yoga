@@ -98,6 +98,15 @@ def seccion_actividades(data, idioma):
             out.append(f'        <form class="interes" data-actividad="{aid}" onsubmit="return enviarInteres(this)">')
             out.append(f'          <input type="text" name="nombre" placeholder="{t("form_nombre")}" required>')
             out.append(f'          <input type="text" name="contacto" placeholder="{t("form_contacto")}" required>')
+            # Franjas horarias (si la actividad las define)
+            franjas = ln.get("franjas", [])
+            if franjas:
+                out.append(f'          <fieldset class="franjas"><legend>{t("elige_franja")}</legend>')
+                for fr in franjas:
+                    fid = fr.get("id", "")
+                    etiq = fr.get("etiqueta", {}).get(idioma) or fr.get("etiqueta", {}).get("es", fid)
+                    out.append(f'            <label><input type="checkbox" name="franja" value="{fid}"> {etiq}</label>')
+                out.append('          </fieldset>')
             out.append(f'          <button type="submit" class="btn">{t("interesa")}</button>')
             out.append(f'          <p class="consent">{t("form_consent")}</p>')
             out.append(f'          <p class="ok" hidden>{t("form_ok")}</p>')
@@ -107,7 +116,8 @@ def seccion_actividades(data, idioma):
     # Script de envío (una sola vez por página; idempotente al regenerar)
     out.append('''    <script>
     async function enviarInteres(f){
-      const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,idioma:document.documentElement.lang};
+      const fr=[...f.querySelectorAll('input[name=franja]:checked')].map(x=>x.value);
+      const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:fr,idioma:document.documentElement.lang};
       try{
         await fetch('https://auto.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         f.querySelector('.ok').hidden=false;

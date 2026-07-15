@@ -156,3 +156,7 @@ form.interes input{padding:.6rem .8rem;border:1px solid var(--linea);border-radi
 form.interes .btn{border:none;cursor:pointer;text-align:center}
 form.interes .consent{font-size:.72rem;color:#7b8791;margin:.2rem 0 0;line-height:1.4}
 form.interes .ok{font-size:.9rem;color:var(--mar);font-weight:700;margin:.3rem 0 0}
+form.interes fieldset.franjas{border:1px solid var(--linea);border-radius:8px;padding:.6rem .8rem;margin:0}
+form.interes fieldset.franjas legend{font-size:.82rem;color:var(--mar);font-weight:700;padding:0 .3rem}
+form.interes fieldset.franjas label{display:flex;align-items:center;gap:.5rem;font-size:.9rem;padding:.2rem 0;cursor:pointer}
+form.interes fieldset.franjas input{width:auto;padding:0}
