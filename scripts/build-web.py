@@ -238,6 +238,19 @@ def desde_nocodb(data):
     JSON.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def versiona_css():
+    """Cache-busting: enlaza el CSS con ?v=<hash> de su contenido en los 4 HTML."""
+    import hashlib
+    css = (RAIZ / "sitio" / "assets" / "style.css").read_bytes()
+    h = hashlib.md5(css).hexdigest()[:8]
+    for ruta in PAGS.values():
+        html = ruta.read_text(encoding="utf-8")
+        html = re.sub(r'href="/assets/style\.css[^"]*"',
+                      f'href="/assets/style.css?v={h}"', html)
+        ruta.write_text(html, encoding="utf-8")
+    print(f"css versionado: style.css?v={h}")
+
+
 def main():
     data = json.loads(JSON.read_text(encoding="utf-8"))
     # NocoDB es la fuente de verdad; el .env lo carga nocolib por sí mismo.
@@ -253,6 +266,7 @@ def main():
     for idioma, ruta in PAGS.items():
         aplica(idioma, ruta, data)
         print(f"generado {ruta.relative_to(RAIZ)}")
+    versiona_css()
     print("OK")
 
 
