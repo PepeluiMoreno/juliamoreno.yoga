@@ -45,6 +45,53 @@ def _tid(tabla):
     return _TABLAS[tabla]
 
 
+def guarda_varios(tabla, filas):
+    url, tok, _ = nc.cfg()
+    nc.api(url, tok, "POST", f"/api/v2/tables/{_tid(tabla)}/records", filas)
+
+
+def _materializa_mes(base):
+    """Convierte una definición recurrente (dias_semana + horas) en ocurrencias
+    puntuales concretas, una por cada día correspondiente desde la fecha de
+    inicio (o hoy) hasta fin del mes en curso. Todas comparten serie_id."""
+    import calendar as _cal
+    import uuid as _uuid
+    dianum = {"lun": 0, "mar": 1, "mie": 2, "jue": 3, "vie": 4, "sab": 5, "dom": 6}
+    dias = {dianum.get(x.strip()) for x in (base.get("dias_semana") or "").split(",")}
+    dias.discard(None)
+    if not dias:
+        return []
+    hoy = datetime.date.today()
+    desde_s = (base.get("vigencia_desde") or "")[:10]
+    try:
+        desde = datetime.date.fromisoformat(desde_s) if desde_s else hoy
+    except Exception:
+        desde = hoy
+    if desde < hoy:
+        desde = hoy
+    ndias = _cal.monthrange(desde.year, desde.month)[1]
+    fin = datetime.date(desde.year, desde.month, ndias)
+    serie = _uuid.uuid4().hex[:12]
+    ocurrencias = []
+    d = desde
+    while d <= fin:
+        if d.weekday() in dias:
+            ocurrencias.append({
+                "titulo": base.get("titulo", ""),
+                "actividad_id": base.get("actividad_id", ""),
+                "tipo": "puntual",
+                "fecha": d.isoformat(),
+                "hora_inicio": base.get("hora_inicio", ""),
+                "duracion_min": base.get("duracion_min"),
+                "lugar": base.get("lugar", ""),
+                "color": base.get("color", ""),
+                "visible_web": base.get("visible_web", False),
+                "serie_id": serie,
+            })
+        d += datetime.timedelta(days=1)
+    return ocurrencias
+
+
 def guarda(tabla, fila):
     url, tok, _ = nc.cfg()
     nc.api(url, tok, "POST", f"/api/v2/tables/{_tid(tabla)}/records", [fila])
@@ -128,7 +175,7 @@ def _fila_agenda(body, con_id):
     if con_id:
         fila["Id"] = body["Id"]
     for c in ("titulo", "actividad_id", "tipo", "dias_semana", "lugar", "color",
-              "hora_inicio"):
+              "hora_inicio", "serie_id"):
         if c in body:
             fila[c] = limpio(body[c], 200)
     if "duracion_min" in body and body["duracion_min"] not in (None, ""):
@@ -331,6 +378,7 @@ class H(BaseHTTPRequestHandler):
                         "dias_semana": r.get("dias_semana"), "fecha": r.get("fecha"),
                         "vigencia_desde": r.get("vigencia_desde"), "vigencia_hasta": r.get("vigencia_hasta"),
                         "hora_inicio": r.get("hora_inicio"), "duracion_min": r.get("duracion_min"),
+                        "serie_id": r.get("serie_id"),
                         "lugar": r.get("lugar"), "color": r.get("color"),
                         "visible_web": r.get("visible_web"),
                     })
@@ -506,14 +554,23 @@ class H(BaseHTTPRequestHandler):
             fila = _fila_agenda(body, con_id=False)
             if not fila.get("titulo") and not fila.get("actividad_id"):
                 return self._json({"error": "falta título o actividad"}, 422)
-            if fila.get("tipo") == "puntual" and not fila.get("fecha"):
-                return self._json({"error": "una sesión puntual necesita fecha"}, 422)
-            if fila.get("tipo") == "recurrente" and not fila.get("dias_semana"):
-                return self._json({"error": "una clase recurrente necesita días de la semana"}, 422)
+            tipo = fila.get("tipo")
             try:
-                guarda("Agenda", fila)
-                dispara_rebuild()
-                return self._json({"ok": True})
+                if tipo == "recurrente":
+                    if not fila.get("dias_semana"):
+                        return self._json({"error": "una clase recurrente necesita días de la semana"}, 422)
+                    ocurrencias = _materializa_mes(fila)
+                    if not ocurrencias:
+                        return self._json({"error": "no hay días de ese tipo en lo que queda de mes"}, 422)
+                    guarda_varios("Agenda", ocurrencias)
+                    dispara_rebuild()
+                    return self._json({"ok": True, "generadas": len(ocurrencias)})
+                else:
+                    if not fila.get("fecha"):
+                        return self._json({"error": "una sesión puntual necesita fecha"}, 422)
+                    guarda("Agenda", fila)
+                    dispara_rebuild()
+                    return self._json({"ok": True})
             except Exception as e:
                 return self._json({"error": f"no se pudo crear: {e}"}, 502)
 
