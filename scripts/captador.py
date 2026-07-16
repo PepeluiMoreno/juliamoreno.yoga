@@ -345,18 +345,22 @@ def _fila_agenda(body, con_id):
     if con_id:
         fila["Id"] = body["Id"]
     for c in ("titulo", "actividad_id", "tipo", "dias_semana", "lugar", "color",
-              "hora_inicio", "serie_id"):
+              "hora_inicio", "serie_id", "estado", "motivo"):
         if c in body:
             fila[c] = limpio(body[c], 200)
+    if "motivo_texto" in body:
+        fila["motivo_texto"] = limpio(body["motivo_texto"], 1000)
     if "duracion_min" in body and body["duracion_min"] not in (None, ""):
         try: fila["duracion_min"] = int(body["duracion_min"])
         except: pass
-    for c in ("fecha", "vigencia_desde", "vigencia_hasta"):
+    for c in ("fecha",):
         if c in body:
             v = limpio(body[c], 20)
             fila[c] = v if v else None
     if "visible_web" in body:
         fila["visible_web"] = bool(body["visible_web"])
+    if "avisar_alumnos" in body:
+        fila["avisar_alumnos"] = bool(body["avisar_alumnos"])
     return fila
 
 
@@ -540,17 +544,26 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "no autenticado"}, 401)
             try:
                 filas = lee("Agenda")
+                # mapa actividad_id -> estado de la actividad (para reglas de borrado)
+                try:
+                    act_estado = {a.get("id"): (a.get("estado") or "").strip()
+                                  for a in lee("Actividades")}
+                except Exception:
+                    act_estado = {}
                 out = []
                 for r in filas:
+                    aid = r.get("actividad_id")
                     out.append({
                         "Id": r.get("Id"), "titulo": r.get("titulo"),
-                        "actividad_id": r.get("actividad_id"), "tipo": r.get("tipo"),
+                        "actividad_id": aid, "tipo": r.get("tipo"),
                         "dias_semana": r.get("dias_semana"), "fecha": r.get("fecha"),
-                        "vigencia_desde": r.get("vigencia_desde"), "vigencia_hasta": r.get("vigencia_hasta"),
                         "hora_inicio": r.get("hora_inicio"), "duracion_min": r.get("duracion_min"),
                         "serie_id": r.get("serie_id"),
                         "lugar": r.get("lugar"), "color": r.get("color"),
                         "visible_web": r.get("visible_web"),
+                        "estado": r.get("estado") or "programada",
+                        "motivo": r.get("motivo"), "motivo_texto": r.get("motivo_texto"),
+                        "actividad_estado": act_estado.get(aid, ""),
                     })
                 return self._json({"ok": True, "agenda": out})
             except Exception as e:
@@ -629,21 +642,28 @@ class H(BaseHTTPRequestHandler):
             body = self._body()
             if body is None:
                 return self._json({"error": "cuerpo vacío"}, 422)
-            # Acepta un solo Id o una lista de ids
             ids = body.get("ids")
-            if isinstance(ids, list) and ids:
-                try:
-                    borra_varios("Agenda", [int(i) for i in ids])
-                    dispara_rebuild()
-                    return self._json({"ok": True, "borradas": len(ids)})
-                except Exception as e:
-                    return self._json({"error": f"no se pudo borrar: {e}"}, 502)
-            if not body.get("Id"):
+            if not (isinstance(ids, list) and ids):
+                ids = [body["Id"]] if body.get("Id") else []
+            if not ids:
                 return self._json({"error": "falta Id"}, 422)
             try:
-                borra("Agenda", body["Id"])
+                # Regla: solo se elimina una clase puntual, no visible en web y sin
+                # actividad en curso detrás. El resto se cancela o aplaza, no se borra.
+                agenda = {r.get("Id"): r for r in lee("Agenda")}
+                act_estado = {a.get("id"): (a.get("estado") or "").strip()
+                              for a in lee("Actividades")}
+                for i in ids:
+                    r = agenda.get(int(i))
+                    if not r:
+                        continue
+                    en_curso = act_estado.get(r.get("actividad_id")) == "en_curso"
+                    anunciada = bool(r.get("visible_web"))
+                    if en_curso or anunciada:
+                        return self._json({"error": "esa clase no se puede eliminar (pertenece a una actividad en curso o está anunciada en la web). Puedes aplazarla o cancelarla."}, 409)
+                borra_varios("Agenda", [int(i) for i in ids])
                 dispara_rebuild()
-                return self._json({"ok": True, "borradas": 1})
+                return self._json({"ok": True, "borradas": len(ids)})
             except Exception as e:
                 return self._json({"error": f"no se pudo borrar: {e}"}, 502)
         self._json({"error": "not found"}, 404)
@@ -745,6 +765,28 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "id": fila["id"]})
             except Exception as e:
                 return self._json({"error": f"no se pudo crear: {e}"}, 502)
+
+        if self.path == "/admin/api/agenda/cancelar":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            ids = body.get("ids") or ([body["Id"]] if body.get("Id") else [])
+            motivo = limpio(body.get("motivo"), 100)
+            if not ids:
+                return self._json({"error": "falta la clase a cancelar"}, 422)
+            if not motivo:
+                return self._json({"error": "hay que indicar un motivo de cancelación"}, 422)
+            try:
+                filas = [{
+                    "Id": int(i), "estado": "cancelada", "motivo": motivo,
+                    "motivo_texto": limpio(body.get("motivo_texto"), 1000),
+                    "avisar_alumnos": bool(body.get("avisar_alumnos")),
+                } for i in ids]
+                nc.api(nc.cfg()[0], nc.cfg()[1], "PATCH",
+                       f"/api/v2/tables/{_tid('Agenda')}/records", filas)
+                dispara_rebuild()
+                return self._json({"ok": True, "canceladas": len(ids)})
+            except Exception as e:
+                return self._json({"error": f"no se pudo cancelar: {e}"}, 502)
 
         if self.path == "/admin/api/agenda/replicar":
             if not self._admin_user():
