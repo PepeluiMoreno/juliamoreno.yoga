@@ -236,20 +236,23 @@ services:
       - traefik.http.services.jmy-kuma.loadbalancer.server.port=3001
 
   captador:
-    image: python:3.12-alpine
+    image: python:3.12-slim
     container_name: jmy-captador
     restart: unless-stopped
     profiles: [negocio, todo]
     working_dir: /app
-    command: python3 scripts/captador.py
+    command: sh -c "pip install --quiet Pillow && python3 scripts/captador.py"
     environment:
       NOCODB_URL: http://nocodb:8080
       NOCODB_TOKEN: ${NOCODB_TOKEN}
       NOCODB_BASE: ${NOCODB_BASE:-Yoga}
       CAPTADOR_ORIGIN: https://juliamoreno.yoga
+      UPLOADS_DIR: /app/sitio/uploads
+      UPLOADS_URL: https://juliamoreno.yoga/uploads
     volumes:
       - ./scripts:/app/scripts:ro
       - ./data:/app/data:ro
+      - ./sitio/uploads:/app/sitio/uploads
     depends_on: [nocodb]
     networks: [internal, traefik_public]
     labels:

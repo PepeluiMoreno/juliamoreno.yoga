@@ -12,3 +12,7 @@ node_modules/
 nohup.out
 *.log
 __pycache__/
+
+# Fotos subidas desde el panel (datos de produccion, no codigo)
+sitio/uploads/*
+!sitio/uploads/.gitkeep

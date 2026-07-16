@@ -15,7 +15,7 @@ Traefik; el captador confía en la cabecera Remote-User que Authelia inyecta):
 Escribe en NocoDB con el token del entorno (que NUNCA viaja al navegador).
 Sin dependencias externas: sólo la stdlib.
 """
-import json, os, sys, pathlib, datetime, re
+import json, os, sys, pathlib, datetime, re, io, uuid, cgi
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -23,6 +23,8 @@ import nocolib as nc
 
 PORT = int(os.environ.get("CAPTADOR_PORT", "8090"))
 ORIGIN = os.environ.get("CAPTADOR_ORIGIN", "https://juliamoreno.yoga")
+MAX_FOTO = 12 * 1024 * 1024   # 12 MB de entrada
+ANCHO_MAX = 1200              # redimensionar a este ancho máximo
 
 _TABLAS = {}
 
@@ -73,6 +75,36 @@ def slug(s):
     s = re.sub(r"[úùü]", "u", s); s = re.sub(r"ñ", "n", s)
     s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
     return s[:60] or "actividad"
+
+
+def guarda_foto(datos, nombre_orig):
+    """Redimensiona con Pillow a ANCHO_MAX y guarda como JPEG optimizado.
+    Devuelve la URL pública. Lanza ValueError si no es una imagen válida."""
+    from PIL import Image
+    uploads_dir = os.environ.get("UPLOADS_DIR", "/app/sitio/uploads")
+    uploads_url = os.environ.get("UPLOADS_URL", "https://juliamoreno.yoga/uploads")
+    try:
+        img = Image.open(io.BytesIO(datos))
+        img.verify()  # valida que es imagen real
+        img = Image.open(io.BytesIO(datos))  # reabrir tras verify
+    except Exception:
+        raise ValueError("el fichero no es una imagen válida")
+    # Corregir orientación EXIF (fotos de móvil)
+    try:
+        from PIL import ImageOps
+        img = ImageOps.exif_transpose(img)
+    except Exception:
+        pass
+    img = img.convert("RGB")
+    if img.width > ANCHO_MAX:
+        alto = int(img.height * ANCHO_MAX / img.width)
+        img = img.resize((ANCHO_MAX, alto), Image.LANCZOS)
+    pathlib.Path(uploads_dir).mkdir(parents=True, exist_ok=True)
+    base = slug(pathlib.Path(nombre_orig or "foto").stem)
+    fichero = f"{base}-{uuid.uuid4().hex[:8]}.jpg"
+    destino = os.path.join(uploads_dir, fichero)
+    img.save(destino, "JPEG", quality=82, optimize=True)
+    return f"{uploads_url}/{fichero}"
 
 
 class H(BaseHTTPRequestHandler):
@@ -168,6 +200,31 @@ class H(BaseHTTPRequestHandler):
         self._json({"error": "not found"}, 404)
 
     def do_POST(self):
+        # Subida de foto: multipart, no JSON. Se maneja aparte.
+        if self.path == "/admin/api/foto":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            ctype = self.headers.get("Content-Type", "")
+            if "multipart/form-data" not in ctype:
+                return self._json({"error": "se esperaba multipart"}, 400)
+            n = int(self.headers.get("Content-Length", 0))
+            if n > MAX_FOTO:
+                return self._json({"error": "la foto es demasiado grande (máx. 12 MB)"}, 413)
+            try:
+                form = cgi.FieldStorage(
+                    fp=self.rfile, headers=self.headers,
+                    environ={"REQUEST_METHOD": "POST", "CONTENT_TYPE": ctype})
+                item = form["foto"] if "foto" in form else None
+                if item is None or not getattr(item, "file", None):
+                    return self._json({"error": "no llegó ninguna foto"}, 422)
+                datos = item.file.read()
+                url = guarda_foto(datos, getattr(item, "filename", "foto"))
+                return self._json({"ok": True, "url": url})
+            except ValueError as e:
+                return self._json({"error": str(e)}, 422)
+            except Exception as e:
+                return self._json({"error": f"no se pudo subir: {e}"}, 502)
+
         body = self._body()
         if body is None:
             return self._json({"error": "bad json"}, 400)

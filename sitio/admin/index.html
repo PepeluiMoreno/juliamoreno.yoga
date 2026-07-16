@@ -78,8 +78,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <label for="texto_es">Descripción</label>
     <textarea id="texto_es" placeholder="Describe la actividad. Se traducirá sola al inglés, francés y alemán."></textarea>
 
-    <label for="foto">Foto (URL, opcional)</label>
-    <input type="text" id="foto" placeholder="https://... — déjalo vacío si no hay foto">
+    <label for="foto-file">Foto (opcional)</label>
+    <input type="file" id="foto-file" accept="image/jpeg,image/png,image/webp">
+    <input type="hidden" id="foto">
+    <div id="foto-preview-wrap" class="oculto" style="margin-top:.6rem">
+      <img id="foto-preview" alt="" style="max-width:220px;border-radius:8px;border:1px solid var(--linea)">
+      <button type="button" class="btn-mini" id="foto-quitar" style="margin-left:.6rem">Quitar foto</button>
+    </div>
+    <p id="foto-estado" style="font-size:.82rem;color:var(--gris);margin-top:.3rem"></p>
 
     <div class="fila">
       <div>
@@ -146,6 +152,36 @@ $("#franjas_elegibles").addEventListener("change", e=>{
   $("#franjas-wrap").classList.toggle("oculto", !e.target.checked);
 });
 
+// --- Subida de foto ---
+const API_FOTO = "https://api.juliamoreno.yoga/admin/api/foto";
+function mostrarFoto(url){
+  if(url){
+    $("#foto").value = url;
+    $("#foto-preview").src = url;
+    $("#foto-preview-wrap").classList.remove("oculto");
+  }else{
+    $("#foto").value = "";
+    $("#foto-preview").src = "";
+    $("#foto-preview-wrap").classList.add("oculto");
+  }
+}
+$("#foto-file").addEventListener("change", async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  $("#foto-estado").textContent = "Subiendo foto…";
+  const fd = new FormData();
+  fd.append("foto", file);
+  try{
+    const r = await fetch(API_FOTO, {method:"POST", credentials:"include", body:fd});
+    const d = await r.json();
+    if(d.ok){ mostrarFoto(d.url); $("#foto-estado").textContent = "Foto lista."; }
+    else { $("#foto-estado").textContent = "Error: " + (d.error||"no se pudo subir"); }
+  }catch(err){ $("#foto-estado").textContent = "Error de conexión al subir la foto."; }
+  e.target.value = "";
+});
+$("#foto-quitar").addEventListener("click", ()=>{ mostrarFoto(""); $("#foto-estado").textContent=""; });
+
+
 function aviso(msg, tipo){
   const a = $("#aviso"); a.textContent = msg; a.className = "aviso " + tipo;
   if(tipo==="ok") setTimeout(()=>{a.className="aviso";}, 4000);
@@ -160,7 +196,8 @@ function marcarFranjas(str){
 }
 
 function resetForm(){
-  $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value=""; $("#foto").value="";
+  $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value="";
+  mostrarFoto(""); $("#foto-estado").textContent="";
   $("#estado").value="tentativa"; $("#umbral").value=""; $("#plazas").value="";
   $("#visible").checked=true; $("#mostrar_contador").checked=true;
   $("#franjas_elegibles").checked=false; $("#franjas-wrap").classList.add("oculto");
@@ -191,7 +228,7 @@ async function cargar(){
 
 function editar(a){
   $("#edit-id").value=a.Id; $("#titulo_es").value=a.titulo_es||"";
-  $("#texto_es").value=a.texto_es||""; $("#foto").value=a.foto||""; $("#estado").value=a.estado||"tentativa";
+  $("#texto_es").value=a.texto_es||""; mostrarFoto(a.foto||""); $("#foto-estado").textContent=""; $("#estado").value=a.estado||"tentativa";
   $("#umbral").value=a.umbral??""; $("#plazas").value=a.plazas??"";
   $("#visible").checked=!!a.visible; $("#mostrar_contador").checked=!!a.mostrar_contador;
   $("#franjas_elegibles").checked=!!a.franjas_elegibles;
