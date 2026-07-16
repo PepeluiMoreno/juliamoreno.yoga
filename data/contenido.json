@@ -282,10 +282,10 @@
         "de": "Gruppe bestätigt! Begrenzte Plätze"
       },
       "tentativa": {
-        "es": "Actividad en formación",
-        "en": "Forming — register your interest",
-        "fr": "En cours de formation",
-        "de": "In Bildung"
+        "es": "En preparación",
+        "en": "In preparation",
+        "fr": "En préparation",
+        "de": "In Vorbereitung"
       },
       "form_nombre": {
         "es": "Tu nombre",
