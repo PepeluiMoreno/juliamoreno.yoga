@@ -96,8 +96,11 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       </div>
     </div>
 
-    <label>Franjas horarias propuestas</label>
-    <div class="franjas-grid" id="franjas-grid"></div>
+    <label class="check" style="margin-top:1.1rem"><input type="checkbox" id="franjas_elegibles"> Esta actividad tiene franjas horarias a elegir</label>
+    <div id="franjas-wrap" class="oculto">
+      <label>Franjas horarias propuestas</label>
+      <div class="franjas-grid" id="franjas-grid"></div>
+    </div>
 
     <div class="fila">
       <label class="check"><input type="checkbox" id="visible" checked> Visible en la web</label>
@@ -135,6 +138,11 @@ const $ = s => document.querySelector(s);
 $("#franjas-grid").innerHTML = FRANJAS.map(([k,v]) =>
   `<label class="franja-op"><input type="checkbox" value="${k}"> ${v}</label>`).join("");
 
+// Mostrar/ocultar franjas segun el checkbox de elegibles
+$("#franjas_elegibles").addEventListener("change", e=>{
+  $("#franjas-wrap").classList.toggle("oculto", !e.target.checked);
+});
+
 function aviso(msg, tipo){
   const a = $("#aviso"); a.textContent = msg; a.className = "aviso " + tipo;
   if(tipo==="ok") setTimeout(()=>{a.className="aviso";}, 4000);
@@ -152,6 +160,7 @@ function resetForm(){
   $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value="";
   $("#estado").value="tentativa"; $("#umbral").value=""; $("#plazas").value="";
   $("#visible").checked=true; $("#mostrar_contador").checked=true;
+  $("#franjas_elegibles").checked=false; $("#franjas-wrap").classList.add("oculto");
   marcarFranjas("");
   $("#form-titulo").textContent="Nueva actividad";
   $("#btn-guardar").textContent="Crear actividad";
@@ -182,6 +191,8 @@ function editar(a){
   $("#texto_es").value=a.texto_es||""; $("#estado").value=a.estado||"tentativa";
   $("#umbral").value=a.umbral??""; $("#plazas").value=a.plazas??"";
   $("#visible").checked=!!a.visible; $("#mostrar_contador").checked=!!a.mostrar_contador;
+  $("#franjas_elegibles").checked=!!a.franjas_elegibles;
+  $("#franjas-wrap").classList.toggle("oculto", !a.franjas_elegibles);
   marcarFranjas(a.franjas);
   $("#form-titulo").textContent="Editar: "+(a.titulo_es||"");
   $("#btn-guardar").textContent="Guardar cambios";
@@ -194,9 +205,12 @@ $("#btn-cancelar").onclick = resetForm;
 $("#btn-guardar").onclick = async ()=>{
   const titulo = $("#titulo_es").value.trim();
   if(!titulo){ aviso("El título es obligatorio.","error"); return; }
+  const elegible=$("#franjas_elegibles").checked;
   const datos = {
     titulo_es:titulo, texto_es:$("#texto_es").value.trim(),
-    estado:$("#estado").value, franjas:franjasSeleccionadas().join(","),
+    estado:$("#estado").value,
+    franjas: elegible ? franjasSeleccionadas().join(",") : "",
+    franjas_elegibles: elegible,
     visible:$("#visible").checked, mostrar_contador:$("#mostrar_contador").checked,
   };
   const um=$("#umbral").value, pl=$("#plazas").value;

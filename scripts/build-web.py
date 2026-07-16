@@ -56,6 +56,7 @@ def fecha_legible(iso, idioma):
 
 
 def seccion_actividades(data, idioma):
+    import json as _json
     a = data.get("actividades")
     if not a:
         return ""
@@ -78,68 +79,101 @@ def seccion_actividades(data, idioma):
         umbral = int(ln.get("umbral", 0) or 0)
         interes = int(ln.get("interesados", 0) or 0)
         aid = ln.get("id", "")
+        elegible = bool(ln.get("franjas_elegibles", False))
+        franjas = ln.get("franjas", []) if elegible else []
+        franjas_data = []
+        for fr in franjas:
+            fid = fr.get("id", "")
+            etiq = fr.get("etiqueta", {}).get(idioma) or fr.get("etiqueta", {}).get("es", fid)
+            franjas_data.append({"id": fid, "etiqueta": etiq})
+
         out.append('      <article class="clase">')
-        if ln.get("foto"):
-            out.append(f'        <img src="{ln["foto"]}" alt="{titulo}" style="border-radius:10px;margin-bottom:.8rem">')
-        # Badge de estado
+        out.append('        <div class="clase-cab">')
         if estado == "tentativa":
-            out.append(f'        <p class="badge badge-tent">{t("tentativa")}</p>')
+            out.append(f'          <p class="badge badge-tent">{t("tentativa")}</p>')
         elif estado == "confirmada":
-            out.append(f'        <p class="badge badge-conf">{t("confirmada")}</p>')
-        out.append(f'        <h3>{titulo}</h3>')
+            out.append(f'          <p class="badge badge-conf">{t("confirmada")}</p>')
+        else:
+            out.append('          <p class="badge badge-hueco">&nbsp;</p>')
+        out.append('        </div>')
+        out.append('        <div class="clase-cuerpo">')
+        if ln.get("foto"):
+            out.append(f'          <img src="{ln["foto"]}" alt="{titulo}" class="clase-foto">')
+        out.append(f'          <h3>{titulo}</h3>')
         if fecha:
-            out.append(f'        <p style="color:var(--mar);font-weight:700;margin-bottom:.4rem">{fecha}</p>')
-        out.append(f'        <p>{texto}</p>')
+            out.append(f'          <p class="clase-fecha">{fecha}</p>')
+        out.append(f'          <p class="clase-texto">{texto}</p>')
         if precio:
-            out.append(f'        <p style="font-weight:700;margin-bottom:.6rem">{precio} €</p>')
-        # Sondeo: contador (solo si va bien) + formulario "Me interesa"
+            out.append(f'          <p class="clase-precio">{precio} &euro;</p>')
+        if estado == "tentativa" and ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
+            faltan = umbral - interes
+            out.append(f'          <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
+        out.append('        </div>')
         if estado == "tentativa":
-            # "solo cuando va bien": mostrar si mostrar_contador y ya hay >=50% del umbral
-            if ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
-                faltan = umbral - interes
-                out.append(f'        <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
-            out.append(f'        <form class="interes" data-actividad="{aid}" onsubmit="enviarInteres(this); return false;">')
+            fr_json = _json.dumps(franjas_data, ensure_ascii=False).replace('"', "&quot;")
+            el = "1" if elegible else "0"
+            out.append(f'        <form class="interes clase-form" data-actividad="{aid}" data-elegible="{el}" data-franjas="{fr_json}" onsubmit="enviarInteres(this); return false;">')
             out.append(f'          <input type="text" name="nombre" placeholder="{t("form_nombre")}" required>')
             out.append(f'          <input type="text" name="contacto" placeholder="{t("form_contacto")}" required>')
-            # Franjas horarias (si la actividad las define)
-            franjas = ln.get("franjas", [])
-            if franjas:
-                out.append(f'          <fieldset class="franjas"><legend>{t("elige_franja")}</legend>')
-                cf = ln.get("conteo_franjas", {})
-                for fr in franjas:
-                    fid = fr.get("id", "")
-                    etiq = fr.get("etiqueta", {}).get(idioma) or fr.get("etiqueta", {}).get("es", fid)
-                    # --- Conteo de apuntados por franja: DESACTIVADO a peticion ---
-                    # Para volver a mostrarlo, descomentar el bloque siguiente.
-                    # El dato (cf) se sigue calculando desde las filas reales de
-                    # Interesados en desde_nocodb(), asi que basta descomentar.
-                    # n = int(cf.get(fid, 0) or 0)
-                    # if n == 1:
-                    #     etiq += f' <span class="franja-n">{t("franja_n_1").replace("{n}", str(n))}</span>'
-                    # elif n > 1:
-                    #     etiq += f' <span class="franja-n">{t("franja_n").replace("{n}", str(n))}</span>'
-                    out.append(f'            <label><input type="checkbox" name="franja" value="{fid}"> {etiq}</label>')
-                out.append('          </fieldset>')
             out.append(f'          <button type="submit" class="btn">{t("interesa")}</button>')
             out.append(f'          <p class="consent">{t("form_consent")}</p>')
             out.append(f'          <p class="ok" hidden>{t("form_ok")}</p>')
             out.append('        </form>')
+        else:
+            out.append('        <div class="clase-form-hueco"></div>')
         out.append('      </article>')
     out.append('    </div>')
-    # Script de envío (una sola vez por página; idempotente al regenerar)
-    out.append('''    <script>
-    async function enviarInteres(f){
-      const fr=[...f.querySelectorAll('input[name=franja]:checked')].map(x=>x.value);
-      const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:fr,idioma:document.documentElement.lang};
-      try{
-        await fetch('https://api.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-        f.querySelector('.ok').hidden=false;
-        f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
-      }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}
-      return false;
-    }
-    </script>''')
+    out.append('    <div class="modal-franjas" id="modalFranjas" hidden>')
+    out.append('      <div class="modal-caja">')
+    out.append(f'        <h3>{t("elige_franja")}</h3>')
+    out.append('        <div class="modal-franjas-lista" id="modalLista"></div>')
+    out.append('        <div class="modal-botones">')
+    out.append(f'          <button type="button" class="btn btn-sec" id="modalCancelar">{t("modal_cancelar")}</button>')
+    out.append(f'          <button type="button" class="btn" id="modalConfirmar">{t("modal_confirmar")}</button>')
+    out.append('        </div>')
+    out.append('      </div>')
+    out.append('    </div>')
+    out.append(JS_INTERES)
     return "\n".join(out)
+
+
+JS_INTERES = """    <script>
+    (function(){
+      const modal=document.getElementById('modalFranjas');
+      const lista=document.getElementById('modalLista');
+      let formActivo=null;
+      window.enviarInteres=function(f){
+        const elegible=f.dataset.elegible==='1';
+        if(elegible){
+          formActivo=f;
+          let fr=[];
+          try{fr=JSON.parse(f.dataset.franjas.replace(/&quot;/g,'"'));}catch(e){}
+          lista.innerHTML=fr.map(function(x){return '<label class="modal-franja"><input type="checkbox" value="'+x.id+'"> '+x.etiqueta+'</label>';}).join('');
+          modal.hidden=false;
+        }else{
+          enviar(f,[]);
+        }
+        return false;
+      };
+      async function enviar(f,franjas){
+        const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:franjas,idioma:document.documentElement.lang};
+        try{
+          await fetch('https://api.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+          f.querySelector('.ok').hidden=false;
+          f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
+        }catch(e){alert('No se pudo enviar, int\u00e9ntalo m\u00e1s tarde.');}
+      }
+      const bc=document.getElementById('modalConfirmar');
+      if(bc)bc.onclick=function(){
+        const fr=[].slice.call(lista.querySelectorAll('input:checked')).map(function(x){return x.value;});
+        modal.hidden=true;
+        if(formActivo){enviar(formActivo,fr);formActivo=null;}
+      };
+      const bx=document.getElementById('modalCancelar');
+      if(bx)bx.onclick=function(){modal.hidden=true;formActivo=null;};
+      if(modal)modal.addEventListener('click',function(e){if(e.target===modal){modal.hidden=true;formActivo=null;}});
+    })();
+    </script>"""
 
 
 def esc(t):
@@ -306,6 +340,7 @@ def desde_nocodb(data):
             "conteo_franjas": conteo_franjas.get((fila.get("id") or "").strip(), {}),
             "plazas": fila.get("plazas") or 0, "foto": fila.get("foto") or "",
             "mostrar_contador": bool(fila.get("mostrar_contador")),
+            "franjas_elegibles": bool(fila.get("franjas_elegibles")),
             "visible": bool(fila.get("visible")),
             "titulo": idi("titulo"), "texto": idi("texto"), "franjas": franjas,
         })

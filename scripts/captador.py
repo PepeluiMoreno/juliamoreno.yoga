@@ -128,6 +128,7 @@ class H(BaseHTTPRequestHandler):
                         "estado": r.get("estado"), "umbral": r.get("umbral"),
                         "plazas": r.get("plazas"), "franjas": r.get("franjas"),
                         "visible": r.get("visible"), "mostrar_contador": r.get("mostrar_contador"),
+                        "franjas_elegibles": r.get("franjas_elegibles"),
                         "interesados": r.get("interesados"),
                     })
                 return self._json({"ok": True, "actividades": out})
@@ -152,7 +153,7 @@ class H(BaseHTTPRequestHandler):
                 if c in body and body[c] not in (None, ""):
                     try: fila[c] = int(body[c])
                     except: pass
-            for c in ("visible", "mostrar_contador"):
+            for c in ("visible", "mostrar_contador", "franjas_elegibles"):
                 if c in body:
                     fila[c] = bool(body[c])
             # Al cambiar el texto ES, vaciar es_hash para forzar re-traducción
@@ -226,6 +227,7 @@ class H(BaseHTTPRequestHandler):
                     except: pass
             fila["visible"] = bool(body.get("visible", True))
             fila["mostrar_contador"] = bool(body.get("mostrar_contador", True))
+            fila["franjas_elegibles"] = bool(body.get("franjas_elegibles", False))
             try:
                 guarda("Actividades", fila)
                 return self._json({"ok": True, "id": fila["id"]})

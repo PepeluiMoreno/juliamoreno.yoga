@@ -189,6 +189,7 @@
         "plazas": 12,
         "foto": "",
         "mostrar_contador": true,
+        "franjas_elegibles": true,
         "visible": true,
         "titulo": {
           "es": "Taller de respiración consciente",
@@ -234,6 +235,31 @@
             }
           }
         ]
+      },
+      {
+        "id": "taller-de-yoga-para-principiantes",
+        "estado": "tentativa",
+        "umbral": 0,
+        "interesados": 0,
+        "conteo_franjas": {},
+        "plazas": 0,
+        "foto": "",
+        "mostrar_contador": true,
+        "franjas_elegibles": false,
+        "visible": true,
+        "titulo": {
+          "es": "Taller de yoga para principiantes",
+          "en": "Yoga workshop for beginners",
+          "fr": "Atelier de yoga pour débutants",
+          "de": "Yoga-Workshop für Anfänger"
+        },
+        "texto": {
+          "es": "Taller pensado para los que se aproximan al yoga por romiera vez",
+          "en": "A workshop designed for those trying yoga for the first time",
+          "fr": "Atelier destiné à ceux qui s'initient au yoga pour la première fois",
+          "de": "Ein Workshop für alle, die zum ersten Mal mit Yoga in Berührung kommen"
+        },
+        "franjas": []
       }
     ],
     "ui": {
@@ -314,6 +340,18 @@
         "en": "· {n} interested",
         "fr": "· {n} intéressés",
         "de": "· {n} Interessenten"
+      },
+      "modal_cancelar": {
+        "es": "Cancelar",
+        "en": "Cancel",
+        "fr": "Annuler",
+        "de": "Abbrechen"
+      },
+      "modal_confirmar": {
+        "es": "Confirmar",
+        "en": "Confirm",
+        "fr": "Confirmer",
+        "de": "Bestätigen"
       }
     },
     "_esquema_linea": "id, estado(tentativa|confirmada|completada), umbral(int), interesados(int, contado de Interesados), plazas(int opc), foto(url opc), mostrar_contador(bool), visible(bool), titulo_{es,en,fr,de}, texto_{es,en,fr,de}, franjas: lista de {id, tipo(generica|fecha), etiqueta_{es,en,fr,de}}. Para tipo=fecha la etiqueta suele ser la misma en los 4 idiomas (fecha/hora); para generica se traduce."

@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Mulish:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=f822ffdd">
+<link rel="stylesheet" href="/assets/style.css?v=4eac6e40">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -125,35 +125,85 @@
     <h2>Actividades y talleres</h2>
     <div class="clases-grid">
       <article class="clase">
-        <p class="badge badge-tent">Actividad en formación</p>
-        <h3>Taller de respiración consciente</h3>
-        <p>Una mañana dedicada a la respiración como herramienta de calma y energía.</p>
-        <p class="contador">Faltan 4 personas para que se monte</p>
-        <form class="interes" data-actividad="taller-respiracion" onsubmit="enviarInteres(this); return false;">
+        <div class="clase-cab">
+          <p class="badge badge-tent">Actividad en formación</p>
+        </div>
+        <div class="clase-cuerpo">
+          <h3>Taller de respiración consciente</h3>
+          <p class="clase-texto">Una mañana dedicada a la respiración como herramienta de calma y energía.</p>
+          <p class="contador">Faltan 4 personas para que se monte</p>
+        </div>
+        <form class="interes clase-form" data-actividad="taller-respiracion" data-elegible="1" data-franjas="[{&quot;id&quot;: &quot;sab_manana&quot;, &quot;etiqueta&quot;: &quot;Sábados por la mañana&quot;}, {&quot;id&quot;: &quot;vie_tarde&quot;, &quot;etiqueta&quot;: &quot;Viernes por la tarde&quot;}, {&quot;id&quot;: &quot;f_2026_03_21&quot;, &quot;etiqueta&quot;: &quot;Sábado 21 de marzo, 10:00&quot;}]" onsubmit="enviarInteres(this); return false;">
           <input type="text" name="nombre" placeholder="Tu nombre" required>
           <input type="text" name="contacto" placeholder="WhatsApp o email" required>
-          <fieldset class="franjas"><legend>¿Cuándo te vendría bien? (marca las que puedas)</legend>
-            <label><input type="checkbox" name="franja" value="sab_manana"> Sábados por la mañana</label>
-            <label><input type="checkbox" name="franja" value="vie_tarde"> Viernes por la tarde</label>
-            <label><input type="checkbox" name="franja" value="f_2026_03_21"> Sábado 21 de marzo, 10:00</label>
-          </fieldset>
+          <button type="submit" class="btn">Me interesa</button>
+          <p class="consent">Al enviar aceptas que Julia Moreno guarde tu nombre y contacto para avisarte sobre esta actividad.</p>
+          <p class="ok" hidden>¡Gracias! Te avisaré en cuanto se monte el grupo.</p>
+        </form>
+      </article>
+      <article class="clase">
+        <div class="clase-cab">
+          <p class="badge badge-tent">Actividad en formación</p>
+        </div>
+        <div class="clase-cuerpo">
+          <h3>Taller de yoga para principiantes</h3>
+          <p class="clase-texto">Taller pensado para los que se aproximan al yoga por romiera vez</p>
+        </div>
+        <form class="interes clase-form" data-actividad="taller-de-yoga-para-principiantes" data-elegible="0" data-franjas="[]" onsubmit="enviarInteres(this); return false;">
+          <input type="text" name="nombre" placeholder="Tu nombre" required>
+          <input type="text" name="contacto" placeholder="WhatsApp o email" required>
           <button type="submit" class="btn">Me interesa</button>
           <p class="consent">Al enviar aceptas que Julia Moreno guarde tu nombre y contacto para avisarte sobre esta actividad.</p>
           <p class="ok" hidden>¡Gracias! Te avisaré en cuanto se monte el grupo.</p>
         </form>
       </article>
     </div>
+    <div class="modal-franjas" id="modalFranjas" hidden>
+      <div class="modal-caja">
+        <h3>¿Cuándo te vendría bien? (marca las que puedas)</h3>
+        <div class="modal-franjas-lista" id="modalLista"></div>
+        <div class="modal-botones">
+          <button type="button" class="btn btn-sec" id="modalCancelar">Cancelar</button>
+          <button type="button" class="btn" id="modalConfirmar">Confirmar</button>
+        </div>
+      </div>
+    </div>
     <script>
-    async function enviarInteres(f){
-      const fr=[...f.querySelectorAll('input[name=franja]:checked')].map(x=>x.value);
-      const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:fr,idioma:document.documentElement.lang};
-      try{
-        await fetch('https://api.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-        f.querySelector('.ok').hidden=false;
-        f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
-      }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}
-      return false;
-    }
+    (function(){
+      const modal=document.getElementById('modalFranjas');
+      const lista=document.getElementById('modalLista');
+      let formActivo=null;
+      window.enviarInteres=function(f){
+        const elegible=f.dataset.elegible==='1';
+        if(elegible){
+          formActivo=f;
+          let fr=[];
+          try{fr=JSON.parse(f.dataset.franjas.replace(/&quot;/g,'"'));}catch(e){}
+          lista.innerHTML=fr.map(function(x){return '<label class="modal-franja"><input type="checkbox" value="'+x.id+'"> '+x.etiqueta+'</label>';}).join('');
+          modal.hidden=false;
+        }else{
+          enviar(f,[]);
+        }
+        return false;
+      };
+      async function enviar(f,franjas){
+        const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:franjas,idioma:document.documentElement.lang};
+        try{
+          await fetch('https://api.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+          f.querySelector('.ok').hidden=false;
+          f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
+        }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}
+      }
+      const bc=document.getElementById('modalConfirmar');
+      if(bc)bc.onclick=function(){
+        const fr=[].slice.call(lista.querySelectorAll('input:checked')).map(function(x){return x.value;});
+        modal.hidden=true;
+        if(formActivo){enviar(formActivo,fr);formActivo=null;}
+      };
+      const bx=document.getElementById('modalCancelar');
+      if(bx)bx.onclick=function(){modal.hidden=true;formActivo=null;};
+      if(modal)modal.addEventListener('click',function(e){if(e.target===modal){modal.hidden=true;formActivo=null;}});
+    })();
     </script>
     <!-- ACTIVIDADES:FIN -->
   </div>
