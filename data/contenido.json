@@ -187,15 +187,15 @@
         "visible": true,
         "titulo": {
           "es": "Taller de respiración consciente",
-          "en": "Taller de respiración consciente",
-          "fr": "Taller de respiración consciente",
-          "de": "Taller de respiración consciente"
+          "en": "Conscious breathing workshop",
+          "fr": "Atelier de respiration consciente",
+          "de": "Workshop für bewusstes Atmen"
         },
         "texto": {
           "es": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
-          "en": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
-          "fr": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
-          "de": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien."
+          "en": "A morning devoted to the breath as a tool for calm and energy. Pranayama techniques adapted with scientific rigour, suitable for all levels. If we gather a group, we'll make it happen: tell me when suits you.",
+          "fr": "Une matinée consacrée à la respiration comme outil de calme et d'énergie. Des techniques de pranayama adaptées avec rigueur scientifique, accessibles à tous les niveaux. Si nous réunissons un groupe, nous l'organisons : dites-moi quand cela vous conviendrait.",
+          "de": "Ein Vormittag rund um die Atmung als Werkzeug für Ruhe und Energie. Pranayama-Techniken, wissenschaftlich fundiert angepasst und für alle Niveaus geeignet. Wenn eine Gruppe zusammenkommt, machen wir es möglich: Sag mir, wann es dir passt."
         },
         "franjas": [
           {
