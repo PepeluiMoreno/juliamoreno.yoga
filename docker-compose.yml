@@ -109,38 +109,6 @@ services:
       - traefik.http.routers.jmy-lm.tls.certresolver=letsencrypt
       - traefik.http.services.jmy-lm.loadbalancer.server.port=9000
 
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: jmy-n8n
-    restart: unless-stopped
-    profiles: [negocio, todo]
-    environment:
-      DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: pg
-      DB_POSTGRESDB_USER: julia
-      DB_POSTGRESDB_PASSWORD: ${PG_PASSWORD}
-      DB_POSTGRESDB_DATABASE: n8n
-      N8N_ENCRYPTION_KEY: ${N8N_KEY}
-      N8N_HOST: auto.juliamoreno.yoga
-      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
-      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
-      NOCODB_URL: http://nocodb:8080
-      NOCODB_TOKEN: ${NOCODB_TOKEN:-}
-      NOCODB_BASE: ${NOCODB_BASE:-Yoga}
-      WEBHOOK_URL: https://auto.juliamoreno.yoga/
-      GENERIC_TIMEZONE: Europe/Madrid
-    volumes:
-      - n8ndata:/home/node/.n8n
-    depends_on: [pg]
-    networks: [interna, traefik_public]
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik_public
-      - traefik.http.routers.jmy-n8n.rule=Host(`auto.juliamoreno.yoga`)
-      - traefik.http.routers.jmy-n8n.entrypoints=websecure
-      - traefik.http.routers.jmy-n8n.tls.certresolver=letsencrypt
-      - traefik.http.services.jmy-n8n.loadbalancer.server.port=5678
-
   nocodb:
     image: nocodb/nocodb:latest
     container_name: jmy-nocodb
@@ -255,6 +223,31 @@ services:
       - traefik.http.routers.jmy-kuma.entrypoints=websecure
       - traefik.http.routers.jmy-kuma.tls.certresolver=letsencrypt
       - traefik.http.services.jmy-kuma.loadbalancer.server.port=3001
+
+  captador:
+    image: python:3.12-alpine
+    container_name: jmy-captador
+    restart: unless-stopped
+    profiles: [negocio, todo]
+    working_dir: /app
+    command: python3 scripts/captador.py
+    environment:
+      NOCODB_URL: http://nocodb:8080
+      NOCODB_TOKEN: ${NOCODB_TOKEN}
+      NOCODB_BASE: ${NOCODB_BASE:-Yoga}
+      CAPTADOR_ORIGIN: https://juliamoreno.yoga
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./data:/app/data:ro
+    depends_on: [nocodb]
+    networks: [interna, traefik_public]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik_public
+      - traefik.http.routers.jmy-cap.rule=Host(`api.juliamoreno.yoga`)
+      - traefik.http.routers.jmy-cap.entrypoints=websecure
+      - traefik.http.routers.jmy-cap.tls.certresolver=letsencrypt
+      - traefik.http.services.jmy-cap.loadbalancer.server.port=8090
 
 volumes:
   pgdata:

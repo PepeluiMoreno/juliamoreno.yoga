@@ -126,8 +126,8 @@
     <div class="clases-grid">
       <article class="clase">
         <p class="badge badge-tent">In Bildung</p>
-        <h3>[DE] Taller de respiración consciente</h3>
-        <p>[DE] Una mañana dedicada a la respiración como herramienta de calma y energía.</p>
+        <h3>Workshop zum bewussten Atmen</h3>
+        <p>Ein Vormittag, der ganz der Atmung als Mittel zur Beruhigung und Energiegewinnung gewidmet ist.</p>
         <form class="interes" data-actividad="taller-respiracion" onsubmit="enviarInteres(this); return false;">
           <input type="text" name="nombre" placeholder="Ihr Name" required>
           <input type="text" name="contacto" placeholder="WhatsApp oder E-Mail" required>
@@ -147,7 +147,7 @@
       const fr=[...f.querySelectorAll('input[name=franja]:checked')].map(x=>x.value);
       const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:fr,idioma:document.documentElement.lang};
       try{
-        await fetch('https://auto.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        await fetch('https://api.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         f.querySelector('.ok').hidden=false;
         f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
       }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}
@@ -249,7 +249,7 @@
     async function enviarContacto(f){
       const d={nombre:f.nombre.value,telefono:f.telefono.value,asunto:f.asunto.value,idioma:document.documentElement.lang};
       try{
-        await fetch('https://auto.juliamoreno.yoga/webhook/contacto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        await fetch('https://api.juliamoreno.yoga/webhook/contacto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
         f.querySelector('.ok').hidden=false;
         f.nombre.disabled=f.telefono.disabled=f.asunto.disabled=f.querySelector('button').disabled=true;
       }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}

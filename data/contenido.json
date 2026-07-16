@@ -180,9 +180,10 @@
         "id": "taller-respiracion",
         "estado": "tentativa",
         "umbral": 8,
-        "interesados": 2,
+        "interesados": 3,
         "conteo_franjas": {
-          "sab_manana": 2
+          "sab_manana": 3,
+          "f_2026_03_21": 1
         },
         "plazas": 12,
         "foto": "",
@@ -190,15 +191,15 @@
         "visible": true,
         "titulo": {
           "es": "Taller de respiración consciente",
-          "en": "[EN-GB] Taller de respiración consciente",
-          "fr": "[FR] Taller de respiración consciente",
-          "de": "[DE] Taller de respiración consciente"
+          "en": "Mindful Breathing Workshop",
+          "fr": "Atelier de respiration consciente",
+          "de": "Workshop zum bewussten Atmen"
         },
         "texto": {
           "es": "Una mañana dedicada a la respiración como herramienta de calma y energía.",
-          "en": "[EN-GB] Una mañana dedicada a la respiración como herramienta de calma y energía.",
-          "fr": "[FR] Una mañana dedicada a la respiración como herramienta de calma y energía.",
-          "de": "[DE] Una mañana dedicada a la respiración como herramienta de calma y energía."
+          "en": "A morning devoted to breathing as a means of finding calm and energy.",
+          "fr": "Une matinée consacrée à la respiration, source de calme et d'énergie.",
+          "de": "Ein Vormittag, der ganz der Atmung als Mittel zur Beruhigung und Energiegewinnung gewidmet ist."
         },
         "franjas": [
           {
