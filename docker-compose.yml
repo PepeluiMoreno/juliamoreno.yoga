@@ -22,6 +22,7 @@ services:
     networks: [traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-web.rule=Host(`juliamoreno.yoga`) || Host(`www.juliamoreno.yoga`)
       - traefik.http.routers.jmy-web.entrypoints=websecure
       - traefik.http.routers.jmy-web.tls.certresolver=letsencrypt
@@ -59,6 +60,7 @@ services:
     networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-umami.rule=Host(`stats.juliamoreno.yoga`)
       - traefik.http.routers.jmy-umami.entrypoints=websecure
       - traefik.http.routers.jmy-umami.tls.certresolver=letsencrypt
@@ -78,6 +80,7 @@ services:
     networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-cal.rule=Host(`reservas.juliamoreno.yoga`)
       - traefik.http.routers.jmy-cal.entrypoints=websecure
       - traefik.http.routers.jmy-cal.tls.certresolver=letsencrypt
@@ -100,6 +103,7 @@ services:
     networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-lm.rule=Host(`correo.juliamoreno.yoga`)
       - traefik.http.routers.jmy-lm.entrypoints=websecure
       - traefik.http.routers.jmy-lm.tls.certresolver=letsencrypt
@@ -131,6 +135,7 @@ services:
     networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-n8n.rule=Host(`auto.juliamoreno.yoga`)
       - traefik.http.routers.jmy-n8n.entrypoints=websecure
       - traefik.http.routers.jmy-n8n.tls.certresolver=letsencrypt
@@ -152,6 +157,7 @@ services:
     networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-nc.rule=Host(`datos.juliamoreno.yoga`)
       - traefik.http.routers.jmy-nc.entrypoints=websecure
       - traefik.http.routers.jmy-nc.tls.certresolver=letsencrypt
@@ -193,6 +199,7 @@ services:
     networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-inv.rule=Host(`facturas.juliamoreno.yoga`)
       - traefik.http.routers.jmy-inv.entrypoints=websecure
       - traefik.http.routers.jmy-inv.tls.certresolver=letsencrypt
@@ -226,6 +233,7 @@ services:
     networks: [interna, traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-postiz.rule=Host(`social.juliamoreno.yoga`)
       - traefik.http.routers.jmy-postiz.entrypoints=websecure
       - traefik.http.routers.jmy-postiz.tls.certresolver=letsencrypt
@@ -241,6 +249,7 @@ services:
     networks: [traefik_public]
     labels:
       - traefik.enable=true
+      - traefik.docker.network=traefik_public
       - traefik.http.routers.jmy-kuma.rule=Host(`estado.juliamoreno.yoga`)
       - traefik.http.routers.jmy-kuma.entrypoints=websecure
       - traefik.http.routers.jmy-kuma.tls.certresolver=letsencrypt
