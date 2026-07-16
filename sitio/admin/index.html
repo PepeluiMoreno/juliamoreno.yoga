@@ -220,6 +220,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <div class="agenda-cal">
         <div class="agenda-barra">
           <button class="btn btn-sec" id="btnNuevaEntrada">+ Nueva clase o sesión</button>
+          <button class="btn btn-sec" id="btnPrepararMes">Preparar mes desde plantillas</button>
           <button class="btn btn-sec" id="btnCopiarMes">Copiar al mes siguiente</button>
         </div>
         <div id="calendario"></div>
@@ -557,7 +558,7 @@ async function cargarAgenda(){
     if(!r.ok) return;
     const d = await r.json();
     calendario.removeAllEvents();
-    (d.agenda||[]).forEach(e=> calendario.addEvent(entradaAEvento(e)));
+    (d.agenda||[]).filter(e=> !e.es_plantilla).forEach(e=> calendario.addEvent(entradaAEvento(e)));
   }catch(err){}
 }
 
@@ -587,6 +588,23 @@ function cerrarEditorAgenda(){
   $("#agEditorVacio").classList.remove("oculto");
 }
 $("#btnNuevaEntrada").addEventListener("click", ()=> abrirModalAgenda(null));
+
+$("#btnPrepararMes").addEventListener("click", async ()=>{
+  if(!calendario) return;
+  const f = calendario.getDate();
+  const mes = `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,"0")}`;
+  const nombreMes = f.toLocaleDateString("es",{month:"long",year:"numeric"});
+  if(!confirm(`¿Generar las clases de ${nombreMes} a partir de las plantillas? Podrás ajustar o borrar lo que sobre después.`)) return;
+  try{
+    const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/preparar-mes", {
+      method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({mes})});
+    const d = await r.json();
+    if(d.ok){ alert(`${d.generadas} clases generadas para ${nombreMes}.`); cargarAgenda(); }
+    else alert(d.error||"No se pudo preparar el mes.");
+  }catch(e){ alert("Error de conexión."); }
+});
+
 
 $("#btnCopiarMes").addEventListener("click", async ()=>{
   if(!calendario) return;

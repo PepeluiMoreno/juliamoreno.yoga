@@ -45,6 +45,33 @@ def _tid(tabla):
     return _TABLAS[tabla]
 
 
+def _preparar_mes_desde_plantillas(mes_ym):
+    """Estampa todas las plantillas sobre el mes indicado (YYYY-MM),
+    generando las ocurrencias concretas de cada una. Devuelve cuántas."""
+    y, m = map(int, mes_ym.split("-"))
+    filas = lee("Agenda")
+    plantillas = [f for f in filas if f.get("es_plantilla")]
+    if not plantillas:
+        return 0
+    total = 0
+    for p in plantillas:
+        base = {
+            "titulo": p.get("titulo", ""),
+            "actividad_id": p.get("actividad_id", ""),
+            "dias_semana": p.get("dias_semana", ""),
+            "hora_inicio": p.get("hora_inicio", ""),
+            "duracion_min": p.get("duracion_min"),
+            "lugar": p.get("lugar", ""),
+            "color": p.get("color", ""),
+            "visible_web": p.get("visible_web", False),
+        }
+        ocs = _materializa_mes(base, anio=y, mes=m)
+        if ocs:
+            guarda_varios("Agenda", ocs)
+            total += len(ocs)
+    return total
+
+
 def _copia_mes(desde_ym, hasta_ym):
     """Copia las ocurrencias del mes origen (YYYY-MM) al mes destino,
     preservando el patrón semanal: cada clase cae en el mismo día de la
@@ -111,10 +138,11 @@ def guarda_varios(tabla, filas):
     nc.api(url, tok, "POST", f"/api/v2/tables/{_tid(tabla)}/records", filas)
 
 
-def _materializa_mes(base):
+def _materializa_mes(base, anio=None, mes=None):
     """Convierte una definición recurrente (dias_semana + horas) en ocurrencias
-    puntuales concretas, una por cada día correspondiente desde la fecha de
-    inicio (o hoy) hasta fin del mes en curso. Todas comparten serie_id."""
+    puntuales concretas, una por cada día correspondiente. Si se pasa anio/mes,
+    genera para ese mes completo; si no, desde hoy (o vigencia_desde) hasta fin
+    del mes en curso. Todas comparten serie_id."""
     import calendar as _cal
     import uuid as _uuid
     dianum = {"lun": 0, "mar": 1, "mie": 2, "jue": 3, "vie": 4, "sab": 5, "dom": 6}
@@ -123,13 +151,16 @@ def _materializa_mes(base):
     if not dias:
         return []
     hoy = datetime.date.today()
-    desde_s = (base.get("vigencia_desde") or "")[:10]
-    try:
-        desde = datetime.date.fromisoformat(desde_s) if desde_s else hoy
-    except Exception:
-        desde = hoy
-    if desde < hoy:
-        desde = hoy
+    if anio and mes:
+        desde = datetime.date(anio, mes, 1)
+    else:
+        desde_s = (base.get("vigencia_desde") or "")[:10]
+        try:
+            desde = datetime.date.fromisoformat(desde_s) if desde_s else hoy
+        except Exception:
+            desde = hoy
+        if desde < hoy:
+            desde = hoy
     ndias = _cal.monthrange(desde.year, desde.month)[1]
     fin = datetime.date(desde.year, desde.month, ndias)
     serie = _uuid.uuid4().hex[:12]
@@ -248,6 +279,8 @@ def _fila_agenda(body, con_id):
             fila[c] = v if v else None
     if "visible_web" in body:
         fila["visible_web"] = bool(body["visible_web"])
+    if "es_plantilla" in body:
+        fila["es_plantilla"] = bool(body["es_plantilla"])
     return fila
 
 
@@ -439,7 +472,7 @@ class H(BaseHTTPRequestHandler):
                         "dias_semana": r.get("dias_semana"), "fecha": r.get("fecha"),
                         "vigencia_desde": r.get("vigencia_desde"), "vigencia_hasta": r.get("vigencia_hasta"),
                         "hora_inicio": r.get("hora_inicio"), "duracion_min": r.get("duracion_min"),
-                        "serie_id": r.get("serie_id"),
+                        "serie_id": r.get("serie_id"), "es_plantilla": r.get("es_plantilla"),
                         "lugar": r.get("lugar"), "color": r.get("color"),
                         "visible_web": r.get("visible_web"),
                     })
@@ -608,6 +641,19 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "id": fila["id"]})
             except Exception as e:
                 return self._json({"error": f"no se pudo crear: {e}"}, 502)
+
+        if self.path == "/admin/api/agenda/preparar-mes":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            mes = limpio(body.get("mes"), 7)  # YYYY-MM
+            if len(mes) != 7:
+                return self._json({"error": "falta el mes (YYYY-MM)"}, 422)
+            try:
+                n = _preparar_mes_desde_plantillas(mes)
+                dispara_rebuild()
+                return self._json({"ok": True, "generadas": n})
+            except Exception as e:
+                return self._json({"error": f"no se pudo preparar: {e}"}, 502)
 
         if self.path == "/admin/api/agenda/copiar-mes":
             if not self._admin_user():
