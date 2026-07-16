@@ -1,0 +1,10 @@
+# Copie este fichero a users_database.yml (SIN .example) y sustituya el hash
+# por el que genere con:
+#   docker run --rm authelia/authelia:4.38 authelia crypto hash generate argon2 --password 'su_contraseña'
+users:
+  julia:
+    displayname: "Julia Moreno"
+    password: "PEGUE_AQUI_EL_HASH_ARGON2"
+    email: julia@juliamoreno.yoga
+    groups:
+      - admins

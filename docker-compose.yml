@@ -27,6 +27,13 @@ services:
       - traefik.http.routers.jmy-web.entrypoints=websecure
       - traefik.http.routers.jmy-web.tls.certresolver=letsencrypt
       - traefik.http.services.jmy-web.loadbalancer.server.port=80
+      # Router adicional, con más prioridad, para proteger /admin con Authelia
+      - traefik.http.routers.jmy-admin.rule=Host(`juliamoreno.yoga`) && PathPrefix(`/admin`)
+      - traefik.http.routers.jmy-admin.entrypoints=websecure
+      - traefik.http.routers.jmy-admin.tls.certresolver=letsencrypt
+      - traefik.http.routers.jmy-admin.priority=10
+      - traefik.http.routers.jmy-admin.middlewares=jmy-authelia
+      - traefik.http.routers.jmy-admin.service=jmy-web
       # canónico: todo -> https://juliamoreno.yoga
       - traefik.http.middlewares.jmy-canon.redirectregex.regex=^https?://www\.juliamoreno\.yoga/(.*)
       - traefik.http.middlewares.jmy-canon.redirectregex.replacement=https://juliamoreno.yoga/$${1}

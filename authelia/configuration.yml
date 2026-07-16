@@ -1,0 +1,57 @@
+theme: light
+
+server:
+  address: 'tcp://:9091'
+
+log:
+  level: info
+
+totp:
+  disable: false
+  issuer: juliamoreno.yoga
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2
+      argon2:
+        variant: argon2id
+        iterations: 3
+        memory: 65536
+        parallelism: 4
+        key_length: 32
+        salt_length: 16
+
+access_control:
+  default_policy: deny
+  rules:
+    - domain: juliamoreno.yoga
+      resources:
+        - '^/admin.*$'
+      policy: one_factor
+
+session:
+  name: authelia_session
+  same_site: lax
+  expiration: 12h
+  inactivity: 1h
+  remember_me: 1M
+  cookies:
+    - domain: juliamoreno.yoga
+      authelia_url: 'https://auth.juliamoreno.yoga'
+      default_redirection_url: 'https://juliamoreno.yoga/admin'
+
+regulation:
+  max_retries: 5
+  find_time: 2m
+  ban_time: 15m
+
+storage:
+  encryption_key: '${STORAGE_ENCRYPTION_KEY}'
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  filesystem:
+    filename: /config/notification.txt
