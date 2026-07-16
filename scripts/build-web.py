@@ -216,7 +216,16 @@ def desde_nocodb(data):
         for ln in data["horarios"]["lineas"]:
             if ln["id"] == fila.get("id"):
                 ln["visible"] = bool(fila.get("visible"))
-    # Actividades: la lista entera viene de NocoDB
+    # Actividades: la lista entera viene de NocoDB.
+    # INTEGRIDAD: el nº de interesados NO se lee del campo almacenado en
+    # Actividades (redundante y desincronizable); se CUENTA de las filas
+    # reales de la tabla Interesados por actividad.
+    conteo = {}
+    if "Interesados" in ids:
+        for fila in nc.records(url, tok, ids["Interesados"], limit=1000):
+            a = (fila.get("actividad") or "").strip()
+            if a:
+                conteo[a] = conteo.get(a, 0) + 1
     nuevas = []
     for fila in nc.records(url, tok, ids["Actividades"]):
         try:
@@ -228,7 +237,7 @@ def desde_nocodb(data):
         nuevas.append({
             "id": fila.get("id"), "estado": fila.get("estado") or "tentativa",
             "umbral": fila.get("umbral") or 0,
-            "interesados": fila.get("interesados") or 0,
+            "interesados": conteo.get((fila.get("id") or "").strip(), 0),
             "plazas": fila.get("plazas") or 0, "foto": fila.get("foto") or "",
             "mostrar_contador": bool(fila.get("mostrar_contador")),
             "visible": bool(fila.get("visible")),

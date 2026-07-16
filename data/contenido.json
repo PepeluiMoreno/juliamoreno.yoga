@@ -180,7 +180,7 @@
         "id": "taller-respiracion",
         "estado": "tentativa",
         "umbral": 8,
-        "interesados": 0,
+        "interesados": 2,
         "plazas": 12,
         "foto": "",
         "mostrar_contador": true,
