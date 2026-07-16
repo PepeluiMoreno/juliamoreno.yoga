@@ -60,6 +60,29 @@ def lee(tabla):
     return nc.records(url, tok, _tid(tabla))
 
 
+def borra(tabla, rid):
+    url, tok, _ = nc.cfg()
+    nc.api(url, tok, "DELETE", f"/api/v2/tables/{_tid(tabla)}/records", [{"Id": rid}])
+
+
+def _fila_agenda(body, con_id):
+    """Construye la fila de Agenda desde el cuerpo de la petición, saneando."""
+    fila = {}
+    if con_id:
+        fila["Id"] = body["Id"]
+    for c in ("titulo", "actividad_id", "tipo", "dias_semana", "lugar", "color",
+              "hora_inicio", "hora_fin"):
+        if c in body:
+            fila[c] = limpio(body[c], 200)
+    for c in ("fecha", "vigencia_desde", "vigencia_hasta"):
+        if c in body:
+            v = limpio(body[c], 20)
+            fila[c] = v if v else None
+    if "visible_web" in body:
+        fila["visible_web"] = bool(body["visible_web"])
+    return fila
+
+
 def limpio(v, n=200):
     return str(v or "").strip()[:n]
 
@@ -224,6 +247,26 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "actividades": out})
             except Exception as e:
                 return self._json({"error": f"no se pudo leer: {e}"}, 502)
+
+        if self.path == "/admin/api/agenda":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            try:
+                filas = lee("Agenda")
+                out = []
+                for r in filas:
+                    out.append({
+                        "Id": r.get("Id"), "titulo": r.get("titulo"),
+                        "actividad_id": r.get("actividad_id"), "tipo": r.get("tipo"),
+                        "dias_semana": r.get("dias_semana"), "fecha": r.get("fecha"),
+                        "vigencia_desde": r.get("vigencia_desde"), "vigencia_hasta": r.get("vigencia_hasta"),
+                        "hora_inicio": r.get("hora_inicio"), "hora_fin": r.get("hora_fin"),
+                        "lugar": r.get("lugar"), "color": r.get("color"),
+                        "visible_web": r.get("visible_web"),
+                    })
+                return self._json({"ok": True, "agenda": out})
+            except Exception as e:
+                return self._json({"error": f"no se pudo leer: {e}"}, 502)
         self._json({"error": "not found"}, 404)
 
     def do_PATCH(self):
@@ -255,6 +298,38 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True})
             except Exception as e:
                 return self._json({"error": f"no se pudo guardar: {e}"}, 502)
+
+        if self.path == "/admin/api/agenda":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            body = self._body()
+            if body is None:
+                return self._json({"error": "bad json"}, 400)
+            if not body.get("Id"):
+                return self._json({"error": "falta Id"}, 422)
+            fila = _fila_agenda(body, con_id=True)
+            try:
+                actualiza("Agenda", fila)
+                dispara_rebuild()
+                return self._json({"ok": True})
+            except Exception as e:
+                return self._json({"error": f"no se pudo guardar: {e}"}, 502)
+
+        self._json({"error": "not found"}, 404)
+
+    def do_DELETE(self):
+        if self.path == "/admin/api/agenda":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            body = self._body()
+            if body is None or not body.get("Id"):
+                return self._json({"error": "falta Id"}, 422)
+            try:
+                borra("Agenda", body["Id"])
+                dispara_rebuild()
+                return self._json({"ok": True})
+            except Exception as e:
+                return self._json({"error": f"no se pudo borrar: {e}"}, 502)
         self._json({"error": "not found"}, 404)
 
     def do_POST(self):
@@ -352,6 +427,23 @@ class H(BaseHTTPRequestHandler):
                 guarda("Actividades", fila)
                 dispara_rebuild()
                 return self._json({"ok": True, "id": fila["id"]})
+            except Exception as e:
+                return self._json({"error": f"no se pudo crear: {e}"}, 502)
+
+        if self.path == "/admin/api/agenda":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            fila = _fila_agenda(body, con_id=False)
+            if not fila.get("titulo") and not fila.get("actividad_id"):
+                return self._json({"error": "falta título o actividad"}, 422)
+            if fila.get("tipo") == "puntual" and not fila.get("fecha"):
+                return self._json({"error": "una sesión puntual necesita fecha"}, 422)
+            if fila.get("tipo") == "recurrente" and not fila.get("dias_semana"):
+                return self._json({"error": "una clase recurrente necesita días de la semana"}, 422)
+            try:
+                guarda("Agenda", fila)
+                dispara_rebuild()
+                return self._json({"ok": True})
             except Exception as e:
                 return self._json({"error": f"no se pudo crear: {e}"}, 502)
 
