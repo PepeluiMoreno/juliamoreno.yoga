@@ -70,7 +70,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .foto-boton:hover{background:#dcebf2}
 .foto-boton-ico{font-size:1.1rem}
 .agenda-barra{margin-bottom:1rem}
-.agenda-layout{display:grid;grid-template-columns:1fr 360px;gap:1.2rem;align-items:start}
+.agenda-layout{display:grid;grid-template-columns:1fr;gap:1.2rem;align-items:start}
+.agenda-layout.con-editor{grid-template-columns:1fr 360px}
 .agenda-editor{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:1.2rem 1.3rem;position:sticky;top:1rem;max-height:calc(100vh - 170px);overflow-y:auto}
 .agenda-editor h3{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);margin:0 0 .8rem}
 .agenda-plantillas{margin-bottom:1.2rem;padding-bottom:1rem;border-bottom:1px solid var(--linea)}
@@ -113,6 +114,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .fc .fc-button-primary:not(:disabled).fc-button-active{background:var(--mar-hondo);border-color:var(--mar-hondo)}
 .fc .fc-toolbar-title{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);font-size:1.2rem}
 .fc-event{cursor:pointer}
+.fc-daygrid-event{white-space:normal}
+.fc-daygrid-event .fc-event-title{overflow:hidden;text-overflow:ellipsis}
 .fc-event.ev-sel{outline:3px solid var(--tinta);outline-offset:1px;box-shadow:0 0 0 2px #fff inset;font-weight:700}
 .fc-event.ev-cancelada{opacity:.5;text-decoration:line-through;filter:grayscale(.6)}
 .fc-event.ev-aplazada{opacity:.75;font-style:italic}
@@ -273,7 +276,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
         </div>
         <div id="calendario"></div>
       </div>
-      <div class="agenda-editor" id="agendaEditor">
+      <div class="agenda-editor oculto" id="agendaEditor">
         <div class="agenda-acciones-sel oculto" id="agAccionesSel">
           <p id="selInfo" style="font-size:.9rem;color:var(--tinta);margin:0 0 .6rem;font-weight:600"></p>
           <button class="btn" id="btnClonarSel" style="width:100%;margin-bottom:.4rem">Clonar seleccionadas al mes siguiente</button>
@@ -749,6 +752,21 @@ async function cargarAgenda(){
 }
 
 
+function actualizarLayoutAgenda(){
+  // La columna del editor solo ocupa espacio si hay algo activo en ella:
+  // el formulario abierto o clases seleccionadas. Si no, el calendario
+  // ocupa todo el ancho.
+  const layout = document.querySelector(".agenda-layout");
+  if(!layout) return;
+  const formAbierto = !$("#agEditorForm").classList.contains("oculto");
+  const haySeleccion = seleccion && seleccion.size > 0;
+  const activo = formAbierto || haySeleccion;
+  layout.classList.toggle("con-editor", activo);
+  $("#agendaEditor").classList.toggle("oculto", !activo);
+  // recalcular el ancho del calendario tras el cambio de columnas
+  setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 30);
+}
+
 function abrirModalAgenda(e){
   e = e || {};
   $("#agEditorVacio").classList.add("oculto");
@@ -766,11 +784,13 @@ function abrirModalAgenda(e){
   $("#ag-lugar").value = e.lugar || "";
   $("#ag-visible").checked = e.visible_web!==false;
   $("#ag-borrar").classList.toggle("oculto", !e.Id);
+  actualizarLayoutAgenda();
 }
 
 function cerrarEditorAgenda(){
   $("#agEditorForm").classList.add("oculto");
   $("#agEditorVacio").classList.remove("oculto");
+  actualizarLayoutAgenda();
 }
 $("#btnNuevaEntrada").addEventListener("click", ()=> abrirModalAgenda(null));
 
@@ -805,6 +825,7 @@ function pintarSeleccion(){
     panel.classList.add("oculto");
     if($("#agEditorForm").classList.contains("oculto")) vacio.classList.remove("oculto");
   }
+  actualizarLayoutAgenda();
 }
 
 $("#btnLimpiarSel").addEventListener("click", ()=>{
