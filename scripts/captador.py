@@ -163,6 +163,46 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/salud":
             return self._json({"ok": True})
+        if self.path == "/admin/api/resumen":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            try:
+                acts = lee("Actividades")
+                inter = lee("Interesados")
+                # Contar interesados reales por actividad (id de actividad)
+                por_act = {}
+                for r in inter:
+                    a = (r.get("actividad") or "").strip()
+                    if a:
+                        por_act[a] = por_act.get(a, 0) + 1
+                estados = {}
+                preparacion = []
+                for a in acts:
+                    est = (a.get("estado") or "tentativa").strip()
+                    estados[est] = estados.get(est, 0) + 1
+                    if est == "tentativa":
+                        aid = (a.get("id") or "").strip()
+                        n = por_act.get(aid, 0)
+                        preparacion.append({
+                            "id": aid,
+                            "titulo": a.get("titulo_es") or "(sin título)",
+                            "interesados": n,
+                            "umbral": int(a.get("umbral") or 0),
+                        })
+                preparacion.sort(key=lambda x: x["interesados"], reverse=True)
+                return self._json({
+                    "ok": True,
+                    "totales": {
+                        "en_preparacion": estados.get("tentativa", 0),
+                        "confirmadas": estados.get("confirmada", 0),
+                        "total_actividades": len(acts),
+                        "visibles": sum(1 for a in acts if a.get("visible")),
+                        "total_interesados": len(inter),
+                    },
+                    "preparacion": preparacion,
+                })
+            except Exception as e:
+                return self._json({"error": f"no se pudo calcular: {e}"}, 502)
         if self.path == "/admin/api/actividades":
             if not self._admin_user():
                 return self._json({"error": "no autenticado"}, 401)

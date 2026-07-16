@@ -65,6 +65,16 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .menu-item.activa{color:var(--mar);border-left-color:var(--mar);background:var(--cielo-claro)}
 .layout main{flex:1;padding:1.5rem 2rem;min-width:0}
 .vista.oculto{display:none}
+.dash-contadores{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.8rem}
+.dash-card{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:.9rem 1rem;text-align:center}
+.dash-num{font-family:'Marcellus',serif;font-size:2rem;color:var(--mar);line-height:1}
+.dash-lbl{font-size:.78rem;color:var(--gris);margin-top:.3rem;text-transform:uppercase;letter-spacing:.03em}
+.dash-prep{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.7rem;margin-top:.6rem}
+.dash-prep-card{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:.7rem .9rem}
+.dash-prep-tit{font-weight:600;color:var(--tinta);font-size:.9rem;margin-bottom:.4rem}
+.dash-prep-n{font-size:.82rem;color:var(--gris)}
+.dash-barra{height:6px;background:var(--cielo-claro);border-radius:99px;margin-top:.4rem;overflow:hidden}
+.dash-barra-fill{height:100%;background:var(--mar);border-radius:99px}
 @media(max-width:700px){
   .layout{flex-direction:column}
   .menu-lateral{width:auto;border-right:none;border-bottom:1px solid var(--linea);padding:.5rem 0}
@@ -85,7 +95,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 <div class="layout">
   <aside class="menu-lateral">
     <nav>
-      <a href="#" class="menu-item activa" data-vista="actividades">Actividades</a>
+      <a href="#" class="menu-item activa" data-vista="panel">Panel de control</a>
+      <a href="#" class="menu-item" data-vista="actividades">Actividades</a>
       <a href="#" class="menu-item" data-vista="tarifas">Tarifas</a>
       <a href="#" class="menu-item" data-vista="programacion">Programación</a>
       <a href="#" class="menu-item" data-vista="estados">Estado</a>
@@ -94,7 +105,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <main>
   <div class="aviso" id="aviso"></div>
 
-  <section class="vista" id="vista-actividades">
+  <section class="vista" id="vista-panel">
+    <h1>Panel de control</h1>
+    <div class="dash-contadores" id="dashContadores"></div>
+    <h2 style="margin-top:1.5rem;font-size:1.1rem">Actividades en preparación</h2>
+    <div class="dash-prep" id="dashPrep"></div>
+  </section>
+
+  <section class="vista oculto" id="vista-actividades">
   <h1>Gestión de actividades</h1>
 
   <div class="tarjeta">
@@ -315,6 +333,37 @@ $("#btn-guardar").onclick = async ()=>{
   finally{ $("#btn-guardar").disabled=false; }
 };
 
+
+// --- Dashboard (panel de control) ---
+const API_RESUMEN = "https://api.juliamoreno.yoga/admin/api/resumen";
+async function cargarDash(){
+  try{
+    const r = await fetch(API_RESUMEN, {credentials:"include"});
+    if(!r.ok) return;
+    const d = await r.json();
+    const tt = d.totales || {};
+    const cont = [
+      ["En preparación", tt.en_preparacion],
+      ["Confirmadas", tt.confirmadas],
+      ["Interesados", tt.total_interesados],
+      ["Visibles", tt.visibles],
+      ["Actividades", tt.total_actividades],
+    ];
+    $("#dashContadores").innerHTML = cont.map(([l,n])=>
+      `<div class="dash-card"><div class="dash-num">${n??0}</div><div class="dash-lbl">${l}</div></div>`).join("");
+    const prep = d.preparacion || [];
+    $("#dashPrep").innerHTML = prep.length ? prep.map(p=>{
+      const pct = p.umbral>0 ? Math.min(100, Math.round(p.interesados/p.umbral*100)) : 0;
+      const meta = p.umbral>0 ? `${p.interesados} / ${p.umbral} interesados` : `${p.interesados} interesados`;
+      return `<div class="dash-prep-card">
+        <div class="dash-prep-tit">${p.titulo}</div>
+        <div class="dash-prep-n">${meta}</div>
+        ${p.umbral>0?`<div class="dash-barra"><div class="dash-barra-fill" style="width:${pct}%"></div></div>`:''}
+      </div>`;
+    }).join("") : '<p style="color:var(--gris)">No hay actividades en preparación.</p>';
+  }catch(e){}
+}
+
 // --- Navegación entre vistas del menú lateral ---
 document.querySelectorAll(".menu-item").forEach(item=>{
   item.addEventListener("click", e=>{
@@ -324,10 +373,12 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     item.classList.add("activa");
     document.querySelectorAll(".vista").forEach(v=>v.classList.add("oculto"));
     document.getElementById("vista-"+vista).classList.remove("oculto");
+    if(vista==="panel") cargarDash();
+    if(vista==="actividades") cargar();
   });
 });
 
-cargar();
+cargarDash();
 </script>
 </body>
 </html>
