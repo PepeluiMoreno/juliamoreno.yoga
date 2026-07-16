@@ -78,6 +78,9 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <label for="texto_es">Descripción</label>
     <textarea id="texto_es" placeholder="Describe la actividad. Se traducirá sola al inglés, francés y alemán."></textarea>
 
+    <label for="foto">Foto (URL, opcional)</label>
+    <input type="text" id="foto" placeholder="https://... — déjalo vacío si no hay foto">
+
     <div class="fila">
       <div>
         <label for="estado">Estado</label>
@@ -157,7 +160,7 @@ function marcarFranjas(str){
 }
 
 function resetForm(){
-  $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value="";
+  $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value=""; $("#foto").value="";
   $("#estado").value="tentativa"; $("#umbral").value=""; $("#plazas").value="";
   $("#visible").checked=true; $("#mostrar_contador").checked=true;
   $("#franjas_elegibles").checked=false; $("#franjas-wrap").classList.add("oculto");
@@ -188,7 +191,7 @@ async function cargar(){
 
 function editar(a){
   $("#edit-id").value=a.Id; $("#titulo_es").value=a.titulo_es||"";
-  $("#texto_es").value=a.texto_es||""; $("#estado").value=a.estado||"tentativa";
+  $("#texto_es").value=a.texto_es||""; $("#foto").value=a.foto||""; $("#estado").value=a.estado||"tentativa";
   $("#umbral").value=a.umbral??""; $("#plazas").value=a.plazas??"";
   $("#visible").checked=!!a.visible; $("#mostrar_contador").checked=!!a.mostrar_contador;
   $("#franjas_elegibles").checked=!!a.franjas_elegibles;
@@ -209,6 +212,7 @@ $("#btn-guardar").onclick = async ()=>{
   const datos = {
     titulo_es:titulo, texto_es:$("#texto_es").value.trim(),
     estado:$("#estado").value,
+    foto:$("#foto").value.trim(),
     franjas: elegible ? franjasSeleccionadas().join(",") : "",
     franjas_elegibles: elegible,
     visible:$("#visible").checked, mostrar_contador:$("#mostrar_contador").checked,
