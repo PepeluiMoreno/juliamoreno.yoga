@@ -59,6 +59,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .foto-boton:hover{background:#dcebf2}
 .foto-boton-ico{font-size:1.1rem}
 .agenda-barra{margin-bottom:1rem}
+.agenda-layout{display:grid;grid-template-columns:1fr 360px;gap:1.2rem;align-items:start}
+.agenda-editor{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:1.2rem 1.3rem;position:sticky;top:1rem}
+.agenda-editor h3{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);margin:0 0 .8rem}
+.agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
+@media(max-width:900px){
+  .agenda-layout{grid-template-columns:1fr}
+  .agenda-editor{position:static}
+}
 .btn-peligro{background:#fff;color:#8a2b26;border:1px solid #e6b3af;margin-right:auto}
 .btn-peligro:hover{background:#fdeceb}
 .ag-dias{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-top:.3rem}
@@ -73,7 +81,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .btn-mini:hover{background:var(--cielo-claro);border-color:var(--mar)}
 .oculto{display:none}
 
-.layout{display:flex;max-width:1100px;margin:0 auto;min-height:calc(100vh - 60px)}
+.layout{display:flex;max-width:1400px;margin:0 auto;min-height:calc(100vh - 60px)}
 .menu-lateral{width:200px;flex-shrink:0;background:#fff;border-right:1px solid var(--linea);padding:1.5rem 0}
 .menu-lateral nav{display:flex;flex-direction:column}
 .menu-item{display:block;padding:.7rem 1.5rem;color:var(--gris-hondo);text-decoration:none;font-weight:600;font-size:.95rem;border-left:3px solid transparent}
@@ -201,57 +209,62 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 
   <section class="vista oculto" id="vista-agenda">
     <h1>Agenda</h1>
-    <div class="agenda-barra">
-      <button class="btn btn-sec" id="btnNuevaEntrada">+ Nueva clase o sesión</button>
-    </div>
-    <div id="calendario"></div>
-  </section>
+    <div class="agenda-layout">
+      <div class="agenda-cal">
+        <div class="agenda-barra">
+          <button class="btn btn-sec" id="btnNuevaEntrada">+ Nueva clase o sesión</button>
+        </div>
+        <div id="calendario"></div>
+      </div>
+      <div class="agenda-editor" id="agendaEditor">
+        <div class="agenda-editor-vacio" id="agEditorVacio">
+          <p style="color:var(--gris)">Selecciona una clase del calendario para editarla, o pulsa <b>+ Nueva clase o sesión</b>.</p>
+        </div>
+        <div id="agEditorForm" class="oculto">
+          <h3 id="agTitulo">Nueva entrada</h3>
+          <input type="hidden" id="ag-id">
+          <label for="ag-titulo">Título</label>
+          <input type="text" id="ag-titulo" placeholder="Ej. Hatha suave">
 
-  <!-- Modal de entrada de agenda -->
-  <div class="modal-franjas" id="modalAgenda" hidden>
-    <div class="modal-caja" style="max-width:480px">
-      <h3 id="agTitulo">Nueva entrada</h3>
-      <input type="hidden" id="ag-id">
-      <label for="ag-titulo">Título</label>
-      <input type="text" id="ag-titulo" placeholder="Ej. Hatha suave">
+          <label for="ag-tipo">Tipo</label>
+          <select id="ag-tipo">
+            <option value="recurrente">Clase recurrente (se repite cada semana)</option>
+            <option value="puntual">Sesión puntual (una fecha concreta)</option>
+          </select>
 
-      <label for="ag-tipo">Tipo</label>
-      <select id="ag-tipo">
-        <option value="recurrente">Clase recurrente (se repite cada semana)</option>
-        <option value="puntual">Sesión puntual (una fecha concreta)</option>
-      </select>
+          <div id="ag-recurrente-campos">
+            <label>Días de la semana</label>
+            <div class="ag-dias" id="ag-dias"></div>
+            <div class="fila">
+              <div><label for="ag-desde">Vigente desde</label><input type="date" id="ag-desde"></div>
+              <div><label for="ag-hasta">Hasta (opcional)</label><input type="date" id="ag-hasta"></div>
+            </div>
+          </div>
 
-      <div id="ag-recurrente-campos">
-        <label>Días de la semana</label>
-        <div class="ag-dias" id="ag-dias"></div>
-        <div class="fila">
-          <div><label for="ag-desde">Vigente desde</label><input type="date" id="ag-desde"></div>
-          <div><label for="ag-hasta">Hasta (opcional)</label><input type="date" id="ag-hasta"></div>
+          <div id="ag-puntual-campos" class="oculto">
+            <label for="ag-fecha">Fecha</label>
+            <input type="date" id="ag-fecha">
+          </div>
+
+          <div class="fila">
+            <div><label for="ag-hora-ini">Hora inicio</label><input type="time" id="ag-hora-ini"></div>
+            <div><label for="ag-hora-fin">Hora fin</label><input type="time" id="ag-hora-fin"></div>
+          </div>
+
+          <label for="ag-lugar">Lugar</label>
+          <input type="text" id="ag-lugar" placeholder="Ej. Estudio Maro">
+
+          <label class="check" style="margin-top:.9rem"><input type="checkbox" id="ag-visible" checked> Mostrar en la web pública</label>
+
+          <div class="modal-botones" style="margin-top:1.2rem">
+            <button type="button" class="btn btn-peligro oculto" id="ag-borrar">Borrar</button>
+            <button type="button" class="btn btn-sec" id="ag-cancelar">Cancelar</button>
+            <button type="button" class="btn" id="ag-guardar">Guardar</button>
+          </div>
         </div>
       </div>
-
-      <div id="ag-puntual-campos" class="oculto">
-        <label for="ag-fecha">Fecha</label>
-        <input type="date" id="ag-fecha">
-      </div>
-
-      <div class="fila">
-        <div><label for="ag-hora-ini">Hora inicio</label><input type="time" id="ag-hora-ini"></div>
-        <div><label for="ag-hora-fin">Hora fin</label><input type="time" id="ag-hora-fin"></div>
-      </div>
-
-      <label for="ag-lugar">Lugar</label>
-      <input type="text" id="ag-lugar" placeholder="Ej. Estudio Maro">
-
-      <label class="check" style="margin-top:.9rem"><input type="checkbox" id="ag-visible" checked> Mostrar en la web pública</label>
-
-      <div class="modal-botones" style="margin-top:1.2rem">
-        <button type="button" class="btn btn-peligro oculto" id="ag-borrar">Borrar</button>
-        <button type="button" class="btn btn-sec" id="ag-cancelar">Cancelar</button>
-        <button type="button" class="btn" id="ag-guardar">Guardar</button>
-      </div>
     </div>
-  </div>
+  </section>
 
   <section class="vista oculto" id="vista-estados">
     <h1>Estado de las actividades</h1>
@@ -503,6 +516,8 @@ async function cargarAgenda(){
 
 function abrirModalAgenda(e){
   e = e || {};
+  $("#agEditorVacio").classList.add("oculto");
+  $("#agEditorForm").classList.remove("oculto");
   $("#ag-id").value = e.Id || "";
   $("#agTitulo").textContent = e.Id ? "Editar entrada" : "Nueva entrada";
   $("#ag-titulo").value = e.titulo || "";
@@ -518,11 +533,14 @@ function abrirModalAgenda(e){
   $("#ag-lugar").value = e.lugar || "";
   $("#ag-visible").checked = e.visible_web!==false;
   $("#ag-borrar").classList.toggle("oculto", !e.Id);
-  $("#modalAgenda").hidden = false;
 }
 
+function cerrarEditorAgenda(){
+  $("#agEditorForm").classList.add("oculto");
+  $("#agEditorVacio").classList.remove("oculto");
+}
 $("#btnNuevaEntrada").addEventListener("click", ()=> abrirModalAgenda(null));
-$("#ag-cancelar").addEventListener("click", ()=> $("#modalAgenda").hidden=true);
+$("#ag-cancelar").addEventListener("click", cerrarEditorAgenda);
 
 $("#ag-guardar").addEventListener("click", async ()=>{
   const tipo = $("#ag-tipo").value;
@@ -549,7 +567,7 @@ $("#ag-guardar").addEventListener("click", async ()=>{
     const r = await fetch(API_AGENDA, {method:metodo, credentials:"include",
       headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
     const d = await r.json();
-    if(d.ok){ $("#modalAgenda").hidden=true; cargarAgenda(); }
+    if(d.ok){ cerrarEditorAgenda(); cargarAgenda(); }
     else alert(d.error||"No se pudo guardar.");
   }catch(e){ alert("Error de conexión al guardar."); }
 });
@@ -562,7 +580,7 @@ $("#ag-borrar").addEventListener("click", async ()=>{
     const r = await fetch(API_AGENDA, {method:"DELETE", credentials:"include",
       headers:{"Content-Type":"application/json"}, body:JSON.stringify({Id:parseInt(editId)})});
     const d = await r.json();
-    if(d.ok){ $("#modalAgenda").hidden=true; cargarAgenda(); }
+    if(d.ok){ cerrarEditorAgenda(); cargarAgenda(); }
     else alert(d.error||"No se pudo borrar.");
   }catch(e){ alert("Error de conexión al borrar."); }
 });
