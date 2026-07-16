@@ -1,0 +1,65 @@
+"""
+backend.handlers.resumen — ruta /admin/api/resumen (GET).
+
+Alimenta el panel de control: cuenta actividades por estado, interesados
+reales por actividad, horas de clase del mes, y separa las actividades
+"ofertadas" (en curso) de las "en preparación" (propuestas).
+"""
+from .. import agenda as logica
+from .. import datos
+
+RUTA = "/admin/api/resumen"
+
+
+def handle(req):
+    if req.path != RUTA:
+        return None
+    if not req.usuario:
+        return 401, {"error": "no autenticado"}
+    if req.metodo != "GET":
+        return None
+    try:
+        acts = datos.lee("Actividades")
+        inter = datos.lee("Interesados")
+        # interesados reales por actividad
+        por_act = {}
+        for r in inter:
+            a = (r.get("actividad") or "").strip()
+            if a:
+                por_act[a] = por_act.get(a, 0) + 1
+        estados = {}
+        ofertadas = []
+        propuestas = []
+        for a in acts:
+            est = (a.get("estado") or "propuesta").strip()
+            estados[est] = estados.get(est, 0) + 1
+            aid = (a.get("id") or "").strip()
+            tarjeta = {
+                "id": aid,
+                "titulo": a.get("titulo_es") or "(sin título)",
+                "interesados": por_act.get(aid, 0),
+                "umbral": int(a.get("umbral") or 0),
+                "lugar": a.get("lugar") or "",
+                "duracion": a.get("duracion") or "",
+            }
+            if est == "en_curso":
+                ofertadas.append(tarjeta)
+            elif est == "propuesta":
+                propuestas.append(tarjeta)
+        propuestas.sort(key=lambda x: x["interesados"], reverse=True)
+        return 200, {
+            "ok": True,
+            "totales": {
+                "ofertadas": estados.get("en_curso", 0),
+                "programadas": estados.get("programada", 0),
+                "en_preparacion": estados.get("propuesta", 0),
+                "finalizadas": estados.get("finalizada", 0),
+                "total_actividades": len(acts),
+                "total_interesados": len(inter),
+                "horas_mes": logica.horas_programadas_mes(),
+            },
+            "ofertadas": ofertadas,
+            "preparacion": propuestas,
+        }
+    except Exception as e:
+        return 502, {"error": f"no se pudo calcular: {e}"}

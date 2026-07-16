@@ -235,13 +235,13 @@ services:
       - traefik.http.routers.jmy-kuma.tls.certresolver=letsencrypt
       - traefik.http.services.jmy-kuma.loadbalancer.server.port=3001
 
-  captador:
+  backend:
     image: python:3.12-slim
-    container_name: jmy-captador
+    container_name: jmy-backend
     restart: unless-stopped
     profiles: [negocio, todo]
     working_dir: /app
-    command: sh -c "pip install --quiet Pillow && python3 scripts/captador.py"
+    command: sh -c "pip install --quiet Pillow && cd scripts && python3 -m backend"
     environment:
       NOCODB_URL: http://nocodb:8080
       NOCODB_TOKEN: ${NOCODB_TOKEN}
@@ -264,7 +264,7 @@ services:
       - traefik.http.routers.jmy-cap.tls.certresolver=letsencrypt
       - traefik.http.services.jmy-cap.loadbalancer.server.port=8090
       # Rutas /admin/api/* protegidas por Authelia (router de mayor prioridad).
-      # Authelia inyecta Remote-User; el captador confia en esa cabecera. Sin
+      # Authelia inyecta Remote-User; el backend confia en esa cabecera. Sin
       # esta proteccion, cualquiera podria falsificar Remote-User contra la API.
       - traefik.http.routers.jmy-capadmin.rule=Host(`api.juliamoreno.yoga`) && PathPrefix(`/admin`) && !Method(`OPTIONS`)
       - traefik.http.routers.jmy-capadmin.entrypoints=websecure
@@ -272,7 +272,7 @@ services:
       - traefik.http.routers.jmy-capadmin.priority=1000
       - traefik.http.routers.jmy-capadmin.service=jmy-cap
       - traefik.http.routers.jmy-capadmin.middlewares=jmy-authelia
-      # El preflight CORS (OPTIONS) va directo al captador, SIN Authelia
+      # El preflight CORS (OPTIONS) va directo al backend, SIN Authelia
       # (un redirect 302 en un preflight rompe el CORS del navegador).
       - traefik.http.routers.jmy-capopts.rule=Host(`api.juliamoreno.yoga`) && PathPrefix(`/admin`) && Method(`OPTIONS`)
       - traefik.http.routers.jmy-capopts.entrypoints=websecure
