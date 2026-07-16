@@ -109,11 +109,15 @@ def seccion_actividades(data, idioma):
                 for fr in franjas:
                     fid = fr.get("id", "")
                     etiq = fr.get("etiqueta", {}).get(idioma) or fr.get("etiqueta", {}).get("es", fid)
-                    n = int(cf.get(fid, 0) or 0)
-                    if n == 1:
-                        etiq += f' <span class="franja-n">{t("franja_n_1").replace("{n}", str(n))}</span>'
-                    elif n > 1:
-                        etiq += f' <span class="franja-n">{t("franja_n").replace("{n}", str(n))}</span>'
+                    # --- Conteo de apuntados por franja: DESACTIVADO a peticion ---
+                    # Para volver a mostrarlo, descomentar el bloque siguiente.
+                    # El dato (cf) se sigue calculando desde las filas reales de
+                    # Interesados en desde_nocodb(), asi que basta descomentar.
+                    # n = int(cf.get(fid, 0) or 0)
+                    # if n == 1:
+                    #     etiq += f' <span class="franja-n">{t("franja_n_1").replace("{n}", str(n))}</span>'
+                    # elif n > 1:
+                    #     etiq += f' <span class="franja-n">{t("franja_n").replace("{n}", str(n))}</span>'
                     out.append(f'            <label><input type="checkbox" name="franja" value="{fid}"> {etiq}</label>')
                 out.append('          </fieldset>')
             out.append(f'          <button type="submit" class="btn">{t("interesa")}</button>')
