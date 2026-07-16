@@ -34,6 +34,10 @@ services:
       - traefik.http.routers.jmy-admin.priority=10
       - traefik.http.routers.jmy-admin.middlewares=jmy-authelia
       - traefik.http.routers.jmy-admin.service=jmy-web
+      # Middleware forwardAuth: valida contra Authelia (stack infra) antes de dejar pasar a /admin
+      - traefik.http.middlewares.jmy-authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://auth.juliamoreno.yoga
+      - traefik.http.middlewares.jmy-authelia.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.jmy-authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email
       # canónico: todo -> https://juliamoreno.yoga
       - traefik.http.middlewares.jmy-canon.redirectregex.regex=^https?://www\.juliamoreno\.yoga/(.*)
       - traefik.http.middlewares.jmy-canon.redirectregex.replacement=https://juliamoreno.yoga/$${1}
