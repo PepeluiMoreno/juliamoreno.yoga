@@ -75,7 +75,7 @@ def seccion_actividades(data, idioma):
         texto = ln["texto"].get(idioma) or ln["texto"]["es"]
         fecha = fecha_legible(ln.get("fecha", ""), idioma)
         precio = ln.get("precio", "").strip()
-        estado = ln.get("estado", "tentativa")
+        estado = ln.get("estado", "propuesta")
         umbral = int(ln.get("umbral", 0) or 0)
         interes = int(ln.get("interesados", 0) or 0)
         aid = ln.get("id", "")
@@ -89,10 +89,12 @@ def seccion_actividades(data, idioma):
 
         out.append('      <article class="clase">')
         out.append('        <div class="clase-cab">')
-        if estado == "tentativa":
-            out.append(f'          <p class="badge badge-tent">{t("tentativa")}</p>')
-        elif estado == "confirmada":
-            out.append(f'          <p class="badge badge-conf">{t("confirmada")}</p>')
+        if estado == "propuesta":
+            out.append(f'          <p class="badge badge-tent">{t("propuesta")}</p>')
+        elif estado == "programada":
+            out.append(f'          <p class="badge badge-prog">{t("programada")}</p>')
+        elif estado == "en_curso":
+            out.append(f'          <p class="badge badge-conf">{t("en_curso")}</p>')
         else:
             out.append('          <p class="badge badge-hueco">&nbsp;</p>')
         out.append('        </div>')
@@ -116,11 +118,11 @@ def seccion_actividades(data, idioma):
         precio = (ln.get("precio") or "").strip()
         if precio:
             out.append(f'          <p class="clase-precio">{precio}</p>')
-        if estado == "tentativa" and ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
+        if estado == "propuesta" and ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
             faltan = umbral - interes
             out.append(f'          <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
         out.append('        </div>')
-        if estado == "tentativa":
+        if estado == "propuesta":
             fr_json = _json.dumps(franjas_data, ensure_ascii=False).replace('"', "&quot;")
             el = "1" if elegible else "0"
             out.append(f'        <form class="interes clase-form" data-actividad="{aid}" data-elegible="{el}" data-franjas="{fr_json}" onsubmit="enviarInteres(this); return false;">')
@@ -345,7 +347,7 @@ def desde_nocodb(data):
         idi = lambda b: {i: (fila.get(f"{b}_{i}") or fila.get(f"{b}_es") or "")
                          for i in ("es", "en", "fr", "de")}
         nuevas.append({
-            "id": fila.get("id"), "estado": fila.get("estado") or "tentativa",
+            "id": fila.get("id"), "estado": fila.get("estado") or "propuesta",
             "umbral": fila.get("umbral") or 0,
             "interesados": conteo.get((fila.get("id") or "").strip(), 0),
             "conteo_franjas": conteo_franjas.get((fila.get("id") or "").strip(), {}),

@@ -65,6 +65,60 @@ def borra(tabla, rid):
     nc.api(url, tok, "DELETE", f"/api/v2/tables/{_tid(tabla)}/records", [{"Id": rid}])
 
 
+def _dur_horas(hi, hf):
+    """Horas decimales entre dos 'HH:MM'. 0 si no parsea."""
+    try:
+        h1, m1 = map(int, (hi or "").split(":"))
+        h2, m2 = map(int, (hf or "").split(":"))
+        d = (h2 * 60 + m2) - (h1 * 60 + m1)
+        return d / 60.0 if d > 0 else 0.0
+    except Exception:
+        return 0.0
+
+
+def _horas_programadas_mes():
+    """Suma las horas de clase del mes en curso a partir de la Agenda:
+    expande recurrentes en sus ocurrencias del mes y suma las puntuales."""
+    import calendar as _cal
+    try:
+        filas = lee("Agenda")
+    except Exception:
+        return 0.0
+    hoy = datetime.date.today()
+    ndias = _cal.monthrange(hoy.year, hoy.month)[1]
+    dianum = {"lun": 0, "mar": 1, "mie": 2, "jue": 3, "vie": 4, "sab": 5, "dom": 6}
+    total = 0.0
+    for f in filas:
+        dur = _dur_horas(f.get("hora_inicio"), f.get("hora_fin"))
+        if dur <= 0:
+            continue
+        tipo = (f.get("tipo") or "").strip()
+        if tipo == "puntual":
+            fecha = (f.get("fecha") or "")[:10]
+            try:
+                d = datetime.date.fromisoformat(fecha)
+                if d.year == hoy.year and d.month == hoy.month:
+                    total += dur
+            except Exception:
+                pass
+        elif tipo == "recurrente":
+            dias = {dianum.get(x.strip()) for x in (f.get("dias_semana") or "").split(",")}
+            dias.discard(None)
+            desde = (f.get("vigencia_desde") or "")[:10]
+            hasta = (f.get("vigencia_hasta") or "")[:10]
+            d0 = datetime.date.fromisoformat(desde) if desde else None
+            d1 = datetime.date.fromisoformat(hasta) if hasta else None
+            for dia in range(1, ndias + 1):
+                fecha = datetime.date(hoy.year, hoy.month, dia)
+                if fecha.weekday() in dias:
+                    if d0 and fecha < d0:
+                        continue
+                    if d1 and fecha > d1:
+                        continue
+                    total += dur
+    return round(total, 1)
+
+
 def _fila_agenda(body, con_id):
     """Construye la fila de Agenda desde el cuerpo de la petición, saneando."""
     fila = {}
@@ -199,30 +253,40 @@ class H(BaseHTTPRequestHandler):
                     if a:
                         por_act[a] = por_act.get(a, 0) + 1
                 estados = {}
-                preparacion = []
+                ofertadas = []
+                propuestas = []
                 for a in acts:
-                    est = (a.get("estado") or "tentativa").strip()
+                    est = (a.get("estado") or "propuesta").strip()
                     estados[est] = estados.get(est, 0) + 1
-                    if est == "tentativa":
-                        aid = (a.get("id") or "").strip()
-                        n = por_act.get(aid, 0)
-                        preparacion.append({
-                            "id": aid,
-                            "titulo": a.get("titulo_es") or "(sin título)",
-                            "interesados": n,
-                            "umbral": int(a.get("umbral") or 0),
-                        })
-                preparacion.sort(key=lambda x: x["interesados"], reverse=True)
+                    aid = (a.get("id") or "").strip()
+                    tarjeta = {
+                        "id": aid,
+                        "titulo": a.get("titulo_es") or "(sin título)",
+                        "interesados": por_act.get(aid, 0),
+                        "umbral": int(a.get("umbral") or 0),
+                        "lugar": a.get("lugar") or "",
+                        "duracion": a.get("duracion") or "",
+                    }
+                    if est == "en_curso":
+                        ofertadas.append(tarjeta)
+                    elif est == "propuesta":
+                        propuestas.append(tarjeta)
+                propuestas.sort(key=lambda x: x["interesados"], reverse=True)
+                # Horas programadas del mes en curso (a partir de la agenda)
+                horas_mes = _horas_programadas_mes()
                 return self._json({
                     "ok": True,
                     "totales": {
-                        "en_preparacion": estados.get("tentativa", 0),
-                        "confirmadas": estados.get("confirmada", 0),
+                        "ofertadas": estados.get("en_curso", 0),
+                        "programadas": estados.get("programada", 0),
+                        "en_preparacion": estados.get("propuesta", 0),
+                        "finalizadas": estados.get("finalizada", 0),
                         "total_actividades": len(acts),
-                        "visibles": sum(1 for a in acts if a.get("visible")),
                         "total_interesados": len(inter),
+                        "horas_mes": horas_mes,
                     },
-                    "preparacion": preparacion,
+                    "ofertadas": ofertadas,
+                    "preparacion": propuestas,
                 })
             except Exception as e:
                 return self._json({"error": f"no se pudo calcular: {e}"}, 502)
@@ -407,7 +471,7 @@ class H(BaseHTTPRequestHandler):
                 "id": slug(titulo),
                 "titulo_es": titulo,
                 "texto_es": limpio(body.get("texto_es"), 2000),
-                "estado": limpio(body.get("estado"), 20) or "tentativa",
+                "estado": limpio(body.get("estado"), 20) or "propuesta",
                 "franjas": limpio(body.get("franjas"), 500),
                 "es_hash": "",
                 "interesados": 0,
