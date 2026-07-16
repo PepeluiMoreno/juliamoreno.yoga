@@ -36,9 +36,16 @@ h2{font-size:1.3rem;margin:0 0 1rem}
 .badge.tentativa{background:var(--arena);color:#7a5a1a}
 .badge.confirmada{background:#dcefe0;color:#276b3c}
 label{display:block;font-size:.85rem;font-weight:600;color:var(--gris-hondo);margin:.9rem 0 .3rem}
-input[type=text],input[type=number],textarea,select{
+input[type=text],input[type=number],input[type=date],input[type=time],textarea,select{
   width:100%;padding:.6rem .8rem;border:1px solid var(--linea);border-radius:8px;
   font-size:.95rem;font-family:inherit;background:#fff;color:var(--tinta)}
+input[type=date],input[type=time]{appearance:none;-webkit-appearance:none;min-height:calc(.6rem*2 + .95rem + 2px)}
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator{
+  opacity:.5;cursor:pointer;filter:invert(24%) sepia(30%) saturate(900%) hue-rotate(160deg)}
+input[type=date]:focus,input[type=time]:focus,input[type=text]:focus,
+input[type=number]:focus,textarea:focus,select:focus{
+  outline:none;border-color:var(--mar);box-shadow:0 0 0 3px var(--cielo-claro)}
 textarea{min-height:90px;resize:vertical}
 .fila{display:flex;gap:1rem;flex-wrap:wrap}
 .fila>div{flex:1;min-width:140px}
