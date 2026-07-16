@@ -246,13 +246,14 @@ services:
       NOCODB_URL: http://nocodb:8080
       NOCODB_TOKEN: ${NOCODB_TOKEN}
       NOCODB_BASE: ${NOCODB_BASE:-Yoga}
+      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
       CAPTADOR_ORIGIN: https://juliamoreno.yoga
       UPLOADS_DIR: /app/sitio/uploads
       UPLOADS_URL: https://juliamoreno.yoga/uploads
     volumes:
       - ./scripts:/app/scripts:ro
-      - ./data:/app/data:ro
-      - ./sitio/uploads:/app/sitio/uploads
+      - ./data:/app/data
+      - ./sitio:/app/sitio
     depends_on: [nocodb]
     networks: [internal, traefik_public]
     labels:

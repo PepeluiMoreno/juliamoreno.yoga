@@ -107,6 +107,22 @@ def guarda_foto(datos, nombre_orig):
     return f"{uploads_url}/{fichero}"
 
 
+def dispara_rebuild():
+    """Lanza build-web.py en segundo plano para regenerar la web tras un
+    cambio en actividades. No bloquea la respuesta al panel; si falla, se
+    registra pero no rompe la operación (la web se puede regenerar a mano)."""
+    import subprocess
+    try:
+        script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "build-web.py")
+        subprocess.Popen(
+            [sys.executable, script],
+            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("rebuild de la web disparado")
+    except Exception as e:
+        print(f"aviso: no se pudo disparar el rebuild: {e}")
+
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
@@ -194,6 +210,7 @@ class H(BaseHTTPRequestHandler):
                 fila["es_hash"] = ""
             try:
                 actualiza("Actividades", fila)
+                dispara_rebuild()
                 return self._json({"ok": True})
             except Exception as e:
                 return self._json({"error": f"no se pudo guardar: {e}"}, 502)
@@ -289,6 +306,7 @@ class H(BaseHTTPRequestHandler):
             fila["foto"] = limpio(body.get("foto"), 500)
             try:
                 guarda("Actividades", fila)
+                dispara_rebuild()
                 return self._json({"ok": True, "id": fila["id"]})
             except Exception as e:
                 return self._json({"error": f"no se pudo crear: {e}"}, 502)
