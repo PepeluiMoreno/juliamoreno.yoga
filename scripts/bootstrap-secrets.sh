@@ -11,7 +11,6 @@ PG_PASSWORD=$PG
 UMAMI_SECRET=$(openssl rand -hex 32)
 CALCOM_SECRET=$(openssl rand -hex 32)
 CALCOM_ENC_KEY=$(openssl rand -hex 32)
-N8N_KEY=$(openssl rand -hex 32)
 IN_DB_PASSWORD=$(openssl rand -hex 24)
 IN_APP_KEY=base64:$(openssl rand -base64 32)
 POSTIZ_JWT=$(openssl rand -hex 32)

@@ -18,7 +18,6 @@ docker compose up -d
 | CNAME    | stats     | juliamoreno.yoga.  | Umami (analítica)      |
 | CNAME    | reservas  | juliamoreno.yoga.  | Cal.com                |
 | CNAME    | correo    | juliamoreno.yoga.  | Listmonk               |
-| CNAME    | auto      | juliamoreno.yoga.  | n8n (proteger)         |
 | CNAME    | datos     | juliamoreno.yoga.  | NocoDB (proteger)      |
 | CNAME    | panel     | juliamoreno.yoga.  | dashboard Traefik      |
 

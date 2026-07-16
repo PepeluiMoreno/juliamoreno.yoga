@@ -29,7 +29,7 @@ Fichero: scripts/deploy.sh
 
 ## Relación con el flujo de contenido
 - CI/CD (esto) despliega CÓDIGO: lo que cambian Jose/soporte con push.
-- El workflow n8n de contenido despliega CONTENIDO: lo que cambia Julia
+- El despliegue de CONTENIDO (lo que cambia Julia en NocoDB) lo aplica build-web.py
   en NocoDB (precios, horarios, actividades). Ese llama a build-web.py
   leyendo NocoDB por defecto, y no pasa por git.
 Ambos acaban ejecutando build-web.py; son disparadores distintos para

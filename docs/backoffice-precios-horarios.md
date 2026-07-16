@@ -10,7 +10,7 @@ soporte técnico en data/contenido.json.
 - `scripts/build-web.py` — regenera las secciones de horarios y precios
   de los 4 HTML, solo entre `<!-- CONTENIDO:INICIO -->` y `<!-- CONTENIDO:FIN -->`.
 - NocoDB (perfil negocio) — dos tablas que edita Julia.
-- n8n (perfil todo) — al guardar en NocoDB, dispara el rebuild.
+- El rebuild se lanza con deploy.sh (o un disparo a configurar).
 
 ## Qué edita Julia en NocoDB
 Tabla **Precios**: columnas `id` (fijo: suelta, bono4, bono8, infantil,
@@ -24,8 +24,8 @@ data/contenido.json (soporte técnico), no NocoDB.
 
 ## Flujo de actualización
 1. Julia cambia un precio en NocoDB y guarda.
-2. NocoDB dispara un webhook → n8n (workflow stack/n8n/flujo-rebuild-web.json).
-3. n8n ejecuta en el contenedor del sitio:
+2. El rebuild se ejecuta con deploy.sh (o un futuro disparo por cron/webhook a Python).
+3. deploy.sh ejecuta:
    `python3 /srv/scripts/build-web.py`
    (lee NocoDB, actualiza contenido.json y regenera los HTML).
 4. La web (servida por nginx desde ./sitio) refleja el cambio en segundos.
@@ -39,9 +39,9 @@ data/contenido.json (soporte técnico), no NocoDB.
    NOCODB_TOKEN=<token>
    (o las variables NOCODB_TBL_PRECIOS / NOCODB_TBL_HORARIOS si se usan
    nombres en lugar de IDs de tabla)
-4. Importar stack/n8n/flujo-rebuild-web.json en n8n y activar el webhook.
+4. (El disparo automático del rebuild queda pendiente de implementar en Python.)
 5. Configurar en NocoDB un webhook "After Insert/Update" de ambas tablas
-   apuntando a la URL del webhook de n8n.
+   apuntando al captador Python (api.juliamoreno.yoga).
 
 ## Ejecución manual (sin esperar al webhook)
 ```

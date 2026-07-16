@@ -11,7 +11,7 @@ Presencia digital y herramientas de negocio de **Julia Moreno · Yoga**
     redirección canónica desde www y juliamorenoyoga.com).
   - `negocio`: Postgres + Umami (analítica sin cookies). El mínimo para medir.
   - `todo`: añade Cal.com (reservas), Listmonk (boletín),
-    n8n (automatizaciones) y NocoDB (alumnos/bonos).
+    captador Python (formularios) y NocoDB (alumnos/bonos).
 - `nginx/sitio.conf` — configuración del sitio (gzip, caché, cabeceras).
 - `stack/initdb/` — creación de las BDs del stack.
 - `scripts/bootstrap-secrets.sh` — genera .env y secretos (solo en el VPS).
@@ -33,7 +33,7 @@ y certresolver `letsencrypt`; DNS del dominio y subdominios
 ## Contenido dinámico
 - Precios y horarios: data/contenido.json + scripts/build-web.py (ver docs/backoffice-precios-horarios.md).
 - Actividades con sondeo de demanda: docs/actividades-sondeo.md.
-- Traducción es→en/fr/de vía n8n+DeepL: docs/traduccion-cambiar-motor.md.
+- Traducción es→en/fr/de vía build-web.py+DeepL: docs/traduccion-cambiar-motor.md.
 
 ## Reglas del repo
 - Ni `.env` ni `secrets/` se versionan jamás (ver .gitignore).
@@ -45,12 +45,12 @@ y certresolver `letsencrypt`; DNS del dominio y subdominios
 ## Backoffice de contenido (precios, horarios, actividades)
 Julia edita en NocoDB (datos.juliamoreno.yoga); la web se regenera sola.
 - Precios y horarios: valores en tablas; ver docs/backoffice-precios-horarios.md
-- Actividades y talleres: Julia escribe en español; n8n traduce a EN/FR/DE
+- Actividades y talleres: Julia escribe en español; build-web.py traduce a EN/FR/DE
   con DeepL y regenera; ver docs/traduccion-cambiar-motor.md para cambiar
   el motor de traducción.
 - Generador: scripts/build-web.py (solo toca las secciones entre marcadores).
 - Despliegue automático de código: docs/cicd-despliegue.md
 
 Flujos:
-- CONTENIDO (Julia, NocoDB) -> n8n -> build-web.py
+- CONTENIDO (Julia, NocoDB) -> build-web.py (traduce + genera)
 - CÓDIGO (Jose/soporte, git push) -> CI/CD -> build-web.py

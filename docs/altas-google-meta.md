@@ -83,7 +83,7 @@ Migrar el número actual a WhatsApp Business:
 - Catálogo: bonos y clases con precios.
 - No confundir con la API de WhatsApp Business (de pago, vía Meta):
   no la necesitamos; los avisos automatizados salen por correo o
-  Telegram desde n8n, coste cero.
+  email, coste cero.
 
 ## 7. Conexión con Postiz (cuando se levante el perfil gestion)
 Para programar publicaciones en Instagram/Facebook desde Postiz

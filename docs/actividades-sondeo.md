@@ -14,24 +14,24 @@ el grupo. No hay pago ni compromiso firme en esta fase: es un sondeo.
 
 ## Piezas
 - **Web**: cada actividad "tentativa" muestra badge de estado, contador
-  condicional y un formulario "Me interesa" que hace POST a n8n
-  (https://auto.juliamoreno.yoga/webhook/interes).
+  condicional y un formulario "Me interesa" que hace POST al captador Python
+  (https://api.juliamoreno.yoga/webhook/interes).
 - **NocoDB**, dos tablas:
   - `Actividades`: id, estado (tentativa|confirmada|completada), umbral,
-    interesados (lo actualiza n8n), plazas (opc), fecha, foto,
+    interesados (se cuenta de la tabla Interesados), plazas (opc), fecha, foto,
     titulo_{es,en,fr,de}, texto_{es,en,fr,de}, mostrar_contador, visible.
-    Julia edita SOLO los campos _es; n8n traduce el resto (flujo
+    Julia edita SOLO los campos _es; build-web.py traduce el resto (DeepL,
     flujo-actividades-traduccion.json).
   - `Interesados`: actividad, nombre, contacto, idioma, fecha.
-- **n8n** (flujo-sondeo-interes.json): recibe el "Me interesa", antispam
+- **captador Python** (scripts/captador.py): recibe el "Me interesa", antispam
   básico, guarda en Interesados, cuenta, y si se alcanza el umbral avisa
   a Julia (Telegram/email) y deja el contador al día.
 
 ## Ciclo de vida de una actividad
 1. Julia crea la actividad en NocoDB en español, estado "tentativa", con
-   un umbral (p. ej. 8). n8n la traduce; el rebuild la publica.
-2. Los clientes pulsan "Me interesa" en la web. n8n acumula.
-3. Al llegar al umbral, n8n avisa a Julia.
+   un umbral (p. ej. 8). build-web.py la traduce; el rebuild la publica.
+2. Los clientes pulsan "Me interesa" en la web. El captador acumula en NocoDB.
+3. Al llegar al umbral, Julia lo ve en NocoDB (o se puede añadir aviso por email).
 4. Julia decide: si la monta, cambia estado a "confirmada" (y, en su caso,
    fija plazas/fechas). Si no, la deja o la oculta (visible=false).
 5. Tras impartirla, estado "completada" (deja de mostrarse).
@@ -50,7 +50,7 @@ tarjeta. No requiere backend nuevo. Se abordará si el negocio lo pide.
 
 ## Franjas horarias (disponibilidad)
 Cada actividad puede definir franjas entre las que el cliente marca las
-que le sirven (opción A: Julia define, cliente elige, n8n encuentra la
+que le sirven (opción A: Julia define, cliente elige, build-web.py cuenta la
 ganadora). Dos tipos, combinables en una misma actividad:
 - **genérica**: recurrente, p. ej. "sábados por la mañana" (para grupos
   regulares). Se traduce a los 4 idiomas.
@@ -61,7 +61,7 @@ Modelo:
 - `Actividades.franjas`: lista de {id, tipo, etiqueta_{es,en,fr,de}}.
 - `Interesados.franjas`: las que marcó cada persona (ids separados por coma).
 
-n8n cuenta el interés TOTAL y también POR FRANJA. Avisa a Julia cuando:
+build-web.py cuenta el interés TOTAL y también POR FRANJA (conteo de la tabla Interesados). Se puede avisar a Julia cuando:
 - el total alcanza el umbral (hay demanda), y/o
 - una franja concreta alcanza el umbral (hay demanda a una hora viable) —
   este es el aviso más útil: "8 personas pueden el sábado por la mañana".
@@ -72,7 +72,7 @@ contacto (sondeo simple), como antes.
 ## Formulario de contacto general
 Además del sondeo por actividad, la sección Contacto de la web lleva un
 formulario general (nombre, teléfono, asunto) que postea a
-https://auto.juliamoreno.yoga/webhook/contacto (flujo-contacto.json):
+https://api.juliamoreno.yoga/webhook/contacto (flujo-contacto.json):
 se guarda en la tabla Contactos (con checkbox "atendido" como bandeja
-de Julia) y n8n le avisa. Mismo patrón que el sondeo; RGPD con frase de
+de Julia). Mismo patrón que el sondeo; RGPD con frase de
 consentimiento en los 4 idiomas.
