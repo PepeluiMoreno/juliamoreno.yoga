@@ -118,6 +118,10 @@ services:
       DB_POSTGRESDB_DATABASE: n8n
       N8N_ENCRYPTION_KEY: ${N8N_KEY}
       N8N_HOST: auto.juliamoreno.yoga
+      DEEPL_API_KEY: ${DEEPL_API_KEY:-}
+      NOCODB_URL: http://nocodb:8080
+      NOCODB_TOKEN: ${NOCODB_TOKEN:-}
+      NOCODB_BASE: ${NOCODB_BASE:-Yoga}
       WEBHOOK_URL: https://auto.juliamoreno.yoga/
       GENERIC_TIMEZONE: Europe/Madrid
     volumes:

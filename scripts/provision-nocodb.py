@@ -35,7 +35,7 @@ TABLAS = {
         col("titulo_en", "LongText"), col("texto_en", "LongText"),
         col("titulo_fr", "LongText"), col("texto_fr", "LongText"),
         col("titulo_de", "LongText"), col("texto_de", "LongText"),
-        col("franjas", "LongText"), col("revisado"),
+        col("franjas", "LongText"), col("revisado"), col("es_hash"),
     ],
     "Interesados": [
         col("actividad"), col("nombre"), col("contacto"),
