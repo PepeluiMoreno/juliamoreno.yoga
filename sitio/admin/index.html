@@ -60,7 +60,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .foto-boton-ico{font-size:1.1rem}
 .agenda-barra{margin-bottom:1rem}
 .agenda-layout{display:grid;grid-template-columns:1fr 360px;gap:1.2rem;align-items:start}
-.agenda-editor{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:1.2rem 1.3rem;position:sticky;top:1rem}
+.agenda-editor{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:1.2rem 1.3rem;position:sticky;top:1rem;max-height:calc(100vh - 170px);overflow-y:auto}
 .agenda-editor h3{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);margin:0 0 .8rem}
 .agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
 @media(max-width:900px){
@@ -497,7 +497,7 @@ async function cargarAgenda(){
       slotMinTime: "07:00:00",
       slotMaxTime: "23:00:00",
       allDaySlot: false,
-      height: "auto",
+      height: "calc(100vh - 170px)",
       eventClick: function(info){
         const e = info.event.extendedProps.raw;
         abrirModalAgenda(e);
