@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Gestión · Julia Moreno Yoga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --mar:#1d5975; --mar-hondo:#153f54; --cielo:#a7cddd; --cielo-claro:#e9f1f4;
+  --crema:#fcfbf8; --arena:#f3e3c3; --linea:#e2dccd; --tinta:#153f54;
+  --gris:#7b8791; --gris-hondo:#46545f;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Mulish',system-ui,sans-serif;background:var(--crema);color:var(--gris-hondo);line-height:1.5}
+header{background:var(--mar);color:#fff;padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center}
+header .marca{font-family:'Marcellus',serif;font-size:1.3rem;color:#fff;text-decoration:none;letter-spacing:.02em}
+header .usuario{font-size:.85rem;opacity:.9}
+main{max-width:900px;margin:0 auto;padding:1.5rem}
+h1,h2{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);line-height:1.15}
+h1{font-size:1.8rem;margin:.2rem 0 1.2rem}
+h2{font-size:1.3rem;margin:0 0 1rem}
+.aviso{padding:.8rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:.95rem;display:none}
+.aviso.ok{background:#e9f1f4;color:var(--mar-hondo);border:1px solid var(--cielo);display:block}
+.aviso.error{background:#fdeceb;color:#8a2b26;border:1px solid #e6b3af;display:block}
+.tarjeta{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:1.3rem 1.4rem;margin-bottom:1.3rem}
+.lista-act{list-style:none;padding:0;margin:0}
+.lista-act li{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:.7rem 0;border-bottom:1px solid var(--linea)}
+.lista-act li:last-child{border-bottom:none}
+.act-info{flex:1;min-width:0}
+.act-titulo{font-weight:600;color:var(--tinta)}
+.act-meta{font-size:.82rem;color:var(--gris);margin-top:.15rem}
+.badge{display:inline-block;font-size:.72rem;padding:.12rem .5rem;border-radius:999px;letter-spacing:.02em;margin-left:.4rem;vertical-align:middle}
+.badge.tentativa{background:var(--arena);color:#7a5a1a}
+.badge.confirmada{background:#dcefe0;color:#276b3c}
+label{display:block;font-size:.85rem;font-weight:600;color:var(--gris-hondo);margin:.9rem 0 .3rem}
+input[type=text],input[type=number],textarea,select{
+  width:100%;padding:.6rem .8rem;border:1px solid var(--linea);border-radius:8px;
+  font-size:.95rem;font-family:inherit;background:#fff;color:var(--tinta)}
+textarea{min-height:90px;resize:vertical}
+.fila{display:flex;gap:1rem;flex-wrap:wrap}
+.fila>div{flex:1;min-width:140px}
+.check{display:flex;align-items:center;gap:.5rem;margin-top:.9rem;font-weight:400}
+.check input{width:auto}
+.franjas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.5rem;margin-top:.3rem}
+.franja-op{display:flex;align-items:center;gap:.4rem;font-size:.88rem;padding:.4rem .6rem;border:1px solid var(--linea);border-radius:8px;cursor:pointer}
+.franja-op input{width:auto}
+.botones{display:flex;gap:.7rem;margin-top:1.3rem;flex-wrap:wrap}
+button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3rem;border-radius:8px;border:none;cursor:pointer}
+.btn-primario{background:var(--mar);color:#fff}
+.btn-primario:hover{background:var(--mar-hondo)}
+.btn-sec{background:transparent;color:var(--mar);border:1px solid var(--mar)}
+.btn-sec:hover{background:var(--cielo-claro)}
+.btn-mini{font-size:.8rem;padding:.35rem .8rem;background:transparent;color:var(--mar);border:1px solid var(--linea)}
+.btn-mini:hover{background:var(--cielo-claro);border-color:var(--mar)}
+.oculto{display:none}
+.pie{text-align:center;font-size:.8rem;color:var(--gris);padding:1.5rem}
+.pie a{color:var(--mar)}
+</style>
+</head>
+<body>
+<header>
+  <a href="/" class="marca">Julia Moreno · Yoga</a>
+  <span class="usuario" id="usuario"></span>
+</header>
+<main>
+  <h1>Gestión de actividades</h1>
+  <div class="aviso" id="aviso"></div>
+
+  <div class="tarjeta">
+    <h2 id="form-titulo">Nueva actividad</h2>
+    <input type="hidden" id="edit-id">
+    <label for="titulo_es">Título</label>
+    <input type="text" id="titulo_es" placeholder="Ej. Taller de respiración consciente" maxlength="200">
+
+    <label for="texto_es">Descripción</label>
+    <textarea id="texto_es" placeholder="Describe la actividad. Se traducirá sola al inglés, francés y alemán."></textarea>
+
+    <div class="fila">
+      <div>
+        <label for="estado">Estado</label>
+        <select id="estado">
+          <option value="tentativa">Tentativa (sondeando interés)</option>
+          <option value="confirmada">Confirmada</option>
+        </select>
+      </div>
+      <div>
+        <label for="umbral">Umbral de interesados</label>
+        <input type="number" id="umbral" min="0" placeholder="8">
+      </div>
+      <div>
+        <label for="plazas">Plazas</label>
+        <input type="number" id="plazas" min="0" placeholder="12">
+      </div>
+    </div>
+
+    <label>Franjas horarias propuestas</label>
+    <div class="franjas-grid" id="franjas-grid"></div>
+
+    <div class="fila">
+      <label class="check"><input type="checkbox" id="visible" checked> Visible en la web</label>
+      <label class="check"><input type="checkbox" id="mostrar_contador" checked> Mostrar contador de interesados</label>
+    </div>
+
+    <div class="botones">
+      <button class="btn-primario" id="btn-guardar">Crear actividad</button>
+      <button class="btn-sec oculto" id="btn-cancelar">Cancelar edición</button>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Actividades existentes</h2>
+    <ul class="lista-act" id="lista"></ul>
+  </div>
+
+  <div class="pie">Panel de gestión · <a href="/">volver a la web</a></div>
+</main>
+
+<script>
+const API = "https://api.juliamoreno.yoga/admin/api/actividades";
+const FRANJAS = [
+  ["lun_manana","Lunes mañana"],["lun_tarde","Lunes tarde"],
+  ["mar_manana","Martes mañana"],["mar_tarde","Martes tarde"],
+  ["mie_manana","Miércoles mañana"],["mie_tarde","Miércoles tarde"],
+  ["jue_manana","Jueves mañana"],["jue_tarde","Jueves tarde"],
+  ["vie_manana","Viernes mañana"],["vie_tarde","Viernes tarde"],
+  ["sab_manana","Sábado mañana"],["sab_tarde","Sábado tarde"],
+  ["dom_manana","Domingo mañana"],["dom_tarde","Domingo tarde"],
+];
+const $ = s => document.querySelector(s);
+
+// pintar checkboxes de franjas
+$("#franjas-grid").innerHTML = FRANJAS.map(([k,v]) =>
+  `<label class="franja-op"><input type="checkbox" value="${k}"> ${v}</label>`).join("");
+
+function aviso(msg, tipo){
+  const a = $("#aviso"); a.textContent = msg; a.className = "aviso " + tipo;
+  if(tipo==="ok") setTimeout(()=>{a.className="aviso";}, 4000);
+}
+
+function franjasSeleccionadas(){
+  return [...document.querySelectorAll("#franjas-grid input:checked")].map(c=>c.value);
+}
+function marcarFranjas(str){
+  const set = new Set((str||"").split(",").map(s=>s.trim()));
+  document.querySelectorAll("#franjas-grid input").forEach(c=>{c.checked = set.has(c.value);});
+}
+
+function resetForm(){
+  $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value="";
+  $("#estado").value="tentativa"; $("#umbral").value=""; $("#plazas").value="";
+  $("#visible").checked=true; $("#mostrar_contador").checked=true;
+  marcarFranjas("");
+  $("#form-titulo").textContent="Nueva actividad";
+  $("#btn-guardar").textContent="Crear actividad";
+  $("#btn-cancelar").classList.add("oculto");
+}
+
+async function cargar(){
+  try{
+    const r = await fetch(API, {credentials:"include"});
+    if(!r.ok){ aviso("No se pudieron cargar las actividades (¿sesión caducada?).","error"); return; }
+    const d = await r.json();
+    const lista = $("#lista");
+    if(!d.actividades || !d.actividades.length){ lista.innerHTML="<li>No hay actividades todavía.</li>"; return; }
+    lista.innerHTML = d.actividades.map(a=>`
+      <li>
+        <div class="act-info">
+          <span class="act-titulo">${a.titulo_es||"(sin título)"}</span>
+          <span class="badge ${a.estado||'tentativa'}">${a.estado||'tentativa'}</span>
+          <div class="act-meta">Umbral: ${a.umbral??'—'} · Plazas: ${a.plazas??'—'} · Interesados: ${a.interesados??0}${a.visible?'':' · <b>oculta</b>'}</div>
+        </div>
+        <button class="btn-mini" onclick='editar(${JSON.stringify(a)})'>Editar</button>
+      </li>`).join("");
+  }catch(e){ aviso("Error de conexión al cargar.","error"); }
+}
+
+function editar(a){
+  $("#edit-id").value=a.Id; $("#titulo_es").value=a.titulo_es||"";
+  $("#texto_es").value=a.texto_es||""; $("#estado").value=a.estado||"tentativa";
+  $("#umbral").value=a.umbral??""; $("#plazas").value=a.plazas??"";
+  $("#visible").checked=!!a.visible; $("#mostrar_contador").checked=!!a.mostrar_contador;
+  marcarFranjas(a.franjas);
+  $("#form-titulo").textContent="Editar: "+(a.titulo_es||"");
+  $("#btn-guardar").textContent="Guardar cambios";
+  $("#btn-cancelar").classList.remove("oculto");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+$("#btn-cancelar").onclick = resetForm;
+
+$("#btn-guardar").onclick = async ()=>{
+  const titulo = $("#titulo_es").value.trim();
+  if(!titulo){ aviso("El título es obligatorio.","error"); return; }
+  const datos = {
+    titulo_es:titulo, texto_es:$("#texto_es").value.trim(),
+    estado:$("#estado").value, franjas:franjasSeleccionadas().join(","),
+    visible:$("#visible").checked, mostrar_contador:$("#mostrar_contador").checked,
+  };
+  const um=$("#umbral").value, pl=$("#plazas").value;
+  if(um!=="") datos.umbral=parseInt(um); if(pl!=="") datos.plazas=parseInt(pl);
+  const editId = $("#edit-id").value;
+  const metodo = editId ? "PATCH" : "POST";
+  if(editId) datos.Id = parseInt(editId);
+  $("#btn-guardar").disabled=true;
+  try{
+    const r = await fetch(API,{method:metodo,credentials:"include",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify(datos)});
+    const d = await r.json();
+    if(d.ok){ aviso(editId?"Cambios guardados.":"Actividad creada.","ok"); resetForm(); cargar(); }
+    else aviso(d.error||"No se pudo guardar.","error");
+  }catch(e){ aviso("Error de conexión al guardar.","error"); }
+  finally{ $("#btn-guardar").disabled=false; }
+};
+
+cargar();
+</script>
+</body>
+</html>

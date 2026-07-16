@@ -180,10 +180,11 @@
         "id": "taller-respiracion",
         "estado": "tentativa",
         "umbral": 8,
-        "interesados": 3,
+        "interesados": 4,
         "conteo_franjas": {
           "sab_manana": 3,
-          "f_2026_03_21": 1
+          "f_2026_03_21": 2,
+          "vie_tarde": 1
         },
         "plazas": 12,
         "foto": "",
