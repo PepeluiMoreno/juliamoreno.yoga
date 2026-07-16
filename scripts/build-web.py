@@ -98,7 +98,7 @@ def seccion_actividades(data, idioma):
             if ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
                 faltan = umbral - interes
                 out.append(f'        <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
-            out.append(f'        <form class="interes" data-actividad="{aid}" onsubmit="return enviarInteres(this)">')
+            out.append(f'        <form class="interes" data-actividad="{aid}" onsubmit="enviarInteres(this); return false;">')
             out.append(f'          <input type="text" name="nombre" placeholder="{t("form_nombre")}" required>')
             out.append(f'          <input type="text" name="contacto" placeholder="{t("form_contacto")}" required>')
             # Franjas horarias (si la actividad las define)
