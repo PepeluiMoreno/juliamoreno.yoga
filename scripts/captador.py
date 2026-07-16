@@ -276,6 +276,12 @@ def borra(tabla, rid):
     nc.api(url, tok, "DELETE", f"/api/v2/tables/{_tid(tabla)}/records", [{"Id": rid}])
 
 
+def borra_varios(tabla, ids):
+    url, tok, _ = nc.cfg()
+    nc.api(url, tok, "DELETE", f"/api/v2/tables/{_tid(tabla)}/records",
+           [{"Id": i} for i in ids])
+
+
 def _dur_horas(hi, hf):
     """Horas decimales entre dos 'HH:MM'. 0 si no parsea."""
     try:
@@ -621,12 +627,23 @@ class H(BaseHTTPRequestHandler):
             if not self._admin_user():
                 return self._json({"error": "no autenticado"}, 401)
             body = self._body()
-            if body is None or not body.get("Id"):
+            if body is None:
+                return self._json({"error": "cuerpo vacío"}, 422)
+            # Acepta un solo Id o una lista de ids
+            ids = body.get("ids")
+            if isinstance(ids, list) and ids:
+                try:
+                    borra_varios("Agenda", [int(i) for i in ids])
+                    dispara_rebuild()
+                    return self._json({"ok": True, "borradas": len(ids)})
+                except Exception as e:
+                    return self._json({"error": f"no se pudo borrar: {e}"}, 502)
+            if not body.get("Id"):
                 return self._json({"error": "falta Id"}, 422)
             try:
                 borra("Agenda", body["Id"])
                 dispara_rebuild()
-                return self._json({"ok": True})
+                return self._json({"ok": True, "borradas": 1})
             except Exception as e:
                 return self._json({"error": f"no se pudo borrar: {e}"}, 502)
         self._json({"error": "not found"}, 404)

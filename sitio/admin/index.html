@@ -83,6 +83,12 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 #menuContextual button.peligro:hover{background:#fdeceb}
 #menuContextual .mc-sep{height:1px;background:var(--linea);margin:.3rem 0}
 #menuContextual .mc-tit{font-size:.78rem;color:var(--gris);padding:.3rem .7rem .1rem;font-weight:600}
+.dlg-fondo{position:fixed;inset:0;z-index:3000;background:rgba(21,63,84,.35);display:flex;align-items:center;justify-content:center;padding:1rem}
+.dlg-caja{background:#fff;border-radius:14px;padding:1.6rem 1.7rem;max-width:440px;width:100%;box-shadow:0 12px 40px rgba(21,63,84,.25)}
+.dlg-caja h3{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);margin:0 0 .6rem;font-size:1.25rem}
+.dlg-caja p{color:var(--tinta);margin:0 0 1.3rem;line-height:1.5;font-size:.95rem}
+.dlg-botones{display:flex;gap:.6rem;justify-content:flex-end;flex-wrap:wrap}
+.dlg-botones .btn{margin:0}
 @media(max-width:900px){
   .agenda-layout{grid-template-columns:1fr}
   .agenda-editor{position:static}
@@ -307,6 +313,15 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <button data-accion="borrar" class="peligro">Borrar</button>
   </div>
 
+  <!-- Modal genérico de diálogo (confirmaciones y avisos) -->
+  <div id="dlgFondo" class="dlg-fondo" hidden>
+    <div class="dlg-caja" role="dialog" aria-modal="true">
+      <h3 id="dlgTitulo"></h3>
+      <p id="dlgMensaje"></p>
+      <div class="dlg-botones" id="dlgBotones"></div>
+    </div>
+  </div>
+
   <section class="vista oculto" id="vista-estados">
     <h1>Estado de las actividades</h1>
     <p style="color:var(--gris)">Sección en preparación.</p>
@@ -488,6 +503,38 @@ async function cargarDash(){
 }
 
 
+// --- Sistema de modales (reemplaza alert/confirm del navegador) ---
+// dialogo({titulo, mensaje, botones:[{texto, valor, tipo}]}) -> Promise(valor)
+function dialogo(opts){
+  return new Promise(resolve=>{
+    const fondo = $("#dlgFondo");
+    $("#dlgTitulo").textContent = opts.titulo || "";
+    $("#dlgMensaje").textContent = opts.mensaje || "";
+    const cont = $("#dlgBotones");
+    cont.innerHTML = "";
+    (opts.botones || [{texto:"Aceptar", valor:true}]).forEach(b=>{
+      const btn = document.createElement("button");
+      btn.className = "btn" + (b.tipo==="sec"?" btn-sec":"") + (b.tipo==="peligro"?" btn-peligro":"");
+      btn.textContent = b.texto;
+      btn.addEventListener("click", ()=>{ cerrar(); resolve(b.valor); });
+      cont.appendChild(btn);
+    });
+    function cerrar(){ fondo.hidden = true; document.removeEventListener("keydown", onKey); }
+    function onKey(ev){ if(ev.key==="Escape"){ cerrar(); resolve(null); } }
+    document.addEventListener("keydown", onKey);
+    fondo.hidden = false;
+  });
+}
+// Confirmación simple sí/no -> Promise(bool)
+function confirmar(mensaje, titulo){
+  return dialogo({titulo: titulo||"Confirmar", mensaje,
+    botones:[{texto:"Cancelar", valor:false, tipo:"sec"}, {texto:"Aceptar", valor:true}]});
+}
+// Aviso simple (error o éxito) -> Promise
+function avisar(mensaje, titulo){
+  return dialogo({titulo: titulo||"", mensaje, botones:[{texto:"Entendido", valor:true}]});
+}
+
 // --- Agenda / Calendario ---
 const API_AGENDA = "https://api.juliamoreno.yoga/admin/api/agenda";
 const DIAS = [["lun","L"],["mar","M"],["mie","X"],["jue","J"],["vie","V"],["sab","S"],["dom","D"]];
@@ -586,9 +633,9 @@ async function cargarAgenda(){
           const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
             headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
           const d = await r.json();
-          if(!d.ok){ alert(d.error||"No se pudo mover."); info.revert(); }
+          if(!d.ok){ avisar(d.error||"No se pudo mover.", "Error"); info.revert(); }
           else { e.fecha = datos.fecha; e.hora_inicio = datos.hora_inicio; }
-        }catch(err){ alert("Error de conexión al mover."); info.revert(); }
+        }catch(err){ avisar("Error de conexión al mover.", "Error"); info.revert(); }
       },
     });
     calendario.render();
@@ -669,17 +716,17 @@ $("#btnLimpiarSel").addEventListener("click", ()=>{
 $("#btnClonarSel").addEventListener("click", async ()=>{
   if(seleccion.size===0) return;
   const ids = [...seleccion];
-  if(!confirm(`¿Clonar ${ids.length} clase(s) al mes siguiente, en su misma posición semanal?`)) return;
+  if(!(await confirmar(`¿Clonar ${ids.length} clase(s) al mes siguiente, en su misma posición semanal?`, "Clonar seleccionadas"))) return;
   try{
     const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/replicar", {
       method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
       body:JSON.stringify({ids})});
     const d = await r.json();
     if(d.ok){
-      alert(`${d.replicadas} clase(s) clonadas al mes siguiente.`);
+      await avisar(`${d.replicadas} clase(s) clonadas al mes siguiente.`, "Hecho");
       seleccion.clear(); pintarSeleccion(); cargarAgenda();
-    }else alert(d.error||"No se pudo clonar.");
-  }catch(e){ alert("Error de conexión al clonar."); }
+    }else await avisar(d.error||"No se pudo clonar.", "Error");
+  }catch(e){ await avisar("Error de conexión al clonar.", "Error"); }
 });
 
 // --- Menú contextual (clic derecho sobre una clase) ---
@@ -712,15 +759,15 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
   if(accion==="editar"){
     abrirModalAgenda(e);
   }else if(accion==="clonar"){
-    if(!confirm(`¿Clonar «${e.titulo}» al mes siguiente?`)) return;
+    if(!(await confirmar(`¿Clonar «${e.titulo}» al mes siguiente?`, "Clonar clase"))) return;
     try{
       const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/replicar", {
         method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ids:[e.Id]})});
       const d = await r.json();
-      if(d.ok){ alert(`Clonada al mes siguiente.`); cargarAgenda(); }
-      else alert(d.error||"No se pudo clonar.");
-    }catch(err){ alert("Error de conexión."); }
+      if(d.ok){ await avisar("Clonada al mes siguiente.", "Hecho"); cargarAgenda(); }
+      else await avisar(d.error||"No se pudo clonar.", "Error");
+    }catch(err){ await avisar("Error de conexión.", "Error"); }
   }else if(accion==="visibilidad"){
     const nuevo = !(e.visible_web!==false);
     try{
@@ -728,18 +775,54 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({Id:e.Id, visible_web:nuevo})});
       const d = await r.json();
-      if(d.ok){ cargarAgenda(); } else alert(d.error||"No se pudo cambiar.");
-    }catch(err){ alert("Error de conexión."); }
+      if(d.ok){ cargarAgenda(); } else await avisar(d.error||"No se pudo cambiar.", "Error");
+    }catch(err){ await avisar("Error de conexión.", "Error"); }
   }else if(accion==="borrar"){
-    if(!confirm(`¿Borrar «${e.titulo}» del ${e.fecha}?`)) return;
-    try{
-      const r = await fetch(API_AGENDA, {method:"DELETE", credentials:"include",
-        headers:{"Content-Type":"application/json"}, body:JSON.stringify({Id:e.Id})});
-      const d = await r.json();
-      if(d.ok){ seleccion.delete(e.Id); cargarAgenda(); } else alert(d.error||"No se pudo borrar.");
-    }catch(err){ alert("Error de conexión."); }
+    await borrarClase(e);
   }
 });
+
+// Borrado de clase: inteligente si es recurrente (serie) y no es la última de su día
+async function borrarClase(e){
+  const dl = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  const wd = new Date((e.fecha||"") + "T00:00:00").getDay();
+  // hermanas de la misma serie, mismo día de la semana, POSTERIORES (incluida ella)
+  let posteriores = [];
+  if(e.serie_id){
+    posteriores = agendaCache.filter(x=>
+      x.serie_id===e.serie_id &&
+      (x.fecha||"") >= (e.fecha||"") &&
+      new Date((x.fecha||"")+"T00:00:00").getDay()===wd
+    );
+  }
+  let idsBorrar = [e.Id];
+  // Si es recurrente y hay MÁS de una posterior (ella + al menos una), ofrecer opciones
+  if(e.serie_id && posteriores.length > 1){
+    const nombreDia = dl[wd];
+    const opcion = await dialogo({
+      titulo: "Borrar clase recurrente",
+      mensaje: `«${e.titulo}» se repite los ${nombreDia}. ¿Quieres borrar solo esta clase, o esta y todas las de los ${nombreDia} de lo que queda de mes (${posteriores.length} en total)?`,
+      botones: [
+        {texto:"Cancelar", valor:"cancelar", tipo:"sec"},
+        {texto:"Solo esta", valor:"una"},
+        {texto:`Esta y las siguientes (${posteriores.length})`, valor:"serie", tipo:"peligro"},
+      ],
+    });
+    if(opcion==="cancelar" || opcion===null) return;
+    if(opcion==="serie") idsBorrar = posteriores.map(x=>x.Id);
+  }else{
+    // clase suelta o última de su día: confirmación simple
+    if(!(await confirmar(`¿Borrar «${e.titulo}» del ${e.fecha}?`, "Borrar clase"))) return;
+  }
+  try{
+    const cuerpo = idsBorrar.length>1 ? {ids:idsBorrar} : {Id:idsBorrar[0]};
+    const r = await fetch(API_AGENDA, {method:"DELETE", credentials:"include",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(cuerpo)});
+    const d = await r.json();
+    if(d.ok){ idsBorrar.forEach(id=>seleccion.delete(id)); cargarAgenda(); }
+    else await avisar(d.error||"No se pudo borrar.", "Error");
+  }catch(err){ await avisar("Error de conexión.", "Error"); }
+}
 
 
 $("#ag-cancelar").addEventListener("click", cerrarEditorAgenda);
@@ -759,7 +842,7 @@ $("#ag-guardar").addEventListener("click", async ()=>{
   }else{
     datos.fecha = $("#ag-fecha").value || null;
   }
-  if(!datos.titulo){ alert("El título es obligatorio."); return; }
+  if(!datos.titulo){ await avisar("El título es obligatorio.", "Falta el título"); return; }
   const editId = $("#ag-id").value;
   const metodo = editId ? "PATCH" : "POST";
   if(editId) datos.Id = parseInt(editId);
@@ -768,21 +851,21 @@ $("#ag-guardar").addEventListener("click", async ()=>{
       headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
     const d = await r.json();
     if(d.ok){ cerrarEditorAgenda(); cargarAgenda(); }
-    else alert(d.error||"No se pudo guardar.");
-  }catch(e){ alert("Error de conexión al guardar."); }
+    else await avisar(d.error||"No se pudo guardar.", "Error");
+  }catch(e){ await avisar("Error de conexión al guardar.", "Error"); }
 });
 
 $("#ag-borrar").addEventListener("click", async ()=>{
   const editId = $("#ag-id").value;
   if(!editId) return;
-  if(!confirm("¿Borrar esta entrada de la agenda?")) return;
+  if(!(await confirmar("¿Borrar esta entrada de la agenda?", "Borrar entrada"))) return;
   try{
     const r = await fetch(API_AGENDA, {method:"DELETE", credentials:"include",
       headers:{"Content-Type":"application/json"}, body:JSON.stringify({Id:parseInt(editId)})});
     const d = await r.json();
     if(d.ok){ cerrarEditorAgenda(); cargarAgenda(); }
-    else alert(d.error||"No se pudo borrar.");
-  }catch(e){ alert("Error de conexión al borrar."); }
+    else await avisar(d.error||"No se pudo borrar.", "Error");
+  }catch(e){ await avisar("Error de conexión al borrar.", "Error"); }
 });
 
 
