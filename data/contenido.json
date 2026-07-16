@@ -291,6 +291,118 @@
           "de": "Eine dynamische Übung, um voller Energie in den Tag zu starten. Wir verbinden Atmung und Bewegung in einer fließenden Abfolge. Für alle Niveaus geeignet, mit verschiedenen Optionen."
         },
         "franjas": []
+      },
+      {
+        "id": "hatha-suave",
+        "estado": "en_curso",
+        "umbral": 0,
+        "interesados": 0,
+        "conteo_franjas": {},
+        "plazas": 15,
+        "foto": "",
+        "precio": "12 € suelto · 40 €/mes",
+        "duracion": "60 min",
+        "lugar": "Sala municipal de Maro",
+        "mostrar_contador": false,
+        "franjas_elegibles": false,
+        "visible": true,
+        "titulo": {
+          "es": "Hatha suave",
+          "en": "Hatha suave",
+          "fr": "Hatha suave",
+          "de": "Hatha suave"
+        },
+        "texto": {
+          "es": "Práctica pausada centrada en la alineación y la respiración. Posturas sostenidas con tiempo para asentarlas. Ideal para todos los niveles y para quien busca una práctica sin prisa.",
+          "en": "Práctica pausada centrada en la alineación y la respiración. Posturas sostenidas con tiempo para asentarlas. Ideal para todos los niveles y para quien busca una práctica sin prisa.",
+          "fr": "Práctica pausada centrada en la alineación y la respiración. Posturas sostenidas con tiempo para asentarlas. Ideal para todos los niveles y para quien busca una práctica sin prisa.",
+          "de": "Práctica pausada centrada en la alineación y la respiración. Posturas sostenidas con tiempo para asentarlas. Ideal para todos los niveles y para quien busca una práctica sin prisa."
+        },
+        "franjas": []
+      },
+      {
+        "id": "yoga-para-mayores",
+        "estado": "en_curso",
+        "umbral": 0,
+        "interesados": 0,
+        "conteo_franjas": {},
+        "plazas": 12,
+        "foto": "",
+        "precio": "10 € suelto · 35 €/mes",
+        "duracion": "60 min",
+        "lugar": "Estudio Maro",
+        "mostrar_contador": false,
+        "franjas_elegibles": false,
+        "visible": true,
+        "titulo": {
+          "es": "Yoga para mayores",
+          "en": "Yoga para mayores",
+          "fr": "Yoga para mayores",
+          "de": "Yoga para mayores"
+        },
+        "texto": {
+          "es": "Sesión adaptada a cuerpos maduros: movilidad articular, equilibrio y respiración, con apoyos y opciones para cada persona. Cuida la autonomía y el bienestar diario.",
+          "en": "Sesión adaptada a cuerpos maduros: movilidad articular, equilibrio y respiración, con apoyos y opciones para cada persona. Cuida la autonomía y el bienestar diario.",
+          "fr": "Sesión adaptada a cuerpos maduros: movilidad articular, equilibrio y respiración, con apoyos y opciones para cada persona. Cuida la autonomía y el bienestar diario.",
+          "de": "Sesión adaptada a cuerpos maduros: movilidad articular, equilibrio y respiración, con apoyos y opciones para cada persona. Cuida la autonomía y el bienestar diario."
+        },
+        "franjas": []
+      },
+      {
+        "id": "yin-yoga",
+        "estado": "en_curso",
+        "umbral": 0,
+        "interesados": 0,
+        "conteo_franjas": {},
+        "plazas": 14,
+        "foto": "",
+        "precio": "12 € suelto · 40 €/mes",
+        "duracion": "60 min",
+        "lugar": "Estudio Maro",
+        "mostrar_contador": false,
+        "franjas_elegibles": false,
+        "visible": true,
+        "titulo": {
+          "es": "Yin Yoga",
+          "en": "Yin Yoga",
+          "fr": "Yin Yoga",
+          "de": "Yin Yoga"
+        },
+        "texto": {
+          "es": "Posturas en el suelo sostenidas varios minutos que trabajan los tejidos profundos y la calma. Una práctica introspectiva perfecta para el final del día.",
+          "en": "Posturas en el suelo sostenidas varios minutos que trabajan los tejidos profundos y la calma. Una práctica introspectiva perfecta para el final del día.",
+          "fr": "Posturas en el suelo sostenidas varios minutos que trabajan los tejidos profundos y la calma. Una práctica introspectiva perfecta para el final del día.",
+          "de": "Posturas en el suelo sostenidas varios minutos que trabajan los tejidos profundos y la calma. Una práctica introspectiva perfecta para el final del día."
+        },
+        "franjas": []
+      },
+      {
+        "id": "clase-junto-al-mar",
+        "estado": "en_curso",
+        "umbral": 0,
+        "interesados": 0,
+        "conteo_franjas": {},
+        "plazas": 18,
+        "foto": "",
+        "precio": "15 €",
+        "duracion": "75 min",
+        "lugar": "Playa de Maro",
+        "mostrar_contador": false,
+        "franjas_elegibles": false,
+        "visible": true,
+        "titulo": {
+          "es": "Clase junto al mar",
+          "en": "Clase junto al mar",
+          "fr": "Clase junto al mar",
+          "de": "Clase junto al mar"
+        },
+        "texto": {
+          "es": "Yoga al aire libre en la playa de Maro, al ritmo de las olas. Una práctica revitalizante que combina movimiento, respiración y el entorno natural. Sujeta a la meteorología.",
+          "en": "Yoga al aire libre en la playa de Maro, al ritmo de las olas. Una práctica revitalizante que combina movimiento, respiración y el entorno natural. Sujeta a la meteorología.",
+          "fr": "Yoga al aire libre en la playa de Maro, al ritmo de las olas. Una práctica revitalizante que combina movimiento, respiración y el entorno natural. Sujeta a la meteorología.",
+          "de": "Yoga al aire libre en la playa de Maro, al ritmo de las olas. Una práctica revitalizante que combina movimiento, respiración y el entorno natural. Sujeta a la meteorología."
+        },
+        "franjas": []
       }
     ],
     "ui": {

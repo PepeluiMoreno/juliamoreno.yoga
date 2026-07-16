@@ -45,6 +45,50 @@ def _tid(tabla):
     return _TABLAS[tabla]
 
 
+def _proyecta_matriz(mes_ym):
+    """Proyecta la matriz de Clases (semana tipo) sobre un mes completo:
+    por cada celda activa, genera una ocurrencia en Agenda para cada día del
+    mes que caiga en su día de la semana. Cada celda produce una serie."""
+    import calendar as _cal
+    import uuid as _uuid
+    y, m = map(int, mes_ym.split("-"))
+    dianum = {"lun": 0, "mar": 1, "mie": 2, "jue": 3, "vie": 4, "sab": 5, "dom": 6}
+    celdas = lee("Clases")
+    ndias = _cal.monthrange(y, m)[1]
+    nuevas = []
+    # mapa actividad_id -> titulo_es (para poner título legible en la ocurrencia)
+    try:
+        acts = {a.get("id"): a.get("titulo_es") for a in lee("Actividades")}
+    except Exception:
+        acts = {}
+    for c in celdas:
+        if not c.get("activa"):
+            continue
+        wd = dianum.get((c.get("dia_semana") or "").strip())
+        if wd is None:
+            continue
+        serie = _uuid.uuid4().hex[:12]
+        titulo = acts.get(c.get("actividad_id")) or c.get("actividad_id") or "(clase)"
+        for dia in range(1, ndias + 1):
+            fecha = datetime.date(y, m, dia)
+            if fecha.weekday() == wd:
+                nuevas.append({
+                    "titulo": titulo,
+                    "actividad_id": c.get("actividad_id", ""),
+                    "tipo": "puntual",
+                    "fecha": fecha.isoformat(),
+                    "hora_inicio": c.get("hora_inicio", ""),
+                    "duracion_min": c.get("duracion_min"),
+                    "lugar": c.get("lugar", ""),
+                    "color": c.get("color", ""),
+                    "visible_web": True,
+                    "serie_id": serie,
+                })
+    if nuevas:
+        guarda_varios("Agenda", nuevas)
+    return len(nuevas)
+
+
 def _replica_ocurrencias(ids):
     """Clona las ocurrencias indicadas (por Id) al mes siguiente al de cada
     una, en su misma posición semanal (mismo día de la semana y misma posición
@@ -505,6 +549,23 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "agenda": out})
             except Exception as e:
                 return self._json({"error": f"no se pudo leer: {e}"}, 502)
+
+        if self.path == "/admin/api/clases":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            try:
+                filas = lee("Clases")
+                out = []
+                for r in filas:
+                    out.append({
+                        "Id": r.get("Id"), "actividad_id": r.get("actividad_id"),
+                        "dia_semana": r.get("dia_semana"), "hora_inicio": r.get("hora_inicio"),
+                        "duracion_min": r.get("duracion_min"), "lugar": r.get("lugar"),
+                        "color": r.get("color"), "activa": r.get("activa"),
+                    })
+                return self._json({"ok": True, "clases": out})
+            except Exception as e:
+                return self._json({"error": f"no se pudo leer: {e}"}, 502)
         self._json({"error": "not found"}, 404)
 
     def do_PATCH(self):
@@ -681,18 +742,18 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 return self._json({"error": f"no se pudo replicar: {e}"}, 502)
 
-        if self.path == "/admin/api/agenda/replicar":
+        if self.path == "/admin/api/agenda/proyectar-matriz":
             if not self._admin_user():
                 return self._json({"error": "no autenticado"}, 401)
-            ids = body.get("ids") or []
-            if not isinstance(ids, list) or not ids:
-                return self._json({"error": "no se seleccionó ninguna clase"}, 422)
+            mes = limpio(body.get("mes"), 7)  # YYYY-MM
+            if len(mes) != 7:
+                return self._json({"error": "falta el mes (YYYY-MM)"}, 422)
             try:
-                n = _replica_ocurrencias([int(i) for i in ids])
+                n = _proyecta_matriz(mes)
                 dispara_rebuild()
-                return self._json({"ok": True, "replicadas": n})
+                return self._json({"ok": True, "generadas": n})
             except Exception as e:
-                return self._json({"error": f"no se pudo replicar: {e}"}, 502)
+                return self._json({"error": f"no se pudo proyectar: {e}"}, 502)
 
         if self.path == "/admin/api/agenda/copiar-mes":
             if not self._admin_user():
