@@ -45,31 +45,59 @@ def _tid(tabla):
     return _TABLAS[tabla]
 
 
-def _preparar_mes_desde_plantillas(mes_ym):
-    """Estampa todas las plantillas sobre el mes indicado (YYYY-MM),
-    generando las ocurrencias concretas de cada una. Devuelve cuántas."""
-    y, m = map(int, mes_ym.split("-"))
+def _replica_ocurrencias(ids):
+    """Clona las ocurrencias indicadas (por Id) al mes siguiente al de cada
+    una, en su misma posición semanal (mismo día de la semana y misma posición
+    ordinal dentro del mes: 2º martes -> 2º martes del mes siguiente)."""
+    import calendar as _cal
+    import uuid as _uuid
     filas = lee("Agenda")
-    plantillas = [f for f in filas if f.get("es_plantilla")]
-    if not plantillas:
-        return 0
-    total = 0
-    for p in plantillas:
-        base = {
-            "titulo": p.get("titulo", ""),
-            "actividad_id": p.get("actividad_id", ""),
-            "dias_semana": p.get("dias_semana", ""),
-            "hora_inicio": p.get("hora_inicio", ""),
-            "duracion_min": p.get("duracion_min"),
-            "lugar": p.get("lugar", ""),
-            "color": p.get("color", ""),
-            "visible_web": p.get("visible_web", False),
-        }
-        ocs = _materializa_mes(base, anio=y, mes=m)
-        if ocs:
-            guarda_varios("Agenda", ocs)
-            total += len(ocs)
-    return total
+    por_id = {r.get("Id"): r for r in filas}
+    serie = _uuid.uuid4().hex[:12]
+    nuevas = []
+    for rid in ids:
+        r = por_id.get(rid)
+        if not r:
+            continue
+        fecha = (r.get("fecha") or "")[:10]
+        try:
+            d = datetime.date.fromisoformat(fecha)
+        except Exception:
+            continue
+        # mes siguiente
+        if d.month == 12:
+            ym, mm = d.year + 1, 1
+        else:
+            ym, mm = d.year, d.month + 1
+        semana_pos = (d.day - 1) // 7
+        wd = d.weekday()
+        ndias = _cal.monthrange(ym, mm)[1]
+        destino = None
+        cuenta = -1
+        for dia in range(1, ndias + 1):
+            fd = datetime.date(ym, mm, dia)
+            if fd.weekday() == wd:
+                cuenta += 1
+                if cuenta == semana_pos:
+                    destino = fd
+                    break
+        if destino is None:
+            continue
+        nuevas.append({
+            "titulo": r.get("titulo", ""),
+            "actividad_id": r.get("actividad_id", ""),
+            "tipo": "puntual",
+            "fecha": destino.isoformat(),
+            "hora_inicio": r.get("hora_inicio", ""),
+            "duracion_min": r.get("duracion_min"),
+            "lugar": r.get("lugar", ""),
+            "color": r.get("color", ""),
+            "visible_web": r.get("visible_web", False),
+            "serie_id": serie,
+        })
+    if nuevas:
+        guarda_varios("Agenda", nuevas)
+    return len(nuevas)
 
 
 def _copia_mes(desde_ym, hasta_ym):
@@ -279,8 +307,6 @@ def _fila_agenda(body, con_id):
             fila[c] = v if v else None
     if "visible_web" in body:
         fila["visible_web"] = bool(body["visible_web"])
-    if "es_plantilla" in body:
-        fila["es_plantilla"] = bool(body["es_plantilla"])
     return fila
 
 
@@ -472,7 +498,7 @@ class H(BaseHTTPRequestHandler):
                         "dias_semana": r.get("dias_semana"), "fecha": r.get("fecha"),
                         "vigencia_desde": r.get("vigencia_desde"), "vigencia_hasta": r.get("vigencia_hasta"),
                         "hora_inicio": r.get("hora_inicio"), "duracion_min": r.get("duracion_min"),
-                        "serie_id": r.get("serie_id"), "es_plantilla": r.get("es_plantilla"),
+                        "serie_id": r.get("serie_id"),
                         "lugar": r.get("lugar"), "color": r.get("color"),
                         "visible_web": r.get("visible_web"),
                     })
@@ -642,18 +668,31 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 return self._json({"error": f"no se pudo crear: {e}"}, 502)
 
-        if self.path == "/admin/api/agenda/preparar-mes":
+        if self.path == "/admin/api/agenda/replicar":
             if not self._admin_user():
                 return self._json({"error": "no autenticado"}, 401)
-            mes = limpio(body.get("mes"), 7)  # YYYY-MM
-            if len(mes) != 7:
-                return self._json({"error": "falta el mes (YYYY-MM)"}, 422)
+            ids = body.get("ids") or []
+            if not isinstance(ids, list) or not ids:
+                return self._json({"error": "no se seleccionó ninguna clase"}, 422)
             try:
-                n = _preparar_mes_desde_plantillas(mes)
+                n = _replica_ocurrencias([int(i) for i in ids])
                 dispara_rebuild()
-                return self._json({"ok": True, "generadas": n})
+                return self._json({"ok": True, "replicadas": n})
             except Exception as e:
-                return self._json({"error": f"no se pudo preparar: {e}"}, 502)
+                return self._json({"error": f"no se pudo replicar: {e}"}, 502)
+
+        if self.path == "/admin/api/agenda/replicar":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            ids = body.get("ids") or []
+            if not isinstance(ids, list) or not ids:
+                return self._json({"error": "no se seleccionó ninguna clase"}, 422)
+            try:
+                n = _replica_ocurrencias([int(i) for i in ids])
+                dispara_rebuild()
+                return self._json({"ok": True, "replicadas": n})
+            except Exception as e:
+                return self._json({"error": f"no se pudo replicar: {e}"}, 502)
 
         if self.path == "/admin/api/agenda/copiar-mes":
             if not self._admin_user():
@@ -671,6 +710,11 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": f"no se pudo copiar: {e}"}, 502)
 
         if self.path == "/admin/api/agenda":
+            if not self._admin_user():
+                return self._json({"error": "no autenticado"}, 401)
+            fila = _fila_agenda(body, con_id=False)
+            if not fila.get("titulo") and not fila.get("actividad_id"):
+                return self._json({"error": "falta título o actividad"}, 422)
             tipo = fila.get("tipo")
             try:
                 if tipo == "recurrente":

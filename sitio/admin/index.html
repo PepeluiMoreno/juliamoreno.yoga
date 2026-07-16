@@ -69,6 +69,11 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .agenda-layout{display:grid;grid-template-columns:1fr 360px;gap:1.2rem;align-items:start}
 .agenda-editor{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:1.2rem 1.3rem;position:sticky;top:1rem;max-height:calc(100vh - 170px);overflow-y:auto}
 .agenda-editor h3{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);margin:0 0 .8rem}
+.agenda-plantillas{margin-bottom:1.2rem;padding-bottom:1rem;border-bottom:1px solid var(--linea)}
+.ag-plantillas-lista{display:flex;flex-direction:column;gap:.3rem}
+.ag-plantilla-it{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.4rem .6rem;border:1px solid var(--linea);border-radius:6px;font-size:.85rem;cursor:pointer}
+.ag-plantilla-it:hover{background:var(--cielo-claro)}
+.ag-plantilla-dias{color:var(--gris);font-size:.78rem}
 .agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
 @media(max-width:900px){
   .agenda-layout{grid-template-columns:1fr}
@@ -85,6 +90,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .fc .fc-button-primary:not(:disabled).fc-button-active{background:var(--mar-hondo);border-color:var(--mar-hondo)}
 .fc .fc-toolbar-title{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);font-size:1.2rem}
 .fc-event{cursor:pointer}
+.fc-event.ev-sel{outline:3px solid var(--tinta);outline-offset:1px;box-shadow:0 0 0 2px #fff inset;font-weight:700}
 .btn-mini:hover{background:var(--cielo-claro);border-color:var(--mar)}
 .oculto{display:none}
 
@@ -220,14 +226,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <div class="agenda-cal">
         <div class="agenda-barra">
           <button class="btn btn-sec" id="btnNuevaEntrada">+ Nueva clase o sesión</button>
-          <button class="btn btn-sec" id="btnPrepararMes">Preparar mes desde plantillas</button>
-          <button class="btn btn-sec" id="btnCopiarMes">Copiar al mes siguiente</button>
+          <button class="btn oculto" id="btnClonarSel">Clonar seleccionadas al mes siguiente</button>
+          <span id="selInfo" style="font-size:.85rem;color:var(--gris);margin-left:.6rem"></span>
         </div>
         <div id="calendario"></div>
       </div>
       <div class="agenda-editor" id="agendaEditor">
         <div class="agenda-editor-vacio" id="agEditorVacio">
-          <p style="color:var(--gris)">Selecciona una clase del calendario para editarla, o pulsa <b>+ Nueva clase o sesión</b>.</p>
+          <p style="color:var(--gris)">Un clic en una clase la selecciona (y las siguientes de su serie) para clonar. Doble clic para editarla. O pulsa <b>+ Nueva clase o sesión</b>.</p>
         </div>
         <div id="agEditorForm" class="oculto">
           <h3 id="agTitulo">Nueva entrada</h3>
@@ -237,17 +243,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 
           <label for="ag-tipo">Tipo</label>
           <select id="ag-tipo">
-            <option value="recurrente">Clase recurrente (se repite cada semana)</option>
+            <option value="recurrente">Clase que se repite (genera las de este mes)</option>
             <option value="puntual">Sesión puntual (una fecha concreta)</option>
           </select>
 
           <div id="ag-recurrente-campos">
             <label>Días de la semana</label>
             <div class="ag-dias" id="ag-dias"></div>
-            <div class="fila">
-              <div><label for="ag-desde">Vigente desde</label><input type="date" id="ag-desde"></div>
-              <div><label for="ag-hasta">Hasta (opcional)</label><input type="date" id="ag-hasta"></div>
-            </div>
+            <p style="font-size:.8rem;color:var(--gris);margin:.3rem 0 0">Se generarán las clases de este mes en los días marcados. Luego podrás moverlas o clonarlas al mes siguiente.</p>
           </div>
 
           <div id="ag-puntual-campos" class="oculto">
@@ -513,6 +516,8 @@ function entradaAEvento(e){
   return base;
 }
 
+let seleccion = new Set();
+let agendaCache = [];
 async function cargarAgenda(){
   if(!calendario){
     calendario = new FullCalendar.Calendar($("#calendario"), {
@@ -529,8 +534,17 @@ async function cargarAgenda(){
       eventStartEditable: true,
       eventDurationEditable: false,
       eventClick: function(info){
-        const e = info.event.extendedProps.raw;
-        abrirModalAgenda(e);
+        toggleSeleccion(info.event.extendedProps.raw);
+        pintarSeleccion();
+      },
+      eventClassNames: function(arg){
+        return seleccion.has(arg.event.extendedProps.raw.Id) ? ["ev-sel"] : [];
+      },
+      eventDidMount: function(info){
+        info.el.addEventListener("dblclick", function(ev){
+          ev.stopPropagation();
+          abrirModalAgenda(info.event.extendedProps.raw);
+        });
       },
       eventDrop: async function(info){
         // Al soltar una clase, actualizar su fecha y/o hora de inicio
@@ -558,9 +572,11 @@ async function cargarAgenda(){
     if(!r.ok) return;
     const d = await r.json();
     calendario.removeAllEvents();
-    (d.agenda||[]).filter(e=> !e.es_plantilla).forEach(e=> calendario.addEvent(entradaAEvento(e)));
+    agendaCache = d.agenda || [];
+    agendaCache.forEach(e=> calendario.addEvent(entradaAEvento(e)));
   }catch(err){}
 }
+
 
 function abrirModalAgenda(e){
   e = e || {};
@@ -573,8 +589,6 @@ function abrirModalAgenda(e){
   $("#ag-tipo").dispatchEvent(new Event("change"));
   const dias = new Set((e.dias_semana||"").split(",").map(x=>x.trim()));
   document.querySelectorAll("#ag-dias input").forEach(c=>c.checked=dias.has(c.value));
-  $("#ag-desde").value = e.vigencia_desde || "";
-  $("#ag-hasta").value = e.vigencia_hasta || "";
   $("#ag-fecha").value = e.fecha || "";
   $("#ag-hora-ini").value = e.hora_inicio || "";
   $("#ag-duracion").value = e.duracion_min ? String(e.duracion_min) : "60";
@@ -589,42 +603,43 @@ function cerrarEditorAgenda(){
 }
 $("#btnNuevaEntrada").addEventListener("click", ()=> abrirModalAgenda(null));
 
-$("#btnPrepararMes").addEventListener("click", async ()=>{
-  if(!calendario) return;
-  const f = calendario.getDate();
-  const mes = `${f.getFullYear()}-${String(f.getMonth()+1).padStart(2,"0")}`;
-  const nombreMes = f.toLocaleDateString("es",{month:"long",year:"numeric"});
-  if(!confirm(`¿Generar las clases de ${nombreMes} a partir de las plantillas? Podrás ajustar o borrar lo que sobre después.`)) return;
+// --- Selección de clases para clonar al mes siguiente ---
+
+function toggleSeleccion(e){
+  const yaSel = seleccion.has(e.Id);
+  // Si pertenece a una serie, actuar sobre esa y las POSTERIORES de su serie
+  if(e.serie_id){
+    const hermanas = agendaCache.filter(x=> x.serie_id===e.serie_id && (x.fecha||"") >= (e.fecha||""));
+    hermanas.forEach(x=> yaSel ? seleccion.delete(x.Id) : seleccion.add(x.Id));
+  }else{
+    yaSel ? seleccion.delete(e.Id) : seleccion.add(e.Id);
+  }
+}
+
+function pintarSeleccion(){
+  if(calendario) calendario.render();  // re-evalúa eventClassNames
+  const n = seleccion.size;
+  const btn = $("#btnClonarSel"), info = $("#selInfo");
+  if(n>0){ btn.classList.remove("oculto"); info.textContent = `${n} clase${n>1?"s":""} seleccionada${n>1?"s":""}`; }
+  else { btn.classList.add("oculto"); info.textContent = ""; }
+}
+
+$("#btnClonarSel").addEventListener("click", async ()=>{
+  if(seleccion.size===0) return;
+  const ids = [...seleccion];
+  if(!confirm(`¿Clonar ${ids.length} clase(s) al mes siguiente, en su misma posición semanal?`)) return;
   try{
-    const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/preparar-mes", {
+    const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/replicar", {
       method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({mes})});
+      body:JSON.stringify({ids})});
     const d = await r.json();
-    if(d.ok){ alert(`${d.generadas} clases generadas para ${nombreMes}.`); cargarAgenda(); }
-    else alert(d.error||"No se pudo preparar el mes.");
-  }catch(e){ alert("Error de conexión."); }
+    if(d.ok){
+      alert(`${d.replicadas} clase(s) clonadas al mes siguiente.`);
+      seleccion.clear(); pintarSeleccion(); cargarAgenda();
+    }else alert(d.error||"No se pudo clonar.");
+  }catch(e){ alert("Error de conexión al clonar."); }
 });
 
-
-$("#btnCopiarMes").addEventListener("click", async ()=>{
-  if(!calendario) return;
-  const fechaVista = calendario.getDate();
-  const y = fechaVista.getFullYear(), m = fechaVista.getMonth()+1;
-  const desde = `${y}-${String(m).padStart(2,"0")}`;
-  const md = m===12 ? 1 : m+1;
-  const yd = m===12 ? y+1 : y;
-  const hasta = `${yd}-${String(md).padStart(2,"0")}`;
-  const nombreMes = new Date(yd, md-1, 1).toLocaleDateString("es",{month:"long",year:"numeric"});
-  if(!confirm(`¿Copiar las clases de este mes a ${nombreMes}?`)) return;
-  try{
-    const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/copiar-mes", {
-      method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({desde, hasta})});
-    const d = await r.json();
-    if(d.ok){ alert(`${d.copiadas} clases copiadas a ${nombreMes}.`); cargarAgenda(); }
-    else alert(d.error||"No se pudo copiar.");
-  }catch(e){ alert("Error de conexión al copiar."); }
-});
 
 $("#ag-cancelar").addEventListener("click", cerrarEditorAgenda);
 
@@ -640,8 +655,6 @@ $("#ag-guardar").addEventListener("click", async ()=>{
   };
   if(tipo==="recurrente"){
     datos.dias_semana = [...document.querySelectorAll("#ag-dias input:checked")].map(c=>c.value).join(",");
-    datos.vigencia_desde = $("#ag-desde").value || null;
-    datos.vigencia_hasta = $("#ag-hasta").value || null;
   }else{
     datos.fecha = $("#ag-fecha").value || null;
   }
