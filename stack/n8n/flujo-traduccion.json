@@ -12,18 +12,24 @@
       "name": "Webhook NocoDB",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "traducir-actividad"
     },
     {
       "parameters": {
-        "jsCode": "// Traduce titulo_es/texto_es a en/fr/de con DeepL y guarda en NocoDB.\n// Anti-bucle: solo actua si md5(titulo_es+texto_es) difiere de es_hash.\n// Respeta idiomas marcados en 'revisado' (ej: \"en,fr\").\nconst crypto = require('crypto');\nconst URL = $env.NOCODB_URL;\nconst TOK = $env.NOCODB_TOKEN;\nconst BASE = $env.NOCODB_BASE || 'Yoga';\nconst DEEPL = $env.DEEPL_API_KEY;\nif (!URL || !TOK || !DEEPL) throw new Error('Faltan NOCODB_URL/NOCODB_TOKEN/DEEPL_API_KEY en el entorno de n8n');\nconst H = { 'xc-token': TOK, 'Content-Type': 'application/json' };\n\n// --- extraer la(s) fila(s) del payload del webhook de NocoDB (tolerante a formatos) ---\nconst body = $json.body || $json;\nlet rows = body?.data?.rows || body?.data?.records || (body?.data ? [body.data] : []) ;\nif (!Array.isArray(rows)) rows = [rows];\nrows = rows.filter(r => r && (r.titulo_es || r.texto_es));\nif (!rows.length) return [{ json: { ok: true, motivo: 'sin filas con contenido es' } }];\n\n// --- localizar la tabla Actividades por nombre ---\nconst bases = await this.helpers.httpRequest({ url: `${URL}/api/v2/meta/bases`, headers: H, json: true });\nconst b = bases.list.find(x => x.title === BASE);\nif (!b) throw new Error(`base ${BASE} no encontrada`);\nconst tabs = await this.helpers.httpRequest({ url: `${URL}/api/v2/meta/bases/${b.id}/tables`, headers: H, json: true });\nconst tAct = tabs.list.find(x => x.title === 'Actividades');\nif (!tAct) throw new Error('tabla Actividades no encontrada');\n\nconst LANGS = { en: 'EN-GB', fr: 'FR', de: 'DE' };\nasync function deepl(texto, target) {\n  if (!texto) return '';\n  const r = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api-free.deepl.com/v2/translate',\n    headers: { 'Authorization': `DeepL-Auth-Key ${DEEPL}`, 'Content-Type': 'application/json' },\n    body: { text: [texto], source_lang: 'ES', target_lang: target },\n    json: true\n  });\n  return r.translations[0].text;\n}\n\nconst resultados = [];\nfor (const row of rows) {\n  const id = row.Id;\n  const tit = (row.titulo_es || '').trim();\n  const txt = (row.texto_es || '').trim();\n  if (!id || (!tit && !txt)) continue;\n  const hash = crypto.createHash('md5').update(tit + '|' + txt).digest('hex');\n  if (row.es_hash === hash) { resultados.push({ id, accion: 'sin cambios (hash)' }); continue; }\n  const revisado = (row.revisado || '').toLowerCase();\n  const parche = { Id: id, es_hash: hash };\n  for (const [idioma, target] of Object.entries(LANGS)) {\n    if (revisado.includes(idioma)) continue;  // traduccion humana: no pisar\n    if (tit) parche[`titulo_${idioma}`] = await deepl.call(this, tit, target);\n    if (txt) parche[`texto_${idioma}`] = await deepl.call(this, txt, target);\n  }\n  await this.helpers.httpRequest({ method: 'PATCH', url: `${URL}/api/v2/tables/${tAct.id}/records`, headers: H, body: [parche], json: true });\n  resultados.push({ id, accion: 'traducida', idiomas: Object.keys(LANGS).filter(i => !revisado.includes(i)) });\n}\nreturn [{ json: { ok: true, resultados } }];"
+        "jsCode": "// Traduce titulo_es/texto_es a en/fr/de con DeepL y guarda en NocoDB.\n// Anti-bucle: solo actua si md5(titulo_es+texto_es) difiere de es_hash.\n// Respeta idiomas marcados en 'revisado' (ej: \"en,fr\").\nconst URL = $env.NOCODB_URL;\nconst TOK = $env.NOCODB_TOKEN;\nconst BASE = $env.NOCODB_BASE || 'Yoga';\nconst DEEPL = $env.DEEPL_API_KEY;\nif (!URL || !TOK || !DEEPL) throw new Error('Faltan NOCODB_URL/NOCODB_TOKEN/DEEPL_API_KEY en el entorno de n8n');\nconst H = { 'xc-token': TOK, 'Content-Type': 'application/json' };\n\n// --- extraer la(s) fila(s) del payload del webhook de NocoDB (tolerante a formatos) ---\nconst body = $json.body || $json;\nlet rows = body?.data?.rows || body?.data?.records || (body?.data ? [body.data] : []) ;\nif (!Array.isArray(rows)) rows = [rows];\nrows = rows.filter(r => r && (r.titulo_es || r.texto_es));\nif (!rows.length) return [{ json: { ok: true, motivo: 'sin filas con contenido es' } }];\n\n// --- localizar la tabla Actividades por nombre ---\nconst bases = await this.helpers.httpRequest({ url: `${URL}/api/v2/meta/bases`, headers: H, json: true });\nconst b = bases.list.find(x => x.title === BASE);\nif (!b) throw new Error(`base ${BASE} no encontrada`);\nconst tabs = await this.helpers.httpRequest({ url: `${URL}/api/v2/meta/bases/${b.id}/tables`, headers: H, json: true });\nconst tAct = tabs.list.find(x => x.title === 'Actividades');\nif (!tAct) throw new Error('tabla Actividades no encontrada');\n\nconst LANGS = { en: 'EN-GB', fr: 'FR', de: 'DE' };\nasync function deepl(texto, target) {\n  if (!texto) return '';\n  const r = await this.helpers.httpRequest({\n    method: 'POST',\n    url: 'https://api-free.deepl.com/v2/translate',\n    headers: { 'Authorization': `DeepL-Auth-Key ${DEEPL}`, 'Content-Type': 'application/json' },\n    body: { text: [texto], source_lang: 'ES', target_lang: target },\n    json: true\n  });\n  return r.translations[0].text;\n}\n\nconst resultados = [];\nfor (const row of rows) {\n  const id = row.Id;\n  const tit = (row.titulo_es || '').trim();\n  const txt = (row.texto_es || '').trim();\n  if (!id || (!tit && !txt)) continue;\n  const fnv = (s) => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; } return h.toString(16); };\n  const hash = fnv(tit + '|' + txt);\n  if (row.es_hash === hash) { resultados.push({ id, accion: 'sin cambios (hash)' }); continue; }\n  const revisado = (row.revisado || '').toLowerCase();\n  const parche = { Id: id, es_hash: hash };\n  for (const [idioma, target] of Object.entries(LANGS)) {\n    if (revisado.includes(idioma)) continue;  // traduccion humana: no pisar\n    if (tit) parche[`titulo_${idioma}`] = await deepl.call(this, tit, target);\n    if (txt) parche[`texto_${idioma}`] = await deepl.call(this, txt, target);\n  }\n  await this.helpers.httpRequest({ method: 'PATCH', url: `${URL}/api/v2/tables/${tAct.id}/records`, headers: H, body: [parche], json: true });\n  resultados.push({ id, accion: 'traducida', idiomas: Object.keys(LANGS).filter(i => !revisado.includes(i)) });\n}\nreturn [{ json: { ok: true, resultados } }];"
       },
       "id": "traducir-deepl",
       "name": "Traducir y guardar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0]
+      "position": [
+        220,
+        0
+      ]
     },
     {
       "parameters": {
@@ -35,12 +41,37 @@
       "name": "Responder OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [440, 0]
+      "position": [
+        440,
+        0
+      ]
     }
   ],
   "connections": {
-    "Webhook NocoDB": { "main": [[{ "node": "Traducir y guardar", "type": "main", "index": 0 }]] },
-    "Traducir y guardar": { "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]] }
+    "Webhook NocoDB": {
+      "main": [
+        [
+          {
+            "node": "Traducir y guardar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traducir y guardar": {
+      "main": [
+        [
+          {
+            "node": "Responder OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
   },
-  "settings": { "executionOrder": "v1" }
+  "settings": {
+    "executionOrder": "v1"
+  }
 }
