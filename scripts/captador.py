@@ -45,6 +45,67 @@ def _tid(tabla):
     return _TABLAS[tabla]
 
 
+def _copia_mes(desde_ym, hasta_ym):
+    """Copia las ocurrencias del mes origen (YYYY-MM) al mes destino,
+    preservando el patrón semanal: cada clase cae en el mismo día de la
+    semana y la misma posición dentro del mes (1er lunes -> 1er lunes).
+    No duplica: si el destino ya tiene ocurrencias, se añaden igualmente
+    (Julia controla; se puede vaciar antes si quiere). Devuelve cuántas."""
+    import calendar as _cal
+    import uuid as _uuid
+    ya, ma = map(int, desde_ym.split("-"))
+    yd, md = map(int, hasta_ym.split("-"))
+    filas = lee("Agenda")
+    # ocurrencias del mes origen
+    origen = []
+    for f in filas:
+        fecha = (f.get("fecha") or "")[:10]
+        if not fecha:
+            continue
+        try:
+            d = datetime.date.fromisoformat(fecha)
+        except Exception:
+            continue
+        if d.year == ya and d.month == ma:
+            origen.append((d, f))
+    if not origen:
+        return 0
+    ndias_dest = _cal.monthrange(yd, md)[1]
+    nuevas = []
+    serie = _uuid.uuid4().hex[:12]
+    for d, f in origen:
+        # posición: cuántos días de ese weekday han pasado en el mes (1er, 2º...)
+        semana_pos = (d.day - 1) // 7  # 0=primera aparición del mes
+        wd = d.weekday()
+        # encontrar la fecha en el mes destino con mismo weekday y misma posición
+        cuenta = -1
+        destino = None
+        for dia in range(1, ndias_dest + 1):
+            fd = datetime.date(yd, md, dia)
+            if fd.weekday() == wd:
+                cuenta += 1
+                if cuenta == semana_pos:
+                    destino = fd
+                    break
+        if destino is None:
+            continue  # ese mes no tiene esa posición (p.ej. 5º lunes)
+        nuevas.append({
+            "titulo": f.get("titulo", ""),
+            "actividad_id": f.get("actividad_id", ""),
+            "tipo": "puntual",
+            "fecha": destino.isoformat(),
+            "hora_inicio": f.get("hora_inicio", ""),
+            "duracion_min": f.get("duracion_min"),
+            "lugar": f.get("lugar", ""),
+            "color": f.get("color", ""),
+            "visible_web": f.get("visible_web", False),
+            "serie_id": serie,
+        })
+    if nuevas:
+        guarda_varios("Agenda", nuevas)
+    return len(nuevas)
+
+
 def guarda_varios(tabla, filas):
     url, tok, _ = nc.cfg()
     nc.api(url, tok, "POST", f"/api/v2/tables/{_tid(tabla)}/records", filas)
@@ -548,12 +609,22 @@ class H(BaseHTTPRequestHandler):
             except Exception as e:
                 return self._json({"error": f"no se pudo crear: {e}"}, 502)
 
-        if self.path == "/admin/api/agenda":
+        if self.path == "/admin/api/agenda/copiar-mes":
             if not self._admin_user():
                 return self._json({"error": "no autenticado"}, 401)
-            fila = _fila_agenda(body, con_id=False)
-            if not fila.get("titulo") and not fila.get("actividad_id"):
-                return self._json({"error": "falta título o actividad"}, 422)
+            # body: {"desde":"2026-07", "hasta":"2026-08"}
+            desde = limpio(body.get("desde"), 7)   # YYYY-MM
+            hasta = limpio(body.get("hasta"), 7)
+            if not (len(desde) == 7 and len(hasta) == 7):
+                return self._json({"error": "faltan meses origen/destino (YYYY-MM)"}, 422)
+            try:
+                n = _copia_mes(desde, hasta)
+                dispara_rebuild()
+                return self._json({"ok": True, "copiadas": n})
+            except Exception as e:
+                return self._json({"error": f"no se pudo copiar: {e}"}, 502)
+
+        if self.path == "/admin/api/agenda":
             tipo = fila.get("tipo")
             try:
                 if tipo == "recurrente":

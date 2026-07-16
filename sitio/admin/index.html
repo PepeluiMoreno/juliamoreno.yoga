@@ -220,6 +220,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <div class="agenda-cal">
         <div class="agenda-barra">
           <button class="btn btn-sec" id="btnNuevaEntrada">+ Nueva clase o sesión</button>
+          <button class="btn btn-sec" id="btnCopiarMes">Copiar al mes siguiente</button>
         </div>
         <div id="calendario"></div>
       </div>
@@ -586,6 +587,27 @@ function cerrarEditorAgenda(){
   $("#agEditorVacio").classList.remove("oculto");
 }
 $("#btnNuevaEntrada").addEventListener("click", ()=> abrirModalAgenda(null));
+
+$("#btnCopiarMes").addEventListener("click", async ()=>{
+  if(!calendario) return;
+  const fechaVista = calendario.getDate();
+  const y = fechaVista.getFullYear(), m = fechaVista.getMonth()+1;
+  const desde = `${y}-${String(m).padStart(2,"0")}`;
+  const md = m===12 ? 1 : m+1;
+  const yd = m===12 ? y+1 : y;
+  const hasta = `${yd}-${String(md).padStart(2,"0")}`;
+  const nombreMes = new Date(yd, md-1, 1).toLocaleDateString("es",{month:"long",year:"numeric"});
+  if(!confirm(`¿Copiar las clases de este mes a ${nombreMes}?`)) return;
+  try{
+    const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/copiar-mes", {
+      method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({desde, hasta})});
+    const d = await r.json();
+    if(d.ok){ alert(`${d.copiadas} clases copiadas a ${nombreMes}.`); cargarAgenda(); }
+    else alert(d.error||"No se pudo copiar.");
+  }catch(e){ alert("Error de conexión al copiar."); }
+});
+
 $("#ag-cancelar").addEventListener("click", cerrarEditorAgenda);
 
 $("#ag-guardar").addEventListener("click", async ()=>{
