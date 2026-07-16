@@ -103,8 +103,19 @@ def seccion_actividades(data, idioma):
         if fecha:
             out.append(f'          <p class="clase-fecha">{fecha}</p>')
         out.append(f'          <p class="clase-texto">{texto}</p>')
+        # Metadatos: duración y lugar (línea sutil bajo el texto)
+        duracion = ln.get("duracion", "").strip()
+        lugar = ln.get("lugar", "").strip()
+        metas = []
+        if duracion:
+            metas.append(f'<span class="clase-meta-it">&#9201; {duracion}</span>')
+        if lugar:
+            metas.append(f'<span class="clase-meta-it">&#128205; {lugar}</span>')
+        if metas:
+            out.append(f'          <p class="clase-meta">{" ".join(metas)}</p>')
+        precio = (ln.get("precio") or "").strip()
         if precio:
-            out.append(f'          <p class="clase-precio">{precio} &euro;</p>')
+            out.append(f'          <p class="clase-precio">{precio}</p>')
         if estado == "tentativa" and ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
             faltan = umbral - interes
             out.append(f'          <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
@@ -339,6 +350,8 @@ def desde_nocodb(data):
             "interesados": conteo.get((fila.get("id") or "").strip(), 0),
             "conteo_franjas": conteo_franjas.get((fila.get("id") or "").strip(), {}),
             "plazas": fila.get("plazas") or 0, "foto": fila.get("foto") or "",
+            "precio": fila.get("precio") or "", "duracion": fila.get("duracion") or "",
+            "lugar": fila.get("lugar") or "",
             "mostrar_contador": bool(fila.get("mostrar_contador")),
             "franjas_elegibles": bool(fila.get("franjas_elegibles")),
             "visible": bool(fila.get("visible")),

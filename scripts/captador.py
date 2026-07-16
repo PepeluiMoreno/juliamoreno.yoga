@@ -178,6 +178,7 @@ class H(BaseHTTPRequestHandler):
                         "visible": r.get("visible"), "mostrar_contador": r.get("mostrar_contador"),
                         "franjas_elegibles": r.get("franjas_elegibles"),
                         "foto": r.get("foto"),
+                        "precio": r.get("precio"), "duracion": r.get("duracion"), "lugar": r.get("lugar"),
                         "interesados": r.get("interesados"),
                     })
                 return self._json({"ok": True, "actividades": out})
@@ -195,7 +196,7 @@ class H(BaseHTTPRequestHandler):
             if not body.get("Id"):
                 return self._json({"error": "falta Id"}, 422)
             fila = {"Id": body["Id"]}
-            for c in ("titulo_es", "texto_es", "estado", "franjas", "foto"):
+            for c in ("titulo_es", "texto_es", "estado", "franjas", "foto", "precio", "duracion", "lugar"):
                 if c in body:
                     fila[c] = limpio(body[c], 2000)
             for c in ("umbral", "plazas"):
@@ -304,6 +305,9 @@ class H(BaseHTTPRequestHandler):
             fila["mostrar_contador"] = bool(body.get("mostrar_contador", True))
             fila["franjas_elegibles"] = bool(body.get("franjas_elegibles", False))
             fila["foto"] = limpio(body.get("foto"), 500)
+            fila["precio"] = limpio(body.get("precio"), 40)
+            fila["duracion"] = limpio(body.get("duracion"), 40)
+            fila["lugar"] = limpio(body.get("lugar"), 120)
             try:
                 guarda("Actividades", fila)
                 dispara_rebuild()
