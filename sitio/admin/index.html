@@ -609,7 +609,13 @@ function toggleSeleccion(e){
   const yaSel = seleccion.has(e.Id);
   // Si pertenece a una serie, actuar sobre esa y las POSTERIORES de su serie
   if(e.serie_id){
-    const hermanas = agendaCache.filter(x=> x.serie_id===e.serie_id && (x.fecha||"") >= (e.fecha||""));
+    // día de la semana de la clase picada (0=domingo..6=sábado, en hora local)
+    const wdBase = new Date((e.fecha||"") + "T00:00:00").getDay();
+    const hermanas = agendaCache.filter(x=>
+      x.serie_id===e.serie_id &&
+      (x.fecha||"") >= (e.fecha||"") &&
+      new Date((x.fecha||"") + "T00:00:00").getDay() === wdBase
+    );
     hermanas.forEach(x=> yaSel ? seleccion.delete(x.Id) : seleccion.add(x.Id));
   }else{
     yaSel ? seleccion.delete(e.Id) : seleccion.add(e.Id);
