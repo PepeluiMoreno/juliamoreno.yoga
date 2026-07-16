@@ -54,6 +54,10 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .btn-sec{background:transparent;color:var(--mar);border:1px solid var(--mar)}
 .btn-sec:hover{background:var(--cielo-claro)}
 .btn-mini{font-size:.8rem;padding:.35rem .8rem;background:transparent;color:var(--mar);border:1px solid var(--linea)}
+.foto-input-oculto{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;z-index:-1}
+.foto-boton{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.1rem;border:1px dashed var(--mar);border-radius:8px;background:var(--cielo-claro);color:var(--mar);font-weight:600;font-size:.9rem;cursor:pointer;transition:background .15s}
+.foto-boton:hover{background:#dcebf2}
+.foto-boton-ico{font-size:1.1rem}
 .btn-mini:hover{background:var(--cielo-claro);border-color:var(--mar)}
 .oculto{display:none}
 
@@ -124,8 +128,9 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <label for="texto_es">Descripción</label>
     <textarea id="texto_es" placeholder="Describe la actividad. Se traducirá sola al inglés, francés y alemán."></textarea>
 
-    <label for="foto-file">Foto (opcional)</label>
-    <input type="file" id="foto-file" accept="image/jpeg,image/png,image/webp">
+    <label>Foto (opcional)</label>
+    <label for="foto-file" class="foto-boton"><span class="foto-boton-ico">&#128247;</span> <span id="foto-boton-txt">Seleccionar foto…</span></label>
+    <input type="file" id="foto-file" accept="image/jpeg,image/png,image/webp" class="foto-input-oculto">
     <input type="hidden" id="foto">
     <div id="foto-preview-wrap" class="oculto" style="margin-top:.6rem">
       <img id="foto-preview" alt="" style="max-width:220px;border-radius:8px;border:1px solid var(--linea)">
@@ -226,11 +231,13 @@ function mostrarFoto(url){
     $("#foto").value = "";
     $("#foto-preview").src = "";
     $("#foto-preview-wrap").classList.add("oculto");
+    $("#foto-boton-txt").textContent = "Seleccionar foto…";
   }
 }
 $("#foto-file").addEventListener("change", async e=>{
   const file = e.target.files[0];
   if(!file) return;
+  $("#foto-boton-txt").textContent = file.name.length>28 ? file.name.slice(0,25)+"…" : file.name;
   $("#foto-estado").textContent = "Subiendo foto…";
   const fd = new FormData();
   fd.append("foto", file);
