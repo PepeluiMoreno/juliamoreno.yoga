@@ -75,6 +75,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .ag-plantilla-it:hover{background:var(--cielo-claro)}
 .ag-plantilla-dias{color:var(--gris);font-size:.78rem}
 .agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
+.agenda-acciones-sel{background:var(--cielo-claro);border:1px solid var(--linea);border-radius:10px;padding:1rem;margin-bottom:1rem}
+#menuContextual{position:fixed;z-index:2000;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 28px rgba(21,63,84,.18);padding:.35rem;min-width:210px;display:none}
+#menuContextual button{display:block;width:100%;text-align:left;background:none;border:none;padding:.55rem .7rem;border-radius:6px;font-family:inherit;font-size:.9rem;color:var(--tinta);cursor:pointer}
+#menuContextual button:hover{background:var(--cielo-claro)}
+#menuContextual button.peligro{color:#8a2b26}
+#menuContextual button.peligro:hover{background:#fdeceb}
+#menuContextual .mc-sep{height:1px;background:var(--linea);margin:.3rem 0}
+#menuContextual .mc-tit{font-size:.78rem;color:var(--gris);padding:.3rem .7rem .1rem;font-weight:600}
 @media(max-width:900px){
   .agenda-layout{grid-template-columns:1fr}
   .agenda-editor{position:static}
@@ -226,14 +234,17 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <div class="agenda-cal">
         <div class="agenda-barra">
           <button class="btn btn-sec" id="btnNuevaEntrada">+ Nueva clase o sesión</button>
-          <button class="btn oculto" id="btnClonarSel">Clonar seleccionadas al mes siguiente</button>
-          <span id="selInfo" style="font-size:.85rem;color:var(--gris);margin-left:.6rem"></span>
         </div>
         <div id="calendario"></div>
       </div>
       <div class="agenda-editor" id="agendaEditor">
+        <div class="agenda-acciones-sel oculto" id="agAccionesSel">
+          <p id="selInfo" style="font-size:.9rem;color:var(--tinta);margin:0 0 .6rem;font-weight:600"></p>
+          <button class="btn" id="btnClonarSel" style="width:100%;margin-bottom:.4rem">Clonar seleccionadas al mes siguiente</button>
+          <button class="btn btn-sec" id="btnLimpiarSel" style="width:100%">Quitar selección</button>
+        </div>
         <div class="agenda-editor-vacio" id="agEditorVacio">
-          <p style="color:var(--gris)">Un clic en una clase la selecciona (y las siguientes de su serie) para clonar. Doble clic para editarla. O pulsa <b>+ Nueva clase o sesión</b>.</p>
+          <p style="color:var(--gris)">Un clic en una clase la selecciona (y las siguientes de su serie) para clonar. Doble clic para editarla. Clic derecho para más acciones. O pulsa <b>+ Nueva clase o sesión</b>.</p>
         </div>
         <div id="agEditorForm" class="oculto">
           <h3 id="agTitulo">Nueva entrada</h3>
@@ -285,6 +296,16 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       </div>
     </div>
   </section>
+
+  <!-- Menú contextual del calendario (clic derecho sobre una clase) -->
+  <div id="menuContextual">
+    <div class="mc-tit" id="mcTitulo"></div>
+    <button data-accion="editar">Editar</button>
+    <button data-accion="clonar">Clonar al mes siguiente</button>
+    <button data-accion="visibilidad" id="mcVisibilidad">Ocultar de la web</button>
+    <div class="mc-sep"></div>
+    <button data-accion="borrar" class="peligro">Borrar</button>
+  </div>
 
   <section class="vista oculto" id="vista-estados">
     <h1>Estado de las actividades</h1>
@@ -545,6 +566,11 @@ async function cargarAgenda(){
           ev.stopPropagation();
           abrirModalAgenda(info.event.extendedProps.raw);
         });
+        info.el.addEventListener("contextmenu", function(ev){
+          ev.preventDefault();
+          ev.stopPropagation();
+          abrirMenuContextual(ev, info.event.extendedProps.raw);
+        });
       },
       eventDrop: async function(info){
         // Al soltar una clase, actualizar su fecha y/o hora de inicio
@@ -625,10 +651,20 @@ function toggleSeleccion(e){
 function pintarSeleccion(){
   if(calendario) calendario.render();  // re-evalúa eventClassNames
   const n = seleccion.size;
-  const btn = $("#btnClonarSel"), info = $("#selInfo");
-  if(n>0){ btn.classList.remove("oculto"); info.textContent = `${n} clase${n>1?"s":""} seleccionada${n>1?"s":""}`; }
-  else { btn.classList.add("oculto"); info.textContent = ""; }
+  const panel = $("#agAccionesSel"), info = $("#selInfo"), vacio = $("#agEditorVacio");
+  if(n>0){
+    panel.classList.remove("oculto");
+    vacio.classList.add("oculto");
+    info.textContent = `${n} clase${n>1?"s":""} seleccionada${n>1?"s":""}`;
+  }else{
+    panel.classList.add("oculto");
+    if($("#agEditorForm").classList.contains("oculto")) vacio.classList.remove("oculto");
+  }
 }
+
+$("#btnLimpiarSel").addEventListener("click", ()=>{
+  seleccion.clear(); pintarSeleccion();
+});
 
 $("#btnClonarSel").addEventListener("click", async ()=>{
   if(seleccion.size===0) return;
@@ -644,6 +680,65 @@ $("#btnClonarSel").addEventListener("click", async ()=>{
       seleccion.clear(); pintarSeleccion(); cargarAgenda();
     }else alert(d.error||"No se pudo clonar.");
   }catch(e){ alert("Error de conexión al clonar."); }
+});
+
+// --- Menú contextual (clic derecho sobre una clase) ---
+let mcClase = null;  // la clase sobre la que se abrió el menú
+function abrirMenuContextual(ev, e){
+  mcClase = e;
+  const menu = $("#menuContextual");
+  $("#mcTitulo").textContent = e.titulo || "Clase";
+  // ajustar texto de visibilidad según estado actual
+  $("#mcVisibilidad").textContent = (e.visible_web!==false) ? "Ocultar de la web" : "Mostrar en la web";
+  menu.style.display = "block";
+  // posicionar sin salirse de la pantalla
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  let x = ev.clientX, y = ev.clientY;
+  if(x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
+  if(y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
+  menu.style.left = x + "px";
+  menu.style.top = y + "px";
+}
+function cerrarMenuContextual(){ $("#menuContextual").style.display = "none"; mcClase = null; }
+document.addEventListener("click", cerrarMenuContextual);
+document.addEventListener("scroll", cerrarMenuContextual, true);
+
+$("#menuContextual").addEventListener("click", async (ev)=>{
+  ev.stopPropagation();
+  const accion = ev.target.dataset ? ev.target.dataset.accion : null;
+  const e = mcClase;
+  cerrarMenuContextual();
+  if(!accion || !e) return;
+  if(accion==="editar"){
+    abrirModalAgenda(e);
+  }else if(accion==="clonar"){
+    if(!confirm(`¿Clonar «${e.titulo}» al mes siguiente?`)) return;
+    try{
+      const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/replicar", {
+        method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ids:[e.Id]})});
+      const d = await r.json();
+      if(d.ok){ alert(`Clonada al mes siguiente.`); cargarAgenda(); }
+      else alert(d.error||"No se pudo clonar.");
+    }catch(err){ alert("Error de conexión."); }
+  }else if(accion==="visibilidad"){
+    const nuevo = !(e.visible_web!==false);
+    try{
+      const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({Id:e.Id, visible_web:nuevo})});
+      const d = await r.json();
+      if(d.ok){ cargarAgenda(); } else alert(d.error||"No se pudo cambiar.");
+    }catch(err){ alert("Error de conexión."); }
+  }else if(accion==="borrar"){
+    if(!confirm(`¿Borrar «${e.titulo}» del ${e.fecha}?`)) return;
+    try{
+      const r = await fetch(API_AGENDA, {method:"DELETE", credentials:"include",
+        headers:{"Content-Type":"application/json"}, body:JSON.stringify({Id:e.Id})});
+      const d = await r.json();
+      if(d.ok){ seleccion.delete(e.Id); cargarAgenda(); } else alert(d.error||"No se pudo borrar.");
+    }catch(err){ alert("Error de conexión."); }
+  }
 });
 
 
