@@ -123,7 +123,37 @@
     <!-- ACTIVIDADES:INICIO (generado por scripts/build-web.py; no editar a mano) -->
     <p class="eyebrow">Aktivitäten & Workshops</p>
     <h2>Aktivitäten & Workshops</h2>
-    <p>Neue Aktivitäten und Workshops folgen bald. Schreiben Sie mir auf WhatsApp, um auf dem Laufenden zu bleiben.</p>
+    <div class="clases-grid">
+      <article class="clase">
+        <p class="badge badge-tent">In Bildung</p>
+        <h3>Taller de respiración consciente</h3>
+        <p>Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.</p>
+        <form class="interes" data-actividad="taller-respiracion" onsubmit="return enviarInteres(this)">
+          <input type="text" name="nombre" placeholder="Ihr Name" required>
+          <input type="text" name="contacto" placeholder="WhatsApp oder E-Mail" required>
+          <fieldset class="franjas"><legend>Wann würde es Ihnen passen? (alle Zutreffenden ankreuzen)</legend>
+            <label><input type="checkbox" name="franja" value="sab_manana"> Samstagvormittags</label>
+            <label><input type="checkbox" name="franja" value="vie_tarde"> Freitagnachmittags</label>
+            <label><input type="checkbox" name="franja" value="f_2026_03_21"> Samstag, 21. März, 10:00</label>
+          </fieldset>
+          <button type="submit" class="btn">Interessiert mich</button>
+          <p class="consent">Mit dem Absenden erlauben Sie Julia Moreno, Ihren Namen und Kontakt zu speichern, um Sie über diese Aktivität zu informieren.</p>
+          <p class="ok" hidden>Danke! Ich melde mich, sobald die Gruppe zustande kommt.</p>
+        </form>
+      </article>
+    </div>
+    <script>
+    async function enviarInteres(f){
+      const fr=[...f.querySelectorAll('input[name=franja]:checked')].map(x=>x.value);
+      const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:fr,idioma:document.documentElement.lang};
+      try{
+        await fetch('https://auto.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+        f.querySelector('.ok').hidden=false;
+        f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
+      }catch(e){alert('No se pudo enviar, inténtalo más tarde.');}
+      return false;
+    }
+    </script>
     <!-- ACTIVIDADES:FIN -->
   </div>
 </section>
@@ -206,7 +236,7 @@
   <div class="wrap">
     <p class="eyebrow">Buchen Sie Ihre erste Stunde</p>
     <h2>Kontakt</h2>
-    <form class="interes contacto-form" onsubmit="return enviarContacto(this)" style="max-width:480px;margin:1.6rem auto 0;text-align:left">
+    <form class="interes contacto-form" onsubmit="enviarContacto(this); return false;" style="max-width:480px;margin:1.6rem auto 0;text-align:left">
       <p style="font-weight:700;color:#fff;margin-bottom:.2rem">Oder hinterlassen Sie mir Ihre Anfrage</p>
       <input type="text" name="nombre" placeholder="Ihr Name" required>
       <input type="tel" name="telefono" placeholder="Ihre Telefonnummer" required>

@@ -177,28 +177,81 @@
     },
     "lineas": [
       {
-        "id": "ejemplo-retiro",
-        "visible": false,
-        "fecha": "2026-09-20",
+        "id": "taller-respiracion",
+        "estado": "tentativa",
+        "umbral": 8,
+        "interesados": 0,
+        "plazas": 12,
         "foto": "",
-        "precio": "45",
+        "mostrar_contador": true,
+        "visible": true,
         "titulo": {
-          "es": "Retiro de fin de semana (ejemplo)",
+          "es": "Taller de respiración consciente",
+          "en": "Taller de respiración consciente",
+          "fr": "Taller de respiración consciente",
+          "de": "Taller de respiración consciente"
+        },
+        "texto": {
+          "es": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
+          "en": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
+          "fr": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
+          "de": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien."
+        },
+        "franjas": [
+          {
+            "id": "sab_manana",
+            "tipo": "generica",
+            "etiqueta": {
+              "es": "Sábados por la mañana",
+              "en": "Saturday mornings",
+              "fr": "Samedis matin",
+              "de": "Samstagvormittags"
+            }
+          },
+          {
+            "id": "vie_tarde",
+            "tipo": "generica",
+            "etiqueta": {
+              "es": "Viernes por la tarde",
+              "en": "Friday afternoons",
+              "fr": "Vendredis après-midi",
+              "de": "Freitagnachmittags"
+            }
+          },
+          {
+            "id": "f_2026_03_21",
+            "tipo": "fecha",
+            "etiqueta": {
+              "es": "Sábado 21 de marzo, 10:00",
+              "en": "Saturday 21 March, 10:00",
+              "fr": "Samedi 21 mars, 10h00",
+              "de": "Samstag, 21. März, 10:00"
+            }
+          }
+        ]
+      },
+      {
+        "id": null,
+        "estado": "tentativa",
+        "umbral": 0,
+        "interesados": 0,
+        "plazas": 0,
+        "foto": "",
+        "mostrar_contador": false,
+        "visible": false,
+        "titulo": {
+          "es": "",
           "en": "",
           "fr": "",
           "de": ""
         },
         "texto": {
-          "es": "Un fin de semana de práctica intensiva junto al mar. Plazas limitadas.",
+          "es": "",
           "en": "",
           "fr": "",
           "de": ""
         },
-        "revisado": {
-          "en": false,
-          "fr": false,
-          "de": false
-        }
+        "franjas": []
       }
     ],
     "ui": {
