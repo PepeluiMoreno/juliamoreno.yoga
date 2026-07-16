@@ -105,9 +105,15 @@ def seccion_actividades(data, idioma):
             franjas = ln.get("franjas", [])
             if franjas:
                 out.append(f'          <fieldset class="franjas"><legend>{t("elige_franja")}</legend>')
+                cf = ln.get("conteo_franjas", {})
                 for fr in franjas:
                     fid = fr.get("id", "")
                     etiq = fr.get("etiqueta", {}).get(idioma) or fr.get("etiqueta", {}).get("es", fid)
+                    n = int(cf.get(fid, 0) or 0)
+                    if n == 1:
+                        etiq += f' <span class="franja-n">{t("franja_n_1").replace("{n}", str(n))}</span>'
+                    elif n > 1:
+                        etiq += f' <span class="franja-n">{t("franja_n").replace("{n}", str(n))}</span>'
                     out.append(f'            <label><input type="checkbox" name="franja" value="{fid}"> {etiq}</label>')
                 out.append('          </fieldset>')
             out.append(f'          <button type="submit" class="btn">{t("interesa")}</button>')
@@ -221,11 +227,17 @@ def desde_nocodb(data):
     # Actividades (redundante y desincronizable); se CUENTA de las filas
     # reales de la tabla Interesados por actividad.
     conteo = {}
+    conteo_franjas = {}
     if "Interesados" in ids:
         for fila in nc.records(url, tok, ids["Interesados"], limit=1000):
             a = (fila.get("actividad") or "").strip()
             if a:
                 conteo[a] = conteo.get(a, 0) + 1
+                for fid in (fila.get("franjas") or "").split(","):
+                    fid = fid.strip()
+                    if fid:
+                        conteo_franjas.setdefault(a, {})
+                        conteo_franjas[a][fid] = conteo_franjas[a].get(fid, 0) + 1
     nuevas = []
     for fila in nc.records(url, tok, ids["Actividades"]):
         try:
@@ -238,6 +250,7 @@ def desde_nocodb(data):
             "id": fila.get("id"), "estado": fila.get("estado") or "tentativa",
             "umbral": fila.get("umbral") or 0,
             "interesados": conteo.get((fila.get("id") or "").strip(), 0),
+            "conteo_franjas": conteo_franjas.get((fila.get("id") or "").strip(), {}),
             "plazas": fila.get("plazas") or 0, "foto": fila.get("foto") or "",
             "mostrar_contador": bool(fila.get("mostrar_contador")),
             "visible": bool(fila.get("visible")),

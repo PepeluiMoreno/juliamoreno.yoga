@@ -181,6 +181,9 @@
         "estado": "tentativa",
         "umbral": 8,
         "interesados": 2,
+        "conteo_franjas": {
+          "sab_manana": 2
+        },
         "plazas": 12,
         "foto": "",
         "mostrar_contador": true,
@@ -229,29 +232,6 @@
             }
           }
         ]
-      },
-      {
-        "id": null,
-        "estado": "tentativa",
-        "umbral": 0,
-        "interesados": 0,
-        "plazas": 0,
-        "foto": "",
-        "mostrar_contador": false,
-        "visible": false,
-        "titulo": {
-          "es": "",
-          "en": "",
-          "fr": "",
-          "de": ""
-        },
-        "texto": {
-          "es": "",
-          "en": "",
-          "fr": "",
-          "de": ""
-        },
-        "franjas": []
       }
     ],
     "ui": {
@@ -320,6 +300,18 @@
         "en": "The «{f}» slot already has enough people",
         "fr": "Le créneau « {f} » réunit déjà assez de personnes",
         "de": "Der Zeitraum «{f}» hat bereits genug Teilnehmer"
+      },
+      "franja_n_1": {
+        "es": "· 1 interesado",
+        "en": "· 1 interested",
+        "fr": "· 1 intéressé",
+        "de": "· 1 Interessent"
+      },
+      "franja_n": {
+        "es": "· {n} interesados",
+        "en": "· {n} interested",
+        "fr": "· {n} intéressés",
+        "de": "· {n} Interessenten"
       }
     },
     "_esquema_linea": "id, estado(tentativa|confirmada|completada), umbral(int), interesados(int, n8n), plazas(int opc), foto(url opc), mostrar_contador(bool), visible(bool), titulo_{es,en,fr,de}, texto_{es,en,fr,de}, franjas: lista de {id, tipo(generica|fecha), etiqueta_{es,en,fr,de}}. Para tipo=fecha la etiqueta suele ser la misma en los 4 idiomas (fecha/hora); para generica se traduce."
