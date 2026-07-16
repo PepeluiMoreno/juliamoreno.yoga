@@ -14,7 +14,6 @@ docker exec jmy-facturas-db sh -c 'mariadb-dump -uroot -p"$MARIADB_ROOT_PASSWORD
   > /var/backups/jmy/mariadb.sql 2>/dev/null || true
 # 2. respaldo: repo desplegado (con .env y secrets), volcados y volúmenes de fichero
 restic backup /opt/juliamoreno /var/backups/jmy \
-  /var/lib/docker/volumes/juliamoreno_n8ndata \
   /var/lib/docker/volumes/juliamoreno_nocodata \
   /var/lib/docker/volumes/juliamoreno_injadata \
   /var/lib/docker/volumes/juliamoreno_kumadata \

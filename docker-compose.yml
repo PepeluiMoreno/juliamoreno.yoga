@@ -251,7 +251,6 @@ services:
 
 volumes:
   pgdata:
-  n8ndata:
   nocodata:
   injadb:
   injadata:
