@@ -70,8 +70,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .foto-boton:hover{background:#dcebf2}
 .foto-boton-ico{font-size:1.1rem}
 .agenda-barra{margin-bottom:1rem}
-.agenda-layout{display:grid;grid-template-columns:1fr;gap:1.2rem;align-items:start}
-.agenda-layout.con-editor{grid-template-columns:1fr 360px}
+.agenda-layout{display:grid;grid-template-columns:1fr 340px;gap:1.2rem;align-items:start}
 .agenda-editor{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:1.2rem 1.3rem;position:sticky;top:1rem;max-height:calc(100vh - 170px);overflow-y:auto}
 .agenda-editor h3{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);margin:0 0 .8rem}
 .agenda-plantillas{margin-bottom:1.2rem;padding-bottom:1rem;border-bottom:1px solid var(--linea)}
@@ -122,7 +121,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .btn-mini:hover{background:var(--cielo-claro);border-color:var(--mar)}
 .oculto{display:none}
 
-.layout{display:flex;max-width:1400px;margin:0 auto;min-height:calc(100vh - 60px)}
+.layout{display:flex;width:100%;min-height:calc(100vh - 60px)}
 .menu-lateral{width:200px;flex-shrink:0;background:#fff;border-right:1px solid var(--linea);padding:1.5rem 0}
 .menu-lateral nav{display:flex;flex-direction:column}
 .menu-item{display:block;padding:.7rem 1.5rem;color:var(--gris-hondo);text-decoration:none;font-weight:600;font-size:.95rem;border-left:3px solid transparent}
@@ -276,7 +275,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
         </div>
         <div id="calendario"></div>
       </div>
-      <div class="agenda-editor oculto" id="agendaEditor">
+      <div class="agenda-editor" id="agendaEditor">
         <div class="agenda-acciones-sel oculto" id="agAccionesSel">
           <p id="selInfo" style="font-size:.9rem;color:var(--tinta);margin:0 0 .6rem;font-weight:600"></p>
           <button class="btn" id="btnClonarSel" style="width:100%;margin-bottom:.4rem">Clonar seleccionadas al mes siguiente</button>
@@ -753,17 +752,8 @@ async function cargarAgenda(){
 
 
 function actualizarLayoutAgenda(){
-  // La columna del editor solo ocupa espacio si hay algo activo en ella:
-  // el formulario abierto o clases seleccionadas. Si no, el calendario
-  // ocupa todo el ancho.
-  const layout = document.querySelector(".agenda-layout");
-  if(!layout) return;
-  const formAbierto = !$("#agEditorForm").classList.contains("oculto");
-  const haySeleccion = seleccion && seleccion.size > 0;
-  const activo = formAbierto || haySeleccion;
-  layout.classList.toggle("con-editor", activo);
-  $("#agendaEditor").classList.toggle("oculto", !activo);
-  // recalcular el ancho del calendario tras el cambio de columnas
+  // El editor está siempre visible (hay ancho de sobra). Solo recalculamos
+  // el tamaño del calendario por si el contenido de la columna cambió.
   setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 30);
 }
 
