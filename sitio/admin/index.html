@@ -58,6 +58,18 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .foto-boton{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.1rem;border:1px dashed var(--mar);border-radius:8px;background:var(--cielo-claro);color:var(--mar);font-weight:600;font-size:.9rem;cursor:pointer;transition:background .15s}
 .foto-boton:hover{background:#dcebf2}
 .foto-boton-ico{font-size:1.1rem}
+.agenda-barra{margin-bottom:1rem}
+.btn-peligro{background:#fff;color:#8a2b26;border:1px solid #e6b3af;margin-right:auto}
+.btn-peligro:hover{background:#fdeceb}
+.ag-dias{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-top:.3rem}
+.ag-dia{display:flex;align-items:center;gap:.35rem;font-size:.85rem;padding:.35rem .5rem;border:1px solid var(--linea);border-radius:6px;cursor:pointer}
+.ag-dia input{width:auto}
+#calendario{background:#fff;border:1px solid var(--linea);border-radius:12px;padding:1rem}
+.fc .fc-button-primary{background:var(--mar);border-color:var(--mar)}
+.fc .fc-button-primary:hover{background:var(--mar-hondo);border-color:var(--mar-hondo)}
+.fc .fc-button-primary:not(:disabled).fc-button-active{background:var(--mar-hondo);border-color:var(--mar-hondo)}
+.fc .fc-toolbar-title{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);font-size:1.2rem}
+.fc-event{cursor:pointer}
 .btn-mini:hover{background:var(--cielo-claro);border-color:var(--mar)}
 .oculto{display:none}
 
@@ -90,6 +102,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .pie{text-align:center;font-size:.8rem;color:var(--gris);padding:1.5rem}
 .pie a{color:var(--mar)}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 </head>
 <body>
 <header>
@@ -100,9 +113,9 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <aside class="menu-lateral">
     <nav>
       <a href="#" class="menu-item activa" data-vista="panel">Panel de control</a>
+      <a href="#" class="menu-item" data-vista="agenda">Agenda</a>
       <a href="#" class="menu-item" data-vista="actividades">Actividades</a>
       <a href="#" class="menu-item" data-vista="tarifas">Tarifas</a>
-      <a href="#" class="menu-item" data-vista="programacion">Programación</a>
       <a href="#" class="menu-item" data-vista="estados">Estado</a>
     </nav>
   </aside>
@@ -186,10 +199,59 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <p style="color:var(--gris)">Sección en preparación.</p>
   </section>
 
-  <section class="vista oculto" id="vista-programacion">
-    <h1>Programación</h1>
-    <p style="color:var(--gris)">Sección en preparación.</p>
+  <section class="vista oculto" id="vista-agenda">
+    <h1>Agenda</h1>
+    <div class="agenda-barra">
+      <button class="btn btn-sec" id="btnNuevaEntrada">+ Nueva clase o sesión</button>
+    </div>
+    <div id="calendario"></div>
   </section>
+
+  <!-- Modal de entrada de agenda -->
+  <div class="modal-franjas" id="modalAgenda" hidden>
+    <div class="modal-caja" style="max-width:480px">
+      <h3 id="agTitulo">Nueva entrada</h3>
+      <input type="hidden" id="ag-id">
+      <label for="ag-titulo">Título</label>
+      <input type="text" id="ag-titulo" placeholder="Ej. Hatha suave">
+
+      <label for="ag-tipo">Tipo</label>
+      <select id="ag-tipo">
+        <option value="recurrente">Clase recurrente (se repite cada semana)</option>
+        <option value="puntual">Sesión puntual (una fecha concreta)</option>
+      </select>
+
+      <div id="ag-recurrente-campos">
+        <label>Días de la semana</label>
+        <div class="ag-dias" id="ag-dias"></div>
+        <div class="fila">
+          <div><label for="ag-desde">Vigente desde</label><input type="date" id="ag-desde"></div>
+          <div><label for="ag-hasta">Hasta (opcional)</label><input type="date" id="ag-hasta"></div>
+        </div>
+      </div>
+
+      <div id="ag-puntual-campos" class="oculto">
+        <label for="ag-fecha">Fecha</label>
+        <input type="date" id="ag-fecha">
+      </div>
+
+      <div class="fila">
+        <div><label for="ag-hora-ini">Hora inicio</label><input type="time" id="ag-hora-ini"></div>
+        <div><label for="ag-hora-fin">Hora fin</label><input type="time" id="ag-hora-fin"></div>
+      </div>
+
+      <label for="ag-lugar">Lugar</label>
+      <input type="text" id="ag-lugar" placeholder="Ej. Estudio Maro">
+
+      <label class="check" style="margin-top:.9rem"><input type="checkbox" id="ag-visible" checked> Mostrar en la web pública</label>
+
+      <div class="modal-botones" style="margin-top:1.2rem">
+        <button type="button" class="btn btn-peligro oculto" id="ag-borrar">Borrar</button>
+        <button type="button" class="btn btn-sec" id="ag-cancelar">Cancelar</button>
+        <button type="button" class="btn" id="ag-guardar">Guardar</button>
+      </div>
+    </div>
+  </div>
 
   <section class="vista oculto" id="vista-estados">
     <h1>Estado de las actividades</h1>
@@ -371,6 +433,141 @@ async function cargarDash(){
   }catch(e){}
 }
 
+
+// --- Agenda / Calendario ---
+const API_AGENDA = "https://api.juliamoreno.yoga/admin/api/agenda";
+const DIAS = [["lun","L"],["mar","M"],["mie","X"],["jue","J"],["vie","V"],["sab","S"],["dom","D"]];
+const DIA_NUM = {dom:0,lun:1,mar:2,mie:3,jue:4,vie:5,sab:6};
+let calendario = null;
+
+// pintar checkboxes de días
+$("#ag-dias").innerHTML = DIAS.map(([k,v])=>
+  `<label class="ag-dia"><input type="checkbox" value="${k}"> ${v}</label>`).join("");
+
+// toggle tipo recurrente/puntual en el modal
+$("#ag-tipo").addEventListener("change", e=>{
+  const rec = e.target.value==="recurrente";
+  $("#ag-recurrente-campos").classList.toggle("oculto", !rec);
+  $("#ag-puntual-campos").classList.toggle("oculto", rec);
+});
+
+function entradaAEvento(e){
+  // Convierte un registro de Agenda al formato de FullCalendar
+  const base = {
+    id: String(e.Id),
+    title: e.titulo || "(sin título)",
+    color: e.color || "#1d5975",
+    extendedProps: {raw: e},
+  };
+  if(e.tipo==="recurrente"){
+    const dias = (e.dias_semana||"").split(",").map(d=>DIA_NUM[d.trim()]).filter(n=>n!==undefined);
+    base.daysOfWeek = dias;
+    if(e.hora_inicio) base.startTime = e.hora_inicio;
+    if(e.hora_fin) base.endTime = e.hora_fin;
+    if(e.vigencia_desde) base.startRecur = e.vigencia_desde;
+    if(e.vigencia_hasta) base.endRecur = e.vigencia_hasta;
+  }else{
+    base.start = e.fecha + (e.hora_inicio?("T"+e.hora_inicio):"");
+    if(e.hora_fin) base.end = e.fecha + "T" + e.hora_fin;
+  }
+  return base;
+}
+
+async function cargarAgenda(){
+  if(!calendario){
+    calendario = new FullCalendar.Calendar($("#calendario"), {
+      initialView: "dayGridMonth",
+      locale: "es",
+      firstDay: 1,
+      headerToolbar: {left:"prev,next today", center:"title", right:"dayGridMonth,timeGridWeek,timeGridDay"},
+      buttonText: {today:"Hoy", month:"Mes", week:"Semana", day:"Día"},
+      slotMinTime: "07:00:00",
+      slotMaxTime: "23:00:00",
+      allDaySlot: false,
+      height: "auto",
+      eventClick: function(info){
+        const e = info.event.extendedProps.raw;
+        abrirModalAgenda(e);
+      },
+    });
+    calendario.render();
+  }
+  try{
+    const r = await fetch(API_AGENDA, {credentials:"include"});
+    if(!r.ok) return;
+    const d = await r.json();
+    calendario.removeAllEvents();
+    (d.agenda||[]).forEach(e=> calendario.addEvent(entradaAEvento(e)));
+  }catch(err){}
+}
+
+function abrirModalAgenda(e){
+  e = e || {};
+  $("#ag-id").value = e.Id || "";
+  $("#agTitulo").textContent = e.Id ? "Editar entrada" : "Nueva entrada";
+  $("#ag-titulo").value = e.titulo || "";
+  $("#ag-tipo").value = e.tipo || "recurrente";
+  $("#ag-tipo").dispatchEvent(new Event("change"));
+  const dias = new Set((e.dias_semana||"").split(",").map(x=>x.trim()));
+  document.querySelectorAll("#ag-dias input").forEach(c=>c.checked=dias.has(c.value));
+  $("#ag-desde").value = e.vigencia_desde || "";
+  $("#ag-hasta").value = e.vigencia_hasta || "";
+  $("#ag-fecha").value = e.fecha || "";
+  $("#ag-hora-ini").value = e.hora_inicio || "";
+  $("#ag-hora-fin").value = e.hora_fin || "";
+  $("#ag-lugar").value = e.lugar || "";
+  $("#ag-visible").checked = e.visible_web!==false;
+  $("#ag-borrar").classList.toggle("oculto", !e.Id);
+  $("#modalAgenda").hidden = false;
+}
+
+$("#btnNuevaEntrada").addEventListener("click", ()=> abrirModalAgenda(null));
+$("#ag-cancelar").addEventListener("click", ()=> $("#modalAgenda").hidden=true);
+
+$("#ag-guardar").addEventListener("click", async ()=>{
+  const tipo = $("#ag-tipo").value;
+  const datos = {
+    titulo: $("#ag-titulo").value.trim(),
+    tipo: tipo,
+    hora_inicio: $("#ag-hora-ini").value,
+    hora_fin: $("#ag-hora-fin").value,
+    lugar: $("#ag-lugar").value.trim(),
+    visible_web: $("#ag-visible").checked,
+  };
+  if(tipo==="recurrente"){
+    datos.dias_semana = [...document.querySelectorAll("#ag-dias input:checked")].map(c=>c.value).join(",");
+    datos.vigencia_desde = $("#ag-desde").value || null;
+    datos.vigencia_hasta = $("#ag-hasta").value || null;
+  }else{
+    datos.fecha = $("#ag-fecha").value || null;
+  }
+  if(!datos.titulo){ alert("El título es obligatorio."); return; }
+  const editId = $("#ag-id").value;
+  const metodo = editId ? "PATCH" : "POST";
+  if(editId) datos.Id = parseInt(editId);
+  try{
+    const r = await fetch(API_AGENDA, {method:metodo, credentials:"include",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
+    const d = await r.json();
+    if(d.ok){ $("#modalAgenda").hidden=true; cargarAgenda(); }
+    else alert(d.error||"No se pudo guardar.");
+  }catch(e){ alert("Error de conexión al guardar."); }
+});
+
+$("#ag-borrar").addEventListener("click", async ()=>{
+  const editId = $("#ag-id").value;
+  if(!editId) return;
+  if(!confirm("¿Borrar esta entrada de la agenda?")) return;
+  try{
+    const r = await fetch(API_AGENDA, {method:"DELETE", credentials:"include",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify({Id:parseInt(editId)})});
+    const d = await r.json();
+    if(d.ok){ $("#modalAgenda").hidden=true; cargarAgenda(); }
+    else alert(d.error||"No se pudo borrar.");
+  }catch(e){ alert("Error de conexión al borrar."); }
+});
+
+
 // --- Navegación entre vistas del menú lateral ---
 document.querySelectorAll(".menu-item").forEach(item=>{
   item.addEventListener("click", e=>{
@@ -382,6 +579,7 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     document.getElementById("vista-"+vista).classList.remove("oculto");
     if(vista==="panel") cargarDash();
     if(vista==="actividades") cargar();
+    if(vista==="agenda"){ cargarAgenda(); setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 50); }
   });
 });
 
