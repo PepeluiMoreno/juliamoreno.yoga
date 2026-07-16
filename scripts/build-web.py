@@ -201,6 +201,53 @@ def aplica(idioma, ruta, data):
     ruta.write_text(html, encoding="utf-8")
 
 
+
+def traduce_actividades_pendientes(nc, url, tok, ids):
+    """Traduce con DeepL las actividades cuyo texto ES cambió (sello es_hash).
+    Convivencia: respeta idiomas en 'revisado'. Sin bucles: solo actúa si el
+    hash del ES difiere del es_hash guardado. Best-effort: si DeepL falla,
+    deja la actividad como está y sigue."""
+    import hashlib, urllib.request, os
+    deepl = os.environ.get("DEEPL_API_KEY")
+    if not deepl or "Actividades" not in ids:
+        return
+    LANGS = {"en": "EN-GB", "fr": "FR", "de": "DE"}
+    def dl(texto, target):
+        if not texto:
+            return ""
+        body = json.dumps({"text": [texto], "source_lang": "ES",
+                           "target_lang": target}).encode()
+        req = urllib.request.Request(
+            "https://api-free.deepl.com/v2/translate", data=body,
+            headers={"Authorization": f"DeepL-Auth-Key {deepl}",
+                     "Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.load(r)["translations"][0]["text"]
+    for fila in nc.records(url, tok, ids["Actividades"]):
+        tit = (fila.get("titulo_es") or "").strip()
+        txt = (fila.get("texto_es") or "").strip()
+        if not tit and not txt:
+            continue
+        h = hashlib.md5((tit + "|" + txt).encode()).hexdigest()
+        if fila.get("es_hash") == h:
+            continue  # sin cambios: no re-traducir (anti-bucle)
+        revisado = (fila.get("revisado") or "").lower()
+        parche = {"Id": fila["Id"], "es_hash": h}
+        try:
+            for idi, tgt in LANGS.items():
+                if idi in revisado:
+                    continue
+                if tit:
+                    parche[f"titulo_{idi}"] = dl(tit, tgt)
+                if txt:
+                    parche[f"texto_{idi}"] = dl(txt, tgt)
+            nc.api(url, tok, "PATCH",
+                   f"/api/v2/tables/{ids['Actividades']}/records", [parche])
+            print(f"  traducida actividad {fila.get('id') or fila['Id']}")
+        except Exception as e:
+            print(f"  AVISO: no se pudo traducir {fila.get('id')}: {e}")
+
+
 def desde_nocodb(data):
     """Lee precios/horarios/actividades de NocoDB (fuente de verdad) y los
     vuelca en data. Descubre las tablas por nombre; no requiere IDs."""
@@ -215,6 +262,8 @@ def desde_nocodb(data):
     for t in ("Precios", "Horarios", "Actividades"):
         if t not in ids:
             raise RuntimeError(f"falta la tabla '{t}' (ejecute provision-nocodb.py)")
+    # Traducir (DeepL) lo que haya cambiado, antes de leer para generar
+    traduce_actividades_pendientes(nc, url, tok, ids)
     # Precios
     for fila in nc.records(url, tok, ids["Precios"]):
         for ln in data["precios"]["lineas"]:
