@@ -248,7 +248,15 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 
           <div class="fila">
             <div><label for="ag-hora-ini">Hora inicio</label><input type="time" id="ag-hora-ini"></div>
-            <div><label for="ag-hora-fin">Hora fin</label><input type="time" id="ag-hora-fin"></div>
+            <div><label for="ag-duracion">Duración</label>
+              <select id="ag-duracion">
+                <option value="45">45 min</option>
+                <option value="60" selected>60 min</option>
+                <option value="75">75 min</option>
+                <option value="90">90 min</option>
+                <option value="120">120 min</option>
+              </select>
+            </div>
           </div>
 
           <label for="ag-lugar">Lugar</label>
@@ -464,6 +472,14 @@ $("#ag-tipo").addEventListener("change", e=>{
   $("#ag-puntual-campos").classList.toggle("oculto", rec);
 });
 
+function calcFin(hora_ini, dur_min){
+  if(!hora_ini || !dur_min) return null;
+  const [h,m] = hora_ini.split(":").map(Number);
+  const tot = h*60 + m + parseInt(dur_min);
+  const hh = String(Math.floor(tot/60)%24).padStart(2,"0");
+  const mm = String(tot%60).padStart(2,"0");
+  return `${hh}:${mm}`;
+}
 function entradaAEvento(e){
   // Convierte un registro de Agenda al formato de FullCalendar
   const base = {
@@ -476,12 +492,14 @@ function entradaAEvento(e){
     const dias = (e.dias_semana||"").split(",").map(d=>DIA_NUM[d.trim()]).filter(n=>n!==undefined);
     base.daysOfWeek = dias;
     if(e.hora_inicio) base.startTime = e.hora_inicio;
-    if(e.hora_fin) base.endTime = e.hora_fin;
+    const fin = calcFin(e.hora_inicio, e.duracion_min);
+    if(fin) base.endTime = fin;
     if(e.vigencia_desde) base.startRecur = e.vigencia_desde;
     if(e.vigencia_hasta) base.endRecur = e.vigencia_hasta;
   }else{
     base.start = e.fecha + (e.hora_inicio?("T"+e.hora_inicio):"");
-    if(e.hora_fin) base.end = e.fecha + "T" + e.hora_fin;
+    const fin = calcFin(e.hora_inicio, e.duracion_min);
+    if(fin) base.end = e.fecha + "T" + fin;
   }
   return base;
 }
@@ -529,7 +547,7 @@ function abrirModalAgenda(e){
   $("#ag-hasta").value = e.vigencia_hasta || "";
   $("#ag-fecha").value = e.fecha || "";
   $("#ag-hora-ini").value = e.hora_inicio || "";
-  $("#ag-hora-fin").value = e.hora_fin || "";
+  $("#ag-duracion").value = e.duracion_min ? String(e.duracion_min) : "60";
   $("#ag-lugar").value = e.lugar || "";
   $("#ag-visible").checked = e.visible_web!==false;
   $("#ag-borrar").classList.toggle("oculto", !e.Id);
@@ -548,7 +566,7 @@ $("#ag-guardar").addEventListener("click", async ()=>{
     titulo: $("#ag-titulo").value.trim(),
     tipo: tipo,
     hora_inicio: $("#ag-hora-ini").value,
-    hora_fin: $("#ag-hora-fin").value,
+    duracion_min: parseInt($("#ag-duracion").value),
     lugar: $("#ag-lugar").value.trim(),
     visible_web: $("#ag-visible").checked,
   };

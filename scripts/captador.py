@@ -89,7 +89,10 @@ def _horas_programadas_mes():
     dianum = {"lun": 0, "mar": 1, "mie": 2, "jue": 3, "vie": 4, "sab": 5, "dom": 6}
     total = 0.0
     for f in filas:
-        dur = _dur_horas(f.get("hora_inicio"), f.get("hora_fin"))
+        try:
+            dur = int(f.get("duracion_min") or 0) / 60.0
+        except Exception:
+            dur = 0.0
         if dur <= 0:
             continue
         tipo = (f.get("tipo") or "").strip()
@@ -125,9 +128,12 @@ def _fila_agenda(body, con_id):
     if con_id:
         fila["Id"] = body["Id"]
     for c in ("titulo", "actividad_id", "tipo", "dias_semana", "lugar", "color",
-              "hora_inicio", "hora_fin"):
+              "hora_inicio"):
         if c in body:
             fila[c] = limpio(body[c], 200)
+    if "duracion_min" in body and body["duracion_min"] not in (None, ""):
+        try: fila["duracion_min"] = int(body["duracion_min"])
+        except: pass
     for c in ("fecha", "vigencia_desde", "vigencia_hasta"):
         if c in body:
             v = limpio(body[c], 20)
@@ -324,7 +330,7 @@ class H(BaseHTTPRequestHandler):
                         "actividad_id": r.get("actividad_id"), "tipo": r.get("tipo"),
                         "dias_semana": r.get("dias_semana"), "fecha": r.get("fecha"),
                         "vigencia_desde": r.get("vigencia_desde"), "vigencia_hasta": r.get("vigencia_hasta"),
-                        "hora_inicio": r.get("hora_inicio"), "hora_fin": r.get("hora_fin"),
+                        "hora_inicio": r.get("hora_inicio"), "duracion_min": r.get("duracion_min"),
                         "lugar": r.get("lugar"), "color": r.get("color"),
                         "visible_web": r.get("visible_web"),
                     })

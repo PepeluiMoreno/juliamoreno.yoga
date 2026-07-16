@@ -178,7 +178,7 @@
     "lineas": [
       {
         "id": "taller-respiracion",
-        "estado": "tentativa",
+        "estado": "propuesta",
         "umbral": 8,
         "interesados": 4,
         "conteo_franjas": {
@@ -188,107 +188,107 @@
         },
         "plazas": 12,
         "foto": "",
-        "precio": "",
-        "duracion": "",
-        "lugar": "",
+        "precio": "12 € suelto · 40 €/mes",
+        "duracion": "60 min",
+        "lugar": "Estudio Maro",
         "mostrar_contador": true,
         "franjas_elegibles": true,
         "visible": true,
         "titulo": {
           "es": "Taller de respiración consciente",
-          "en": "Taller de respiración consciente",
-          "fr": "Taller de respiración consciente",
-          "de": "Taller de respiración consciente"
+          "en": "Mindful Breathing Workshop",
+          "fr": "Atelier de respiration consciente",
+          "de": "Workshop zum bewussten Atmen"
         },
         "texto": {
           "es": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
-          "en": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
-          "fr": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
-          "de": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien."
+          "en": "A morning dedicated to breathing as a means of finding calm and energy. Scientifically-based pranayama techniques, suitable for all levels. If we can get a group together, we’ll organise it: let me know when would suit you.",
+          "fr": "Une matinée consacrée à la respiration, source de calme et d'énergie. Des techniques de pranayama adaptées selon des critères scientifiques, accessibles à tous les niveaux. Si nous réunissons suffisamment de participants, nous organiserons un cours : dis-moi quand cela t'arrangerait.",
+          "de": "Ein Vormittag, der ganz der Atmung als Mittel zur Beruhigung und Energiegewinnung gewidmet ist. Wissenschaftlich fundierte Pranayama-Techniken, geeignet für alle Niveaus. Wenn sich eine Gruppe zusammenfindet, organisieren wir den Kurs: Sag mir einfach, wann es dir passen würde."
         },
         "franjas": []
       },
       {
         "id": "taller-de-yoga-para-principiantes",
-        "estado": "tentativa",
-        "umbral": 0,
+        "estado": "propuesta",
+        "umbral": 6,
         "interesados": 0,
         "conteo_franjas": {},
-        "plazas": 0,
+        "plazas": 10,
         "foto": "",
-        "precio": "",
-        "duracion": "",
-        "lugar": "",
-        "mostrar_contador": true,
-        "franjas_elegibles": false,
-        "visible": true,
-        "titulo": {
-          "es": "Taller de yoga para principiantes",
-          "en": "Taller de yoga para principiantes",
-          "fr": "Taller de yoga para principiantes",
-          "de": "Taller de yoga para principiantes"
-        },
-        "texto": {
-          "es": "Taller pensado para los que se aproximan al yoga por primera vez.",
-          "en": "Taller pensado para los que se aproximan al yoga por primera vez.",
-          "fr": "Taller pensado para los que se aproximan al yoga por primera vez.",
-          "de": "Taller pensado para los que se aproximan al yoga por primera vez."
-        },
-        "franjas": []
-      },
-      {
-        "id": "actividad-de-prueba",
-        "estado": "tentativa",
-        "umbral": 0,
-        "interesados": 0,
-        "conteo_franjas": {},
-        "plazas": 0,
-        "foto": "",
-        "precio": "",
-        "duracion": "",
-        "lugar": "",
-        "mostrar_contador": true,
-        "franjas_elegibles": false,
-        "visible": true,
-        "titulo": {
-          "es": "Actividad de Prueba",
-          "en": "Actividad de Prueba",
-          "fr": "Actividad de Prueba",
-          "de": "Actividad de Prueba"
-        },
-        "texto": {
-          "es": "",
-          "en": "",
-          "fr": "",
-          "de": ""
-        },
-        "franjas": []
-      },
-      {
-        "id": "actividad-de-prueba-con-foto-y-franjas-horarias",
-        "estado": "tentativa",
-        "umbral": 0,
-        "interesados": 0,
-        "conteo_franjas": {},
-        "plazas": 0,
-        "foto": "",
-        "precio": "",
-        "duracion": "",
-        "lugar": "",
+        "precio": "50 € el ciclo",
+        "duracion": "75 min",
+        "lugar": "Estudio Maro",
         "mostrar_contador": true,
         "franjas_elegibles": true,
         "visible": true,
         "titulo": {
-          "es": "Actividad de prueba con foto y franjas horarias",
-          "en": "Actividad de prueba con foto y franjas horarias",
-          "fr": "Actividad de prueba con foto y franjas horarias",
-          "de": "Actividad de prueba con foto y franjas horarias"
+          "es": "Taller de yoga para principiantes",
+          "en": "Yoga workshop for beginners",
+          "fr": "Atelier de yoga pour débutants",
+          "de": "Yoga-Workshop für Anfänger"
         },
         "texto": {
-          "es": "",
-          "en": "",
-          "fr": "",
-          "de": ""
+          "es": "Un ciclo de cuatro sesiones para empezar de cero: postura, respiración y los fundamentos del yoga sin prisa. Grupos reducidos.",
+          "en": "A series of four sessions to start from scratch: posture, breathing and the basics of yoga, taken at a leisurely pace. Small groups.",
+          "fr": "Un cycle de quatre séances pour partir de zéro : postures, respiration et bases du yoga, sans se presser. Petits groupes.",
+          "de": "Ein Kurs mit vier Terminen für Anfänger: Körperhaltung, Atmung und die Grundlagen des Yoga in aller Ruhe. Kleine Gruppen."
+        },
+        "franjas": []
+      },
+      {
+        "id": "yoga-restaurativo-luna-llena",
+        "estado": "en_curso",
+        "umbral": 0,
+        "interesados": 0,
+        "conteo_franjas": {},
+        "plazas": 12,
+        "foto": "",
+        "precio": "18 €",
+        "duracion": "90 min",
+        "lugar": "Playa de Maro",
+        "mostrar_contador": false,
+        "franjas_elegibles": false,
+        "visible": true,
+        "titulo": {
+          "es": "Yoga restaurativo de luna llena",
+          "en": "Full Moon Restorative Yoga",
+          "fr": "Yoga réparateur à la pleine lune",
+          "de": "Regeneratives Yoga bei Vollmond"
+        },
+        "texto": {
+          "es": "Sesión suave y profunda coincidiendo con la luna llena: posturas sostenidas, mantas y silencio junto al mar. Plazas muy limitadas.",
+          "en": "A gentle, deep-going session to coincide with the full moon: held poses, blankets and silence by the sea. Places are very limited.",
+          "fr": "Une séance douce et profonde, organisée à l'occasion de la pleine lune : postures maintenues, couvertures et silence au bord de la mer. Places très limitées.",
+          "de": "Eine sanfte und tiefgehende Yoga-Stunde zum Vollmond: lang gehaltene Positionen, Decken und Stille am Meer. Die Teilnehmerzahl ist sehr begrenzt."
+        },
+        "franjas": []
+      },
+      {
+        "id": "vinyasa-manana",
+        "estado": "en_curso",
+        "umbral": 0,
+        "interesados": 0,
+        "conteo_franjas": {},
+        "plazas": 14,
+        "foto": "",
+        "precio": "12 € suelto · 40 €/mes",
+        "duracion": "60 min",
+        "lugar": "Estudio Maro",
+        "mostrar_contador": false,
+        "franjas_elegibles": false,
+        "visible": true,
+        "titulo": {
+          "es": "Vinyasa de mañana",
+          "en": "Morning Vinyasa",
+          "fr": "Vinyasa du matin",
+          "de": "Vinyasa am Morgen"
+        },
+        "texto": {
+          "es": "Práctica dinámica para empezar el día con energía. Enlazamos respiración y movimiento en una secuencia fluida. Todos los niveles con opciones.",
+          "en": "A dynamic practice to start the day full of energy. We combine breathing and movement in a flowing sequence. Suitable for all levels, with options available.",
+          "fr": "Une séance dynamique pour commencer la journée en pleine forme. Nous associons respiration et mouvement dans une enchaînement fluide. Tous niveaux, avec différentes options.",
+          "de": "Eine dynamische Übung, um voller Energie in den Tag zu starten. Wir verbinden Atmung und Bewegung in einer fließenden Abfolge. Für alle Niveaus geeignet, mit verschiedenen Optionen."
         },
         "franjas": []
       }
