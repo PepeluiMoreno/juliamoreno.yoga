@@ -151,6 +151,7 @@ services:
       NC_PUBLIC_URL: https://datos.juliamoreno.yoga
       NC_DISABLE_TELE: "true"
       NC_INVITE_ONLY_SIGNUP: "true"
+      NC_ALLOW_LOCAL_HOOKS: "true"
     volumes:
       - nocodata:/usr/app/data
     depends_on: [pg]
