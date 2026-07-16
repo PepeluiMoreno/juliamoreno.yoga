@@ -128,7 +128,7 @@
         <p class="badge badge-tent">In Bildung</p>
         <h3>Taller de respiración consciente</h3>
         <p>Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.</p>
-        <form class="interes" data-actividad="taller-respiracion" onsubmit="return enviarInteres(this)">
+        <form class="interes" data-actividad="taller-respiracion" onsubmit="enviarInteres(this); return false;">
           <input type="text" name="nombre" placeholder="Ihr Name" required>
           <input type="text" name="contacto" placeholder="WhatsApp oder E-Mail" required>
           <fieldset class="franjas"><legend>Wann würde es Ihnen passen? (alle Zutreffenden ankreuzen)</legend>
