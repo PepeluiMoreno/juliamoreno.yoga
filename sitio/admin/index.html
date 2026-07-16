@@ -523,9 +523,30 @@ async function cargarAgenda(){
       slotMaxTime: "23:00:00",
       allDaySlot: false,
       height: "calc(100vh - 170px)",
+      editable: true,
+      eventStartEditable: true,
+      eventDurationEditable: false,
       eventClick: function(info){
         const e = info.event.extendedProps.raw;
         abrirModalAgenda(e);
+      },
+      eventDrop: async function(info){
+        // Al soltar una clase, actualizar su fecha y/o hora de inicio
+        const e = info.event.extendedProps.raw;
+        const nuevaFecha = info.event.start;
+        const yyyy = nuevaFecha.getFullYear();
+        const mm = String(nuevaFecha.getMonth()+1).padStart(2,"0");
+        const dd = String(nuevaFecha.getDate()).padStart(2,"0");
+        const HH = String(nuevaFecha.getHours()).padStart(2,"0");
+        const MM = String(nuevaFecha.getMinutes()).padStart(2,"0");
+        const datos = {Id: parseInt(e.Id), fecha: `${yyyy}-${mm}-${dd}`, hora_inicio: `${HH}:${MM}`};
+        try{
+          const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
+            headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
+          const d = await r.json();
+          if(!d.ok){ alert(d.error||"No se pudo mover."); info.revert(); }
+          else { e.fecha = datos.fecha; e.hora_inicio = datos.hora_inicio; }
+        }catch(err){ alert("Error de conexión al mover."); info.revert(); }
       },
     });
     calendario.render();
