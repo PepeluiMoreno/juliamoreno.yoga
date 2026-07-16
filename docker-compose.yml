@@ -31,7 +31,7 @@ services:
       - traefik.http.routers.jmy-admin.rule=Host(`juliamoreno.yoga`) && PathPrefix(`/admin`)
       - traefik.http.routers.jmy-admin.entrypoints=websecure
       - traefik.http.routers.jmy-admin.tls.certresolver=letsencrypt
-      - traefik.http.routers.jmy-admin.priority=10
+      - traefik.http.routers.jmy-admin.priority=1000
       - traefik.http.routers.jmy-admin.middlewares=jmy-authelia
       - traefik.http.routers.jmy-admin.service=jmy-web
       # Middleware forwardAuth: valida contra Authelia (stack infra) antes de dejar pasar a /admin
@@ -265,7 +265,7 @@ services:
       - traefik.http.routers.jmy-capadmin.rule=Host(`api.juliamoreno.yoga`) && PathPrefix(`/admin`)
       - traefik.http.routers.jmy-capadmin.entrypoints=websecure
       - traefik.http.routers.jmy-capadmin.tls.certresolver=letsencrypt
-      - traefik.http.routers.jmy-capadmin.priority=10
+      - traefik.http.routers.jmy-capadmin.priority=1000
       - traefik.http.routers.jmy-capadmin.service=jmy-cap
       - traefik.http.routers.jmy-capadmin.middlewares=jmy-authelia
       # Definicion del middleware (apunta al Authelia del stack infra)
