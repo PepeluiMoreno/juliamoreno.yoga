@@ -78,6 +78,19 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .ag-plantilla-it{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.4rem .6rem;border:1px solid var(--linea);border-radius:6px;font-size:.85rem;cursor:pointer}
 .ag-plantilla-it:hover{background:var(--cielo-claro)}
 .ag-plantilla-dias{color:var(--gris);font-size:.78rem}
+.agenda-editor h3{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);margin:0 0 .8rem}
+.dia-clase{border:1px solid var(--linea);border-radius:10px;padding:.8rem .9rem;margin-bottom:.7rem;background:#fff}
+.dia-clase-activa{border-color:var(--mar);box-shadow:0 0 0 2px var(--cielo-claro)}
+.dia-clase-canc{opacity:.6}
+.dia-clase-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.dia-clase-tit{font-weight:700;color:var(--tinta);font-size:.92rem}
+.dia-clase-badge{font-size:.72rem;background:#fdeceb;color:#8a2b26;padding:.1rem .4rem;border-radius:4px}
+.dia-clase-campos{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem}
+.dia-clase label{display:block;font-size:.72rem;color:var(--gris);font-weight:600;margin:0}
+.dia-clase input,.dia-clase select{width:100%;padding:.4rem .5rem;border:1px solid var(--linea);border-radius:6px;font-size:.85rem;font-family:inherit;margin-top:.15rem;box-sizing:border-box}
+.dia-clase-lugar{display:block;margin-bottom:.5rem}
+.dia-clase-acciones{display:flex;gap:.4rem}
+.dia-clase-acciones .btn-mini{flex:1}
 .agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
 .agenda-acciones-sel{background:var(--cielo-claro);border:1px solid var(--linea);border-radius:10px;padding:1rem;margin-bottom:1rem}
 #menuContextual{position:fixed;z-index:2000;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 28px rgba(21,63,84,.18);padding:.35rem;min-width:210px;display:none}
@@ -276,13 +289,12 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
         <div id="calendario"></div>
       </div>
       <div class="agenda-editor" id="agendaEditor">
-        <div class="agenda-acciones-sel oculto" id="agAccionesSel">
-          <p id="selInfo" style="font-size:.9rem;color:var(--tinta);margin:0 0 .6rem;font-weight:600"></p>
-          <button class="btn" id="btnClonarSel" style="width:100%;margin-bottom:.4rem">Clonar seleccionadas al mes siguiente</button>
-          <button class="btn btn-sec" id="btnLimpiarSel" style="width:100%">Quitar selección</button>
-        </div>
         <div class="agenda-editor-vacio" id="agEditorVacio">
-          <p style="color:var(--gris)">Un clic en una clase la selecciona (y las siguientes de su serie) para clonar. Doble clic para editarla. Clic derecho para más acciones. O pulsa <b>+ Nueva clase o sesión</b>.</p>
+          <p style="color:var(--gris)">Pulsa en un día del calendario para ver y editar sus clases aquí. Doble clic en una clase para editarla directamente. Clic derecho para más acciones. O pulsa <b>+ Nueva clase o sesión</b>.</p>
+        </div>
+        <div id="agEditorDia" class="oculto">
+          <h3 id="agDiaTitulo">Clases del día</h3>
+          <div id="agDiaLista"></div>
         </div>
         <div id="agEditorForm" class="oculto">
           <h3 id="agTitulo">Nueva entrada</h3>
@@ -299,7 +311,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
           <div id="ag-recurrente-campos">
             <label>Días de la semana</label>
             <div class="ag-dias" id="ag-dias"></div>
-            <p style="font-size:.8rem;color:var(--gris);margin:.3rem 0 0">Se generarán las clases de este mes en los días marcados. Luego podrás moverlas o clonarlas al mes siguiente.</p>
+            <p style="font-size:.8rem;color:var(--gris);margin:.3rem 0 0">Se generarán las clases de este mes en los días marcados.</p>
           </div>
 
           <div id="ag-puntual-campos" class="oculto">
@@ -339,7 +351,6 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <div id="menuContextual">
     <div class="mc-tit" id="mcTitulo"></div>
     <button data-accion="editar">Editar</button>
-    <button data-accion="clonar">Clonar al mes siguiente</button>
     <button data-accion="visibilidad" id="mcVisibilidad">Ocultar de la web</button>
     <div class="mc-sep"></div>
     <button data-accion="cancelar" id="mcCancelar">Cancelar clase…</button>
@@ -657,7 +668,6 @@ function entradaAEvento(e){
   return base;
 }
 
-let seleccion = new Set();
 let agendaCache = [];
 async function cargarAgenda(){
   if(!calendario){
@@ -674,23 +684,22 @@ async function cargarAgenda(){
       editable: true,
       eventStartEditable: true,
       eventDurationEditable: false,
+      dateClick: function(info){
+        mostrarClasesDelDia(info.dateStr);
+      },
       eventClick: function(info){
-        toggleSeleccion(info.event.extendedProps.raw);
-        pintarSeleccion();
+        // clic en una clase -> mostrar las de ese día, con el editor de esa abierto
+        const e = info.event.extendedProps.raw;
+        mostrarClasesDelDia((e.fecha||"").slice(0,10), e.Id);
       },
       eventClassNames: function(arg){
         const raw = arg.event.extendedProps.raw;
         const cls = [];
-        if(seleccion.has(raw.Id)) cls.push("ev-sel");
         if(raw.estado==="cancelada") cls.push("ev-cancelada");
         if(raw.estado==="aplazada") cls.push("ev-aplazada");
         return cls;
       },
       eventDidMount: function(info){
-        info.el.addEventListener("dblclick", function(ev){
-          ev.stopPropagation();
-          abrirModalAgenda(info.event.extendedProps.raw);
-        });
         info.el.addEventListener("contextmenu", function(ev){
           ev.preventDefault();
           ev.stopPropagation();
@@ -784,59 +793,86 @@ function cerrarEditorAgenda(){
 }
 $("#btnNuevaEntrada").addEventListener("click", ()=> abrirModalAgenda(null));
 
-// --- Selección de clases para clonar al mes siguiente ---
-
-function toggleSeleccion(e){
-  const yaSel = seleccion.has(e.Id);
-  // Si pertenece a una serie, actuar sobre esa y las POSTERIORES de su serie
-  if(e.serie_id){
-    // día de la semana de la clase picada (0=domingo..6=sábado, en hora local)
-    const wdBase = new Date((e.fecha||"") + "T00:00:00").getDay();
-    const hermanas = agendaCache.filter(x=>
-      x.serie_id===e.serie_id &&
-      (x.fecha||"") >= (e.fecha||"") &&
-      new Date((x.fecha||"") + "T00:00:00").getDay() === wdBase
-    );
-    hermanas.forEach(x=> yaSel ? seleccion.delete(x.Id) : seleccion.add(x.Id));
-  }else{
-    yaSel ? seleccion.delete(e.Id) : seleccion.add(e.Id);
-  }
+// --- Interacción del calendario ---
+// --- Clases del día en la columna derecha (editables) ---
+function _fmtDia(fechaStr){
+  const d = new Date(fechaStr + "T00:00:00");
+  const dias = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  return `${dias[d.getDay()]} ${d.getDate()} de ${meses[d.getMonth()]}`;
 }
 
-function pintarSeleccion(){
-  if(calendario) calendario.render();  // re-evalúa eventClassNames
-  const n = seleccion.size;
-  const panel = $("#agAccionesSel"), info = $("#selInfo"), vacio = $("#agEditorVacio");
-  if(n>0){
-    panel.classList.remove("oculto");
-    vacio.classList.add("oculto");
-    info.textContent = `${n} clase${n>1?"s":""} seleccionada${n>1?"s":""}`;
-  }else{
-    panel.classList.add("oculto");
-    if($("#agEditorForm").classList.contains("oculto")) vacio.classList.remove("oculto");
+function mostrarClasesDelDia(fechaStr, resaltarId){
+  const clases = agendaCache
+    .filter(e => (e.fecha||"").slice(0,10) === fechaStr)
+    .sort((a,b) => (a.hora_inicio||"").localeCompare(b.hora_inicio||""));
+  $("#agEditorVacio").classList.add("oculto");
+  $("#agEditorForm").classList.add("oculto");
+  $("#agEditorDia").classList.remove("oculto");
+  $("#agDiaTitulo").textContent = _fmtDia(fechaStr);
+  const cont = $("#agDiaLista");
+  if(!clases.length){
+    cont.innerHTML = `<p style="color:var(--gris);font-size:.9rem">No hay clases este día.</p>
+      <button class="btn btn-sec" style="width:100%;margin-top:.6rem" onclick='nuevaEnFecha("${fechaStr}")'>+ Añadir clase este día</button>`;
+    return;
   }
-  actualizarLayoutAgenda();
+  cont.innerHTML = clases.map(e => _tarjetaClaseEditable(e, e.Id===resaltarId)).join("") +
+    `<button class="btn btn-sec" style="width:100%;margin-top:.8rem" onclick='nuevaEnFecha("${fechaStr}")'>+ Añadir clase este día</button>`;
+  // guardar las clases mostradas para el guardado inline
+  _diaClases = {};
+  clases.forEach(e => _diaClases[e.Id] = e);
 }
 
-$("#btnLimpiarSel").addEventListener("click", ()=>{
-  seleccion.clear(); pintarSeleccion();
-});
+let _diaClases = {};
 
-$("#btnClonarSel").addEventListener("click", async ()=>{
-  if(seleccion.size===0) return;
-  const ids = [...seleccion];
-  if(!(await confirmar(`¿Clonar ${ids.length} clase(s) al mes siguiente, en su misma posición semanal?`, "Clonar seleccionadas"))) return;
+function _tarjetaClaseEditable(e, resaltar){
+  const canc = e.estado==="cancelada";
+  const dur = e.duracion_min || 60;
+  return `<div class="dia-clase${resaltar?' dia-clase-activa':''}${canc?' dia-clase-canc':''}" data-id="${e.Id}">
+    <div class="dia-clase-cab">
+      <span class="dia-clase-tit">${e.titulo||"(sin título)"}</span>
+      ${canc?'<span class="dia-clase-badge">cancelada</span>':''}
+    </div>
+    <div class="dia-clase-campos">
+      <label>Hora
+        <input type="time" value="${e.hora_inicio||""}" data-campo="hora_inicio" data-id="${e.Id}">
+      </label>
+      <label>Duración
+        <select data-campo="duracion_min" data-id="${e.Id}">
+          ${[45,60,75,90,120].map(m=>`<option value="${m}"${m==dur?' selected':''}>${m} min</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <label class="dia-clase-lugar">Lugar
+      <input type="text" value="${(e.lugar||"").replace(/"/g,'&quot;')}" data-campo="lugar" data-id="${e.Id}">
+    </label>
+    <div class="dia-clase-acciones">
+      <button class="btn-mini" onclick='guardarClaseDia(${e.Id})'>Guardar</button>
+      <button class="btn-mini" onclick='abrirModalAgenda(_diaClases[${e.Id}])'>Editar todo</button>
+    </div>
+  </div>`;
+}
+
+function nuevaEnFecha(fechaStr){
+  abrirModalAgenda({tipo:"puntual", fecha:fechaStr});
+}
+
+async function guardarClaseDia(id){
+  const caja = document.querySelector(`.dia-clase[data-id="${id}"]`);
+  if(!caja) return;
+  const datos = {Id: id};
+  caja.querySelectorAll("[data-campo]").forEach(el=>{
+    const campo = el.dataset.campo;
+    datos[campo] = campo==="duracion_min" ? parseInt(el.value) : el.value;
+  });
   try{
-    const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/replicar", {
-      method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({ids})});
+    const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
     const d = await r.json();
-    if(d.ok){
-      await avisar(`${d.replicadas} clase(s) clonadas al mes siguiente.`, "Hecho");
-      seleccion.clear(); pintarSeleccion(); cargarAgenda();
-    }else await avisar(d.error||"No se pudo clonar.", "Error");
-  }catch(e){ await avisar("Error de conexión al clonar.", "Error"); }
-});
+    if(d.ok){ await cargarAgenda(); }
+    else await avisar(d.error||"No se pudo guardar.", "Error");
+  }catch(e){ await avisar("Error de conexión.", "Error"); }
+}
 
 // --- Menú contextual (clic derecho sobre una clase) ---
 let mcClase = null;  // la clase sobre la que se abrió el menú
@@ -873,16 +909,6 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
   if(!accion || !e) return;
   if(accion==="editar"){
     abrirModalAgenda(e);
-  }else if(accion==="clonar"){
-    if(!(await confirmar(`¿Clonar «${e.titulo}» al mes siguiente?`, "Clonar clase"))) return;
-    try{
-      const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/replicar", {
-        method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ids:[e.Id]})});
-      const d = await r.json();
-      if(d.ok){ await avisar("Clonada al mes siguiente.", "Hecho"); cargarAgenda(); }
-      else await avisar(d.error||"No se pudo clonar.", "Error");
-    }catch(err){ await avisar("Error de conexión.", "Error"); }
   }else if(accion==="visibilidad"){
     const nuevo = !(e.visible_web!==false);
     try{
@@ -1007,7 +1033,7 @@ async function borrarClase(e){
     const r = await fetch(API_AGENDA, {method:"DELETE", credentials:"include",
       headers:{"Content-Type":"application/json"}, body:JSON.stringify(cuerpo)});
     const d = await r.json();
-    if(d.ok){ idsBorrar.forEach(id=>seleccion.delete(id)); cargarAgenda(); }
+    if(d.ok){ cargarAgenda(); }
     else await avisar(d.error||"No se pudo borrar.", "Error");
   }catch(err){ await avisar("Error de conexión.", "Error"); }
 }
