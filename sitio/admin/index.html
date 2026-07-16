@@ -18,7 +18,7 @@ body{margin:0;font-family:'Mulish',system-ui,sans-serif;background:var(--crema);
 header{background:var(--mar);color:#fff;padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center}
 header .marca{font-family:'Marcellus',serif;font-size:1.3rem;color:#fff;text-decoration:none;letter-spacing:.02em}
 header .usuario{font-size:.85rem;opacity:.9}
-main{max-width:900px;margin:0 auto;padding:1.5rem}
+main{margin:0 auto}
 h1,h2{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);line-height:1.15}
 h1{font-size:1.8rem;margin:.2rem 0 1.2rem}
 h2{font-size:1.3rem;margin:0 0 1rem}
@@ -56,6 +56,23 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .btn-mini{font-size:.8rem;padding:.35rem .8rem;background:transparent;color:var(--mar);border:1px solid var(--linea)}
 .btn-mini:hover{background:var(--cielo-claro);border-color:var(--mar)}
 .oculto{display:none}
+
+.layout{display:flex;max-width:1100px;margin:0 auto;min-height:calc(100vh - 60px)}
+.menu-lateral{width:200px;flex-shrink:0;background:#fff;border-right:1px solid var(--linea);padding:1.5rem 0}
+.menu-lateral nav{display:flex;flex-direction:column}
+.menu-item{display:block;padding:.7rem 1.5rem;color:var(--gris-hondo);text-decoration:none;font-weight:600;font-size:.95rem;border-left:3px solid transparent}
+.menu-item:hover{background:var(--cielo-claro)}
+.menu-item.activa{color:var(--mar);border-left-color:var(--mar);background:var(--cielo-claro)}
+.layout main{flex:1;padding:1.5rem 2rem;min-width:0}
+.vista.oculto{display:none}
+@media(max-width:700px){
+  .layout{flex-direction:column}
+  .menu-lateral{width:auto;border-right:none;border-bottom:1px solid var(--linea);padding:.5rem 0}
+  .menu-lateral nav{flex-direction:row;overflow-x:auto}
+  .menu-item{border-left:none;border-bottom:3px solid transparent;white-space:nowrap}
+  .menu-item.activa{border-left:none;border-bottom-color:var(--mar)}
+}
+
 .pie{text-align:center;font-size:.8rem;color:var(--gris);padding:1.5rem}
 .pie a{color:var(--mar)}
 </style>
@@ -65,9 +82,20 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <a href="/" class="marca">Julia Moreno · Yoga</a>
   <span class="usuario" id="usuario"></span>
 </header>
-<main>
-  <h1>Gestión de actividades</h1>
+<div class="layout">
+  <aside class="menu-lateral">
+    <nav>
+      <a href="#" class="menu-item activa" data-vista="actividades">Actividades</a>
+      <a href="#" class="menu-item" data-vista="tarifas">Tarifas</a>
+      <a href="#" class="menu-item" data-vista="programacion">Programación</a>
+      <a href="#" class="menu-item" data-vista="estados">Estado</a>
+    </nav>
+  </aside>
+  <main>
   <div class="aviso" id="aviso"></div>
+
+  <section class="vista" id="vista-actividades">
+  <h1>Gestión de actividades</h1>
 
   <div class="tarjeta">
     <h2 id="form-titulo">Nueva actividad</h2>
@@ -128,7 +156,24 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   </div>
 
   <div class="pie">Panel de gestión · <a href="/">volver a la web</a></div>
-</main>
+  </section>
+
+  <section class="vista oculto" id="vista-tarifas">
+    <h1>Tarifas</h1>
+    <p style="color:var(--gris)">Sección en preparación.</p>
+  </section>
+
+  <section class="vista oculto" id="vista-programacion">
+    <h1>Programación</h1>
+    <p style="color:var(--gris)">Sección en preparación.</p>
+  </section>
+
+  <section class="vista oculto" id="vista-estados">
+    <h1>Estado de las actividades</h1>
+    <p style="color:var(--gris)">Sección en preparación.</p>
+  </section>
+  </main>
+</div>
 
 <script>
 const API = "https://api.juliamoreno.yoga/admin/api/actividades";
@@ -269,6 +314,18 @@ $("#btn-guardar").onclick = async ()=>{
   }catch(e){ aviso("Error de conexión al guardar.","error"); }
   finally{ $("#btn-guardar").disabled=false; }
 };
+
+// --- Navegación entre vistas del menú lateral ---
+document.querySelectorAll(".menu-item").forEach(item=>{
+  item.addEventListener("click", e=>{
+    e.preventDefault();
+    const vista = item.dataset.vista;
+    document.querySelectorAll(".menu-item").forEach(m=>m.classList.remove("activa"));
+    item.classList.add("activa");
+    document.querySelectorAll(".vista").forEach(v=>v.classList.add("oculto"));
+    document.getElementById("vista-"+vista).classList.remove("oculto");
+  });
+});
 
 cargar();
 </script>
