@@ -108,6 +108,8 @@ class H(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
         self._cors()
+        self.send_header("Access-Control-Max-Age", "600")
+        self.send_header("Content-Length", "0")
         self.end_headers()
 
     def do_GET(self):

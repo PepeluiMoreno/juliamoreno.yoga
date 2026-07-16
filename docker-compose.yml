@@ -262,12 +262,19 @@ services:
       # Rutas /admin/api/* protegidas por Authelia (router de mayor prioridad).
       # Authelia inyecta Remote-User; el captador confia en esa cabecera. Sin
       # esta proteccion, cualquiera podria falsificar Remote-User contra la API.
-      - traefik.http.routers.jmy-capadmin.rule=Host(`api.juliamoreno.yoga`) && PathPrefix(`/admin`)
+      - traefik.http.routers.jmy-capadmin.rule=Host(`api.juliamoreno.yoga`) && PathPrefix(`/admin`) && !Method(`OPTIONS`)
       - traefik.http.routers.jmy-capadmin.entrypoints=websecure
       - traefik.http.routers.jmy-capadmin.tls.certresolver=letsencrypt
       - traefik.http.routers.jmy-capadmin.priority=1000
       - traefik.http.routers.jmy-capadmin.service=jmy-cap
       - traefik.http.routers.jmy-capadmin.middlewares=jmy-authelia
+      # El preflight CORS (OPTIONS) va directo al captador, SIN Authelia
+      # (un redirect 302 en un preflight rompe el CORS del navegador).
+      - traefik.http.routers.jmy-capopts.rule=Host(`api.juliamoreno.yoga`) && PathPrefix(`/admin`) && Method(`OPTIONS`)
+      - traefik.http.routers.jmy-capopts.entrypoints=websecure
+      - traefik.http.routers.jmy-capopts.tls.certresolver=letsencrypt
+      - traefik.http.routers.jmy-capopts.priority=1100
+      - traefik.http.routers.jmy-capopts.service=jmy-cap
       # Definicion del middleware (apunta al Authelia del stack infra)
       - traefik.http.middlewares.jmy-authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://auth.juliamoreno.yoga
       - traefik.http.middlewares.jmy-authelia.forwardauth.trustForwardHeader=true
