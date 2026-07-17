@@ -1,5 +1,5 @@
 """
-backend.calcom.sonda — prueba manual de la exploración Cal.com-centric.
+backend.calcom.sonda — prueba manual de la exploración Cal.diy-centric.
 
 Ejecuta las tres lecturas que deciden la viabilidad y reporta en claro
 qué funciona y qué no, sin tocar nada. No escribe en ningún sitio.
@@ -7,7 +7,7 @@ qué funciona y qué no, sin tocar nada. No escribe en ningún sitio.
 Uso (en el VPS, con el entorno cargado):
     CALCOM_API_URL=... CALCOM_API_KEY=... python3 -m backend.calcom.sonda
 
-Salida esperada si Cal.com puede ser la base del calendario:
+Salida esperada si Cal.diy puede ser la base del calendario:
   - lista de tipos de evento (las clases)
   - franjas reservables de uno de ellos para el próximo mes
   - reservas existentes
@@ -27,8 +27,22 @@ def _sep(t):
     print("=" * 60)
 
 
+def _seats(e):
+    """Extrae las plazas con independencia de la versión del endpoint:
+    2024-06-14 las anida en un objeto 'seats'; otras versiones usan
+    'seatsPerTimeSlot' plano."""
+    v = e.get("seatsPerTimeSlot")
+    if v is None and isinstance(e.get("seats"), dict):
+        v = e["seats"].get("seatsPerTimeSlot") or e["seats"].get("seats")
+    return v
+
+
+def _recurrente(e):
+    return bool(e.get("recurringEvent") or e.get("recurrence"))
+
+
 def main():
-    _sep("1. Tipos de evento (las 'clases' en Cal.com)")
+    _sep("1. Tipos de evento (las 'clases' en Cal.diy)")
     try:
         et = cliente.event_types()
         datos = et.get("data", et)
@@ -38,8 +52,8 @@ def main():
             for e in datos[:10]:
                 eid = e.get("id")
                 print(f"   · id={eid}  «{e.get('title','?')}»  "
-                      f"seats={e.get('seatsPerTimeSlot')}  "
-                      f"recurring={bool(e.get('recurringEvent'))}")
+                      f"seats={_seats(e)}  "
+                      f"recurring={_recurrente(e)}")
             primero = datos[0].get("id")
     except Exception as e:
         print(f"FALLO: {e}")
@@ -73,8 +87,8 @@ def main():
         print(f"FALLO: {e}")
 
     _sep("Conclusión")
-    print("Si los 3 bloques dan OK, Cal.com puede alimentar la web y el")
-    print("panel: la variante Cal.com-centric es viable de verdad.")
+    print("Si los 3 bloques dan OK, Cal.diy puede alimentar la web y el")
+    print("panel: la variante Cal.diy-centric es viable de verdad.")
     return 0
 
 

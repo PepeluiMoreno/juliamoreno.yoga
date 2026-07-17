@@ -92,11 +92,11 @@ decide, es un paso posterior y consciente.
 
 ## Resultado (rellenar tras la exploración)
 
-- [ ] API v2 levantada y respondiendo
-- [ ] Franja recurrente con plazas creada en Cal.com
-- [ ] Sonda: tipos de evento → OK / FALLO: ____
-- [ ] Sonda: slots/disponibilidad → OK / FALLO: ____
-- [ ] Sonda: reservas → OK / FALLO: ____
+- [x] API v2 levantada y respondiendo
+- [x] Clase con plazas creada (seats=10; recurrencia sustituida por disponibilidad — ver hallazgo 6)
+- [x] Sonda: tipos de evento → OK
+- [x] Sonda: slots/disponibilidad → OK (seatsBooked/seatsRemaining/seatsTotal por hueco)
+- [x] Sonda: reservas → OK
 - [ ] Disponibilidad pintable con estilo web → sí / no
 - [ ] UI de Cal.com suficiente para gestión → sí / no
 - [ ] Decisión: Cal.com-centric / NocoDB-centric
@@ -429,3 +429,79 @@ Avisos: CALENDSO_ENCRYPTION_KEY no cambiar si ya hay credenciales
 guardadas. Integrar con Traefik como el resto (api-reservas.* -> puerto
 del calcom-api). Pegar cualquier error del build/arranque tal cual para
 diagnosticarlo.
+
+## HALLAZGO 6 (17 jul) — seats y recurring son excluyentes; la clase se modela con disponibilidad
+
+Al activar "Offer seats" con la recurrencia puesta, la UI lo impide:
+"Recurring event doesn't support seats feature. Make it non-recurring
+to enable seats." Verificado en la instancia levantada.
+
+No bloquea, porque "recurring" en Cal.com significa que UN MISMO
+reservante se lleva la serie entera (N sesiones de golpe) — un 1:1
+semanal con la misma persona. No es la clase de Julia, donde distintos
+alumnos reservan cada ocurrencia por separado.
+
+El modelado correcto: evento NO recurrente con seats + horario de
+disponibilidad restringido a las franjas de la clase (p. ej. solo
+martes 19:00-20:00). La repetición la pone la disponibilidad, no la
+función recurring. Validado por sonda: cada hueco llega con
+seatsBooked / seatsRemaining / seatsTotal — el aforo por franja que la
+web necesita, legible por API.
+
+RGPD: desmarcar "Share attendee information between guests" (los
+alumnos no deben verse entre sí); "Show the number of available seats"
+sí se deja (es el aforo visible).
+
+## HALLAZGO 7 (17 jul) — la cabecera cal-api-version es POR RECURSO
+
+Con una versión que el recurso no reconoce, la API responde 404
+"Cannot GET ..." como si la ruta no existiera (engañoso: parece error
+de URL y es de versión). Verificado contra la instancia:
+  event-types  2024-06-14
+  slots        2024-09-04
+  bookings     2024-08-13
+cliente.py corregido: versión por endpoint (dict VERSIONES). sonda.py
+ajustado: con 2024-06-14 las plazas vienen anidadas en un objeto
+"seats", no en "seatsPerTimeSlot" plano.
+
+## LEVANTAMIENTO EJECUTADO (17 jul) — resumen
+
+- Clon de calcom/cal.diy en /opt/docker/apps/cal.diy (fuera del repo).
+- Stack autocontenido: Postgres y Redis propios del compose de Cal.diy;
+  la base del proyecto queda intacta y el experimento es desechable
+  (docker compose down -v).
+- .env con secretos nuevos (no había datos previos que conservar),
+  Stripe con placeholders, URLs reservas./api-reservas.juliamoreno.yoga.
+- docker-compose.override.yml: sin puertos publicados al host; webapp y
+  API en traefik_public con TLS (web 3000, api 5555); Prisma Studio
+  relegado a profile manual.
+- Build de ambas imágenes sin errores. Arranque limpio: /health interno
+  OK, webapp 307 (login), api /health 200 vía Traefik.
+- Cuenta admin creada; API key generada en Settings → Developer SIN
+  muro de licencia. Higiene pendiente: revocar y regenerar esa key
+  (viajó por el chat de trabajo) y valorar 2FA antes de uso serio.
+- Sonda: 3/3 OK con el evento «Clase de yoga» (seats=10, horario L/X/V
+  9:00-12:00).
+
+## PROMOCIÓN A MAIN (17 jul)
+
+Con el punto crítico validado, decisión del usuario: esta rama pasa a
+ser la línea principal. El main anterior queda en la rama de
+salvaguarda main-salvaguarda-20260717 (recuperable si hubiera que
+volver a NocoDB-centric). La fusión se hizo trayendo primero el main
+posterior a la creación de la rama (docs/funcionalidades/) para no
+perder nada.
+
+Pendiente (ahora en main):
+- [ ] Disponibilidad pintable con estilo web → mini-página que consuma
+      slots (siguiente paso natural).
+- [ ] UI de Cal.diy suficiente como trastienda de gestión → a valorar
+      con calma (aceptada de partida la separación tienda/trastienda).
+- [ ] Cierre formal del reparto de piezas (qué queda en NocoDB:
+      actividades, tarifas, textos web) y actualización de
+      docs/funcionalidades/reservas-disponibilidad-avisos.md.
+
+Idea anotada para el diseño: avisos a Julia por Telegram — webhook
+BOOKING_CREATED/CANCELLED → backend → bot ("nuevo alumno apuntado a la
+clase del jueves"); la venta de bonos avisa desde el propio backend
+(los bonos viven fuera de Cal.diy en cualquiera de las dos vías).
