@@ -142,3 +142,63 @@ dependencia frágil.
 La sonda y el cliente de esta rama asumen la API v2. Si no se levanta,
 esa vía queda bloqueada; habría que pivotar a "embeber booker +
 webhooks" (sin API v2 de lectura) o descartar Cal.com-centric.
+
+## HALLAZGO 2 (17 jul) — API keys self-hosted y muro Enterprise
+
+Investigado más a fondo. Dos cosas nuevas, ambas pesan:
+
+### A. Generar API keys en self-hosted parece requerir Enterprise (pago)
+- Caso real (issue #23911): al intentar crear una API key en la UI de
+  un self-hosted, salió "creación de API keys solo disponible en
+  Enterprise". El usuario compró licencia Enterprise y entonces sí
+  pudo crearla. Con imagen oficial estándar, v5.6.19.
+- La doc oficial confirma que hay funciones self-hosted tras licencia
+  comercial de pago (cal.com/docs/self-hosting/license-key).
+- Contradicción: el FAQ oficial dice que la API y los webhooks están
+  en el plan gratuito ("90% de las funciones"). Y otra fuente dice que
+  en self-hosted "añades tu propia API key".
+- Lectura probable: **generar API keys desde la UI está tras Enterprise
+  en self-hosted; los webhooks sí funcionan gratis.** O sea: la vía
+  "leer por API v2" (nuestra sonda) probablemente choca con Enterprise;
+  la vía "webhooks + embeber booker" probablemente no. A confirmar en
+  la instancia real.
+
+### B. Cal.diy — la edición que de verdad corresponde
+- Cal.com ha escindido la parte open source en **Cal.diy**. Cal.com,
+  Inc. dice literalmente: Cal.diy es "community maintained y
+  ESTRICTAMENTE recomendada para uso personal, NO de producción... use
+  at your own risk". Para uso comercial/producción remiten a Cal.com
+  (cloud) o a su on-prem Enterprise (ventas).
+- Traducción sin adornos: la versión libre self-hosted que podríamos
+  usar es la que ELLOS MISMOS desaconsejan para producción. El negocio
+  de Julia es producción.
+
+### Efecto en la decisión (importante)
+Junta los tres hallazgos:
+1. La API v2 no viene en la imagen estándar (hay que compilarla, con
+   builds que fallan).
+2. Generar API keys parece requerir Enterprise de pago en self-hosted.
+3. La edición libre (Cal.diy) está oficialmente desaconsejada para
+   producción.
+
+El camino "Cal.com-centric por API v2" acumula: componente frágil a
+compilar + probable muro de pago para la key + edición no recomendada
+para producción. **El coste/riesgo de integración es alto y en parte
+fuera de nuestro control** (depende de decisiones de licencia de un
+tercero).
+
+Queda viva una variante MÁS BARATA dentro de Cal.com:
+- **Embeber el booker + webhooks** (sin API v2, sin API key de
+  lectura). El alumno reserva en la UI de Cal.com; el webhook
+  BOOKING_CREATED avisa al backend, que registra en NocoDB. Esto no
+  necesita Enterprise (webhooks son gratis) ni compilar la API v2.
+  Pierde: pintar disponibilidad con estilo propio (se usa el widget de
+  Cal.com tal cual). Gana: coste bajo y sin dependencias frágiles.
+
+### Recomendación de Claude (honesta)
+Si se quiere Cal.com, ir por **embeber booker + webhooks**, NO por la
+API v2. Pero visto lo visto (edición libre desaconsejada para
+producción, muros de pago móviles), la opción **NocoDB-centric** —
+construir reservas sobre lo que ya controlas al 100%— evita todo este
+terreno movedizo. La exploración en rama ha cumplido su función:
+destapar estos costes antes de invertir tiempo en el VPS.
