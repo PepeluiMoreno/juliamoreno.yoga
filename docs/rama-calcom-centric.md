@@ -100,3 +100,45 @@ decide, es un paso posterior y consciente.
 - [ ] Disponibilidad pintable con estilo web → sí / no
 - [ ] UI de Cal.com suficiente para gestión → sí / no
 - [ ] Decisión: Cal.com-centric / NocoDB-centric
+
+## HALLAZGO (17 jul) — la API v2 self-hosted es costosa de levantar
+
+Investigada la doc oficial y casos reales antes de tocar el VPS.
+Resultado que pesa en la decisión:
+
+- La **imagen Docker estándar de Cal.com NO arranca la API v2**. El
+  servidor de la API (puerto 5555) no viene en la imagen; los
+  workspaces @calcom/api-v2 / @calcom/api no están presentes en ella
+  (issue #23911, discusión #17098).
+- Para tener la API v2 hay que **compilar una imagen propia** desde
+  `apps/api/v2` del monorepo, y hay gente atascada en el build
+  (`yarn install` falla, exit 1 — discusión #19313).
+- Cal.com **no da soporte oficial a Docker** ("use at your own risk").
+
+Implicación: el camino Cal.com-centric no es "añadir un contenedor de
+API", sino **mantener una imagen compilada a mano de un componente que
+el propio Cal.com no soporta en Docker**. Eso es coste de integración
+recurrente (cada actualización de Cal.com puede romper el build), no
+de una sola vez.
+
+### Efecto en el eje coste/beneficio
+El beneficio de Cal.com (reservas/recordatorios/portal ya hechos)
+sigue ahí, pero el **coste de integración sube bastante**: depender de
+una API que hay que compilar y mantener uno mismo, sin soporte. Esto
+acerca la balanza al camino NocoDB-centric, donde no hay esa
+dependencia frágil.
+
+### Alternativas dentro de Cal.com-centric (si aun así se quiere)
+- **Embeber el booker de Cal.com** (iframe / atoms) en la web SIN usar
+  la API v2: el alumno reserva en la UI de Cal.com. Se pierde el
+  control fino de pintar la disponibilidad con estilo propio, pero se
+  evita la API v2. Los webhooks (que sí funcionan en el webapp) llevan
+  las reservas al backend.
+- **Leer la base de datos de Cal.com directamente** (Postgres
+  compartido) en vez de por API. Frágil (acopla a su esquema interno)
+  pero evita la API v2. No recomendado.
+
+### Estado
+La sonda y el cliente de esta rama asumen la API v2. Si no se levanta,
+esa vía queda bloqueada; habría que pivotar a "embeber booker +
+webhooks" (sin API v2 de lectura) o descartar Cal.com-centric.
