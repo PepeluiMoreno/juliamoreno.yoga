@@ -283,14 +283,11 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <h1>Agenda</h1>
     <div class="agenda-layout">
       <div class="agenda-cal">
-        <div class="agenda-barra">
-          <button class="btn btn-sec" id="btnNuevaEntrada">+ Nueva clase o sesión</button>
-        </div>
         <div id="calendario"></div>
       </div>
       <div class="agenda-editor" id="agendaEditor">
         <div class="agenda-editor-vacio" id="agEditorVacio">
-          <p style="color:var(--gris)">Pulsa en un día del calendario para ver y editar sus clases aquí. Doble clic en una clase para editarla directamente. Clic derecho para más acciones. O pulsa <b>+ Nueva clase o sesión</b>.</p>
+          <p style="color:var(--gris)">Clic derecho (o mantén el cursor) sobre un día del calendario para las acciones: crear una clase si está vacío, o editar, cancelar u ocultar las que haya. Un clic en un día muestra aquí sus clases.</p>
         </div>
         <div id="agEditorDia" class="oculto">
           <h3 id="agDiaTitulo">Clases del día</h3>
@@ -350,38 +347,13 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <!-- Menú contextual del calendario (clic derecho sobre una clase) -->
   <div id="menuContextual">
     <div class="mc-tit" id="mcTitulo"></div>
-    <button data-accion="editar">Editar</button>
+    <button data-accion="nueva" id="mcNueva">+ Nueva clase o sesión este día</button>
+    <button data-accion="editar" id="mcEditar">Editar</button>
     <button data-accion="visibilidad" id="mcVisibilidad">Ocultar de la web</button>
-    <div class="mc-sep"></div>
+    <div class="mc-sep" id="mcSep"></div>
     <button data-accion="cancelar" id="mcCancelar">Cancelar clase…</button>
     <button data-accion="reactivar" id="mcReactivar">Reactivar clase</button>
     <button data-accion="borrar" id="mcBorrar" class="peligro">Eliminar</button>
-  </div>
-
-  <!-- Modal de cancelación (motivo + aviso) -->
-  <div id="dlgCancelarFondo" class="dlg-fondo" hidden>
-    <div class="dlg-caja" role="dialog" aria-modal="true">
-      <h3>Cancelar clase</h3>
-      <p id="canMensaje" style="margin-bottom:.9rem"></p>
-      <label for="can-motivo">Motivo de la cancelación</label>
-      <select id="can-motivo">
-        <option value="enfermedad">Enfermedad</option>
-        <option value="festivo">Festivo</option>
-        <option value="aforo insuficiente">Aforo insuficiente</option>
-        <option value="climatología">Climatología</option>
-        <option value="fuerza mayor">Fuerza mayor</option>
-        <option value="otro">Otro (especificar)</option>
-      </select>
-      <div id="can-otro-campo" class="oculto" style="margin-top:.6rem">
-        <label for="can-otro">Detalle</label>
-        <input type="text" id="can-otro" placeholder="Motivo concreto">
-      </div>
-      <label class="check" style="margin-top:.9rem"><input type="checkbox" id="can-avisar"> Avisar a los alumnos</label>
-      <div class="dlg-botones" style="margin-top:1.3rem">
-        <button type="button" class="btn btn-sec" id="can-cancelar">Volver</button>
-        <button type="button" class="btn btn-peligro" id="can-confirmar">Cancelar la clase</button>
-      </div>
-    </div>
   </div>
 
   <!-- Modal genérico de diálogo (confirmaciones y avisos) -->
@@ -700,11 +672,30 @@ async function cargarAgenda(){
         return cls;
       },
       eventDidMount: function(info){
+        const raw = info.event.extendedProps.raw;
         info.el.addEventListener("contextmenu", function(ev){
-          ev.preventDefault();
-          ev.stopPropagation();
-          abrirMenuContextual(ev, info.event.extendedProps.raw);
+          ev.preventDefault(); ev.stopPropagation();
+          abrirMenuContextual(ev, {clase: raw});
         });
+        // hover con retardo -> abre el menú sobre la clase
+        info.el.addEventListener("mouseenter", function(ev){
+          programarHoverMenu(ev, {clase: raw}, info.el);
+        });
+        info.el.addEventListener("mouseleave", cancelarHoverMenu);
+      },
+      dayCellDidMount: function(info){
+        const fechaStr = fechaLocalISO(info.date);
+        info.el.addEventListener("contextmenu", function(ev){
+          // si el clic derecho fue sobre un evento, ya lo maneja el evento
+          if(ev.target.closest(".fc-event")) return;
+          ev.preventDefault(); ev.stopPropagation();
+          abrirMenuContextual(ev, {fecha: fechaStr});
+        });
+        info.el.addEventListener("mouseenter", function(ev){
+          if(ev.target.closest(".fc-event")) return;
+          programarHoverMenu(ev, {fecha: fechaStr}, info.el);
+        });
+        info.el.addEventListener("mouseleave", cancelarHoverMenu);
       },
       eventDrop: async function(info){
         const e = info.event.extendedProps.raw;
@@ -791,7 +782,6 @@ function cerrarEditorAgenda(){
   $("#agEditorVacio").classList.remove("oculto");
   actualizarLayoutAgenda();
 }
-$("#btnNuevaEntrada").addEventListener("click", ()=> abrirModalAgenda(null));
 
 // --- Interacción del calendario ---
 // --- Clases del día en la columna derecha (editables) ---
@@ -874,21 +864,51 @@ async function guardarClaseDia(id){
   }catch(e){ await avisar("Error de conexión.", "Error"); }
 }
 
-// --- Menú contextual (clic derecho sobre una clase) ---
-let mcClase = null;  // la clase sobre la que se abrió el menú
-function abrirMenuContextual(ev, e){
-  mcClase = e;
+// --- Menú contextual (clic derecho o hover sobre celda del calendario) ---
+// ctx puede ser {clase: <ocurrencia>} o {fecha: "YYYY-MM-DD"} (celda vacía)
+let mcCtx = null;
+let hoverTimer = null;
+
+function fechaLocalISO(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"), dd = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${dd}`;
+}
+
+function programarHoverMenu(ev, ctx, el){
+  cancelarHoverMenu();
+  const x = ev.clientX, y = ev.clientY;
+  hoverTimer = setTimeout(()=> abrirMenuContextual({clientX:x, clientY:y}, ctx), 550);
+}
+function cancelarHoverMenu(){ if(hoverTimer){ clearTimeout(hoverTimer); hoverTimer = null; } }
+
+function abrirMenuContextual(ev, ctx){
+  cancelarHoverMenu();
+  mcCtx = ctx;
   const menu = $("#menuContextual");
-  $("#mcTitulo").textContent = e.titulo || "Clase";
-  $("#mcVisibilidad").textContent = (e.visible_web!==false) ? "Ocultar de la web" : "Mostrar en la web";
+  const esClase = !!ctx.clase;
+  const e = ctx.clase || {};
+
+  // Título del menú
+  $("#mcTitulo").textContent = esClase ? (e.titulo || "Clase")
+                                        : ("Día " + (ctx.fecha||"").slice(8) + "/" + (ctx.fecha||"").slice(5,7));
+
+  // Entrada de creación: siempre disponible (celda vacía o con clase)
+  $("#mcNueva").style.display = "block";
+
+  // Entradas sobre una clase concreta: solo si hay clase
   const cancelada = e.estado==="cancelada";
   const enCurso = e.actividad_estado==="en_curso";
   const anunciada = e.visible_web!==false;
-  // Eliminar: solo clases puntuales, no anunciadas y sin actividad en curso
-  const puedeEliminar = (e.tipo==="puntual") && !anunciada && !enCurso;
+  const puedeEliminar = esClase && (e.tipo==="puntual") && !anunciada && !enCurso;
+
+  $("#mcEditar").style.display = esClase ? "block" : "none";
+  $("#mcVisibilidad").style.display = esClase ? "block" : "none";
+  $("#mcVisibilidad").textContent = (e.visible_web!==false) ? "Ocultar de la web" : "Mostrar en la web";
+  $("#mcCancelar").style.display = (esClase && !cancelada) ? "block" : "none";
+  $("#mcReactivar").style.display = (esClase && cancelada) ? "block" : "none";
   $("#mcBorrar").style.display = puedeEliminar ? "block" : "none";
-  $("#mcCancelar").style.display = cancelada ? "none" : "block";
-  $("#mcReactivar").style.display = cancelada ? "block" : "none";
+  $("#mcSep").style.display = esClase ? "block" : "none";
+
   menu.style.display = "block";
   const mw = menu.offsetWidth, mh = menu.offsetHeight;
   let x = ev.clientX, y = ev.clientY;
@@ -897,17 +917,22 @@ function abrirMenuContextual(ev, e){
   menu.style.left = x + "px";
   menu.style.top = y + "px";
 }
-function cerrarMenuContextual(){ $("#menuContextual").style.display = "none"; mcClase = null; }
+function cerrarMenuContextual(){ $("#menuContextual").style.display = "none"; mcCtx = null; }
 document.addEventListener("click", cerrarMenuContextual);
 document.addEventListener("scroll", cerrarMenuContextual, true);
 
 $("#menuContextual").addEventListener("click", async (ev)=>{
   ev.stopPropagation();
   const accion = ev.target.dataset ? ev.target.dataset.accion : null;
-  const e = mcClase;
+  const ctx = mcCtx;
   cerrarMenuContextual();
-  if(!accion || !e) return;
-  if(accion==="editar"){
+  if(!accion || !ctx) return;
+  const e = ctx.clase;
+
+  if(accion==="nueva"){
+    const fecha = ctx.fecha || (e && (e.fecha||"").slice(0,10)) || "";
+    abrirModalAgenda({tipo:"puntual", fecha});
+  }else if(accion==="editar"){
     abrirModalAgenda(e);
   }else if(accion==="visibilidad"){
     const nuevo = !(e.visible_web!==false);
@@ -919,7 +944,7 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
       if(d.ok){ cargarAgenda(); } else await avisar(d.error||"No se pudo cambiar.", "Error");
     }catch(err){ await avisar("Error de conexión.", "Error"); }
   }else if(accion==="cancelar"){
-    abrirModalCancelar(e);
+    mostrarCancelacionEnSidebar(e);
   }else if(accion==="reactivar"){
     try{
       const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
@@ -964,37 +989,55 @@ function modalReprogramar(e, cambióHora, nPosteriores){
   });
 }
 
-// --- Modal de cancelación ---
-let canClase = null;
-function abrirModalCancelar(e){
-  canClase = e;
-  $("#canMensaje").textContent = `«${e.titulo}» del ${e.fecha}. La clase quedará marcada como cancelada (no se elimina).`;
-  $("#can-motivo").value = "enfermedad";
-  $("#can-otro-campo").classList.add("oculto");
-  $("#can-otro").value = "";
-  $("#can-avisar").checked = false;
-  $("#dlgCancelarFondo").hidden = false;
+// --- Cancelación en el sidebar derecho (motivo + aviso) ---
+const MOTIVOS_CANC = [
+  ["enfermedad","Enfermedad"], ["festivo","Festivo"],
+  ["aforo insuficiente","Aforo insuficiente"], ["climatología","Climatología"],
+  ["fuerza mayor","Fuerza mayor"], ["otro","Otro (especificar)"],
+];
+function mostrarCancelacionEnSidebar(e){
+  $("#agEditorVacio").classList.add("oculto");
+  $("#agEditorForm").classList.add("oculto");
+  $("#agEditorDia").classList.remove("oculto");
+  $("#agDiaTitulo").textContent = "Cancelar clase";
+  const cont = $("#agDiaLista");
+  cont.innerHTML = `
+    <div class="dia-clase dia-clase-activa">
+      <div class="dia-clase-cab"><span class="dia-clase-tit">${e.titulo||"Clase"}</span></div>
+      <p style="font-size:.82rem;color:var(--gris);margin:.2rem 0 .7rem">${e.fecha||""} · ${e.hora_inicio||""}. Quedará marcada como cancelada (no se elimina).</p>
+      <label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600">Motivo de la cancelación
+        <select id="can-motivo" style="width:100%;padding:.5rem;border:1px solid var(--linea);border-radius:6px;margin-top:.2rem;font-family:inherit">
+          ${MOTIVOS_CANC.map(([v,t])=>`<option value="${v}">${t}</option>`).join("")}
+        </select>
+      </label>
+      <label id="can-otro-campo" class="oculto" style="display:block;font-size:.72rem;color:var(--gris);font-weight:600;margin-top:.5rem">Detalle
+        <input type="text" id="can-otro" placeholder="Motivo concreto" style="width:100%;padding:.5rem;border:1px solid var(--linea);border-radius:6px;margin-top:.2rem;font-family:inherit;box-sizing:border-box">
+      </label>
+      <label class="check" style="margin-top:.8rem;display:flex;align-items:center;gap:.5rem;font-size:.88rem"><input type="checkbox" id="can-avisar" style="width:auto"> Avisar a los alumnos</label>
+      <div class="dia-clase-acciones" style="margin-top:.9rem">
+        <button class="btn-mini" id="can-confirmar">Cancelar la clase</button>
+        <button class="btn-mini" id="can-volver">Volver</button>
+      </div>
+    </div>`;
+  $("#can-motivo").addEventListener("change", ev=>{
+    $("#can-otro-campo").classList.toggle("oculto", ev.target.value!=="otro");
+  });
+  $("#can-volver").addEventListener("click", ()=> mostrarClasesDelDia((e.fecha||"").slice(0,10), e.Id));
+  $("#can-confirmar").addEventListener("click", async ()=>{
+    const motivo = $("#can-motivo").value;
+    const motivo_texto = motivo==="otro" ? $("#can-otro").value.trim() : "";
+    if(motivo==="otro" && !motivo_texto){ await avisar("Indica el motivo concreto.", "Falta el motivo"); return; }
+    const avisar_alumnos = $("#can-avisar").checked;
+    try{
+      const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/cancelar", {
+        method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({Id:e.Id, motivo, motivo_texto, avisar_alumnos})});
+      const d = await r.json();
+      if(d.ok){ await cargarAgenda(); mostrarClasesDelDia((e.fecha||"").slice(0,10)); }
+      else await avisar(d.error||"No se pudo cancelar.", "Error");
+    }catch(err){ await avisar("Error de conexión.", "Error"); }
+  });
 }
-$("#can-motivo").addEventListener("change", e=>{
-  $("#can-otro-campo").classList.toggle("oculto", e.target.value!=="otro");
-});
-$("#can-cancelar").addEventListener("click", ()=> $("#dlgCancelarFondo").hidden = true);
-$("#can-confirmar").addEventListener("click", async ()=>{
-  const e = canClase;
-  if(!e) return;
-  const motivo = $("#can-motivo").value;
-  const motivo_texto = motivo==="otro" ? $("#can-otro").value.trim() : "";
-  if(motivo==="otro" && !motivo_texto){ await avisar("Indica el motivo concreto.", "Falta el motivo"); return; }
-  const avisar_alumnos = $("#can-avisar").checked;
-  try{
-    const r = await fetch("https://api.juliamoreno.yoga/admin/api/agenda/cancelar", {
-      method:"POST", credentials:"include", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({Id:e.Id, motivo, motivo_texto, avisar_alumnos})});
-    const d = await r.json();
-    if(d.ok){ $("#dlgCancelarFondo").hidden = true; cargarAgenda(); }
-    else await avisar(d.error||"No se pudo cancelar.", "Error");
-  }catch(err){ await avisar("Error de conexión.", "Error"); }
-});
 
 // Borrado de clase: inteligente si es recurrente (serie) y no es la última de su día
 async function borrarClase(e){
