@@ -657,10 +657,9 @@ async function cargarAgenda(){
       eventStartEditable: true,
       eventDurationEditable: false,
       dateClick: function(info){
-        mostrarClasesDelDia(info.dateStr);
+        mostrarClasesDelDia(fechaLocalISO(info.date));
       },
       eventClick: function(info){
-        // clic en una clase -> mostrar las de ese día, con el editor de esa abierto
         const e = info.event.extendedProps.raw;
         mostrarClasesDelDia((e.fecha||"").slice(0,10), e.Id);
       },
@@ -677,23 +676,8 @@ async function cargarAgenda(){
           ev.preventDefault(); ev.stopPropagation();
           abrirMenuContextual(ev, {clase: raw});
         });
-        // hover con retardo -> abre el menú sobre la clase
         info.el.addEventListener("mouseenter", function(ev){
           programarHoverMenu(ev, {clase: raw}, info.el);
-        });
-        info.el.addEventListener("mouseleave", cancelarHoverMenu);
-      },
-      dayCellDidMount: function(info){
-        const fechaStr = fechaLocalISO(info.date);
-        info.el.addEventListener("contextmenu", function(ev){
-          // si el clic derecho fue sobre un evento, ya lo maneja el evento
-          if(ev.target.closest(".fc-event")) return;
-          ev.preventDefault(); ev.stopPropagation();
-          abrirMenuContextual(ev, {fecha: fechaStr});
-        });
-        info.el.addEventListener("mouseenter", function(ev){
-          if(ev.target.closest(".fc-event")) return;
-          programarHoverMenu(ev, {fecha: fechaStr}, info.el);
         });
         info.el.addEventListener("mouseleave", cancelarHoverMenu);
       },
@@ -739,6 +723,7 @@ async function cargarAgenda(){
       },
     });
     calendario.render();
+    engancharMenuHuecos();
   }
   try{
     const r = await fetch(API_AGENDA, {credentials:"include"});
@@ -874,6 +859,51 @@ function fechaLocalISO(d){
   return `${y}-${m}-${dd}`;
 }
 
+// Determina el contexto {fecha[, hora]} de un hueco vacío según la vista y el
+// punto donde ocurrió el evento del ratón. Devuelve null si fue sobre una clase.
+function contextoHueco(ev){
+  if(ev.target.closest(".fc-event")) return null;  // sobre una clase, no hueco
+  const vista = calendario ? calendario.view.type : "dayGridMonth";
+  if(vista === "dayGridMonth"){
+    const cell = ev.target.closest("[data-date]");
+    if(!cell) return null;
+    return {fecha: cell.getAttribute("data-date")};
+  }
+  // Vistas de tiempo (semana/día): la columna del día lleva data-date; la hora
+  // se deduce de la posición vertical dentro de la rejilla de horas.
+  const col = ev.target.closest(".fc-timegrid-col[data-date]");
+  const fecha = col ? col.getAttribute("data-date") : null;
+  if(!fecha) return {fecha: fechaLocalISO(calendario.getDate())};
+  // calcular hora aproximada por la Y del ratón dentro del cuerpo de la rejilla
+  const cuerpo = document.querySelector(".fc-timegrid-slots");
+  let hora = null;
+  if(cuerpo){
+    const r = cuerpo.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+    const minInicio = 7*60;   // slotMinTime 07:00
+    const minFin = 23*60;     // slotMaxTime 23:00
+    let mins = Math.round((minInicio + frac*(minFin-minInicio)) / 15) * 15; // a cuartos
+    const hh = String(Math.floor(mins/60)).padStart(2,"0");
+    const mm = String(mins%60).padStart(2,"0");
+    hora = `${hh}:${mm}`;
+  }
+  return hora ? {fecha, hora} : {fecha};
+}
+
+function engancharMenuHuecos(){
+  const cont = $("#calendario");
+  if(!cont || cont._menuEnganchado) return;
+  cont._menuEnganchado = true;
+  // Sobre huecos vacíos, el menú se abre con clic derecho (el hover sobre zonas
+  // vacías resultaría molesto; el hover se reserva para las clases).
+  cont.addEventListener("contextmenu", function(ev){
+    const ctx = contextoHueco(ev);
+    if(!ctx) return;  // sobre una clase: lo maneja el handler del evento
+    ev.preventDefault(); ev.stopPropagation();
+    abrirMenuContextual(ev, ctx);
+  });
+}
+
 function programarHoverMenu(ev, ctx, el){
   cancelarHoverMenu();
   const x = ev.clientX, y = ev.clientY;
@@ -892,8 +922,13 @@ function abrirMenuContextual(ev, ctx){
   $("#mcTitulo").textContent = esClase ? (e.titulo || "Clase")
                                         : ("Día " + (ctx.fecha||"").slice(8) + "/" + (ctx.fecha||"").slice(5,7));
 
-  // Entrada de creación: siempre disponible (celda vacía o con clase)
+  // Entrada de creación: siempre disponible. Refleja la hora si el contexto
+  // la trae (vistas Semana/Día); si no, solo el día.
   $("#mcNueva").style.display = "block";
+  const horaCtx = !esClase && ctx.hora ? ctx.hora : null;
+  $("#mcNueva").textContent = horaCtx
+    ? `+ Nueva clase a las ${horaCtx}`
+    : "+ Nueva clase o sesión este día";
 
   // Entradas sobre una clase concreta: solo si hay clase
   const cancelada = e.estado==="cancelada";
@@ -931,7 +966,8 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
 
   if(accion==="nueva"){
     const fecha = ctx.fecha || (e && (e.fecha||"").slice(0,10)) || "";
-    abrirModalAgenda({tipo:"puntual", fecha});
+    const hora = ctx.hora || "";
+    abrirModalAgenda({tipo:"puntual", fecha, hora_inicio:hora});
   }else if(accion==="editar"){
     abrirModalAgenda(e);
   }else if(accion==="visibilidad"){
