@@ -10,18 +10,21 @@ historial de chat.
 - `panel-admin.md` — panel de gestión en /admin (agenda, clases)
 - `backend.md` — servicio Python modular (API interna del panel)
 - `actividades-clases-agenda.md` — modelo de oferta y ocurrencias
-- `reservas-disponibilidad-avisos.md` — módulo de reservas (EN DISEÑO,
-  con análisis de alternativas Cal.com/Cal.diy vs NocoDB)
+- `reservas-disponibilidad-avisos.md` — módulo de reservas (motor
+  decidido: Cal.diy)
 
 ## Estado general (17 jul 2026)
 - Web pública: desplegada, funcional.
-- Panel /admin: agenda operativa (calendario, menú contextual,
-  edición de clases). Desplegado en main.
+- Panel /admin: agenda operativa. La parte de calendario pasará a la
+  UI de Cal.diy cuando se complete la integración de reservas; el
+  resto se conserva.
 - Backend: modular, operativo.
-- Reservas: EN DISEÑO. Decisión de motor sin cerrar. Rama
-  `calcom-centric` con exploración de Cal.diy.
+- Reservas: motor DECIDIDO (Cal.diy, validado en el VPS el 17 jul).
+  Integración en construcción; diseño en
+  docs/reservas-avisos-disponibilidad.md.
 
 ## Convenciones
-- Fuente de verdad de la oferta: NocoDB (base "Yoga").
+- Fuentes de verdad: Cal.diy (calendario/reservas/aforo) y NocoDB
+  (actividades, tarifas, textos, bonos).
 - Web pública generada; panel servido por el backend.
 - Cuadernos de bitácora por servidor, aparte de estos documentos.

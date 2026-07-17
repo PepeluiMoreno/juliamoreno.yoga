@@ -1,232 +1,148 @@
-# Reservas, disponibilidad, bonos y avisos — diseño unificado
+# Reservas, disponibilidad, bonos y avisos — diseño (Cal.diy-centric)
 
-Documento de trabajo que fija la arquitectura antes de construir.
-Unifica y sustituye a los anteriores `reservas-y-bonos.md` y
-`diseno-reservas-avisos.md`. No es código: es la decisión de qué hace
-cada pieza y por qué.
+Documento de diseño del módulo de reservas. Sustituye a la versión
+anterior de este fichero, que recogía la decisión provisional
+NocoDB-centric y el análisis de alternativas. La historia completa de
+cómo se llegó aquí (hallazgos 1-7, levantamiento y validación) está en
+docs/rama-calcom-centric.md; no se repite.
 
 Fecha: 17 jul 2026.
+Decisión: **Cal.diy como motor del calendario y las reservas.**
+El main anterior (con la vía NocoDB-centric aún abierta) queda en la
+rama de salvaguarda main-salvaguarda-20260717.
 
 ## 1. Qué se quiere resolver
 
 1. Que el alumno vea la **disponibilidad real** de clases y pueda
    **reservar** su plaza.
 2. Una **vista de disponibilidad reutilizable** (web pública y donde
-   convenga).
-3. En admin, por cada clase, la **lista de alumnos apuntados**, como
-   grupo destinatario de **avisos** ("traed esterilla", "nos
-   retrasamos 10 min"), enviados solo a quien va a esa clase.
+   convenga), con el estilo de la web.
+3. En gestión, por cada clase, la **lista de alumnos apuntados**, como
+   grupo destinatario de **avisos** solo a quien va a esa clase.
 4. **Bonos** (4/8 clases) que se descuentan al asistir, con caducidad.
 
-## 2. La decisión: construir sobre NocoDB, no traer Cal.com
+## 2. Por qué Cal.diy
 
-Se valoró con el criterio coste/beneficio correcto: **idoneidad
-funcional** como beneficio, **coste de integración** como coste.
-
-**Cal.com** (ya desplegado en reservas.juliamoreno.yoga):
-- Idoneidad alta: motor de reservas completo (plazas, recordatorios,
-  portal de autoservicio, webhooks).
-- Coste de integración alto: introduce una **segunda fuente de verdad
-  de la semana tipo** (las franjas viven en Cal.com y en la matriz de
-  Clases de NocoDB), obliga a sincronizar o vigilar deriva, añade un
-  servicio de pegamento por webhooks y una pieza pesada que mantener.
-
-**Construir sobre NocoDB + el backend existente:**
-- Idoneidad media: hay que escribir reserva y aforo (poco), pero
-  "apuntarse y ver plazas" es sencillo sobre la Agenda que ya existe.
-- Coste de integración bajo: **una sola fuente de verdad**. Agenda,
-  clases, alumnos y reservas viven todos en NocoDB. Sin sincronizar
-  dos calendarios. Encaja con el panel ya construido.
-
-**Decisión (17 jul 2026):** construir sobre **NocoDB + backend**.
-Motivos, según lo que se usará de verdad:
-- Del motor de reservas solo se usará **apuntarse y ver plazas**; lo
-  demás (recordatorios, portal, pagos) lo lleva Julia/el sistema. Es
-  decir, de la alta idoneidad de Cal.com se aprovecharía muy poco.
-- Pesa más **evitar duplicar la semana tipo**: una sola fuente de
-  verdad (NocoDB) que dos calendarios que mantener sincronizados.
-
-Cuando el beneficio aprovechable es pequeño y el coste que importa es
-alto, la balanza cae del lado de construirlo en NocoDB.
-
-Cal.com queda desplegado pero **fuera de este flujo**. Puede retirarse
-del compose más adelante si no se le da otro uso (revisar antes de
-tocar). InvoiceNinja: **solo facturación a demanda** (si un alumno
-pide factura); no es registro de alumnos ni motor de reservas.
+- La objeción original a Cal.com (duplicar la semana tipo) desaparece
+  al plantearlo como sustitución del calendario, no como duplicado.
+- Los muros que mataban la vía (API v2 no incluida en la imagen, API
+  keys tras Enterprise) eran del Cal.com cerrado. Cal.diy (fork MIT
+  tras el cierre de abril 2026) conserva la API v2 y genera keys sin
+  licencia.
+- Verificado en el VPS (17 jul): stack levantado, API v2 operativa,
+  sonda 3/3 OK — tipos de evento, slots con aforo por hueco
+  (seatsBooked/seatsRemaining/seatsTotal) y reservas.
+- Riesgo asumido conscientemente: Cal.diy es community y sus autores
+  lo desaconsejan para producción por SOPORTE/SEGURIDAD (no por
+  capacidad ni licencia). Para un negocio pequeño autohospedado con
+  backups es asumible; la salvaguarda permite volver atrás.
 
 ## 3. Reparto de piezas
 
-- **NocoDB** (base Yoga) — fuente de verdad única: oferta
-  (actividades, agenda/ocurrencias, tarifas), **alumnos**, **bonos**,
-  **reservas** y **aforo**.
-- **backend** (servicio Python del panel) — expone los endpoints de
-  reserva (públicos, con aforo) y la consulta de alumnos por clase.
-- **Listmonk** — envío de avisos y boletines.
-- **InvoiceNinja** — facturación a demanda, opcional, aparte.
+- **Cal.diy** — el motor: calendario, disponibilidad, reservas, aforo,
+  confirmaciones y cancelaciones. Su UI es la **trastienda** de
+  gestión de Julia (separación tienda/trastienda, aceptada como
+  ventaja). Corre como stack propio en /opt/docker/apps/cal.diy
+  (Postgres y Redis propios), expuesto en reservas. y
+  api-reservas.juliamoreno.yoga.
+- **NocoDB** (base Yoga) — lo que no es calendario: actividades y su
+  ciclo de estados, tarifas, textos de la web multi-idioma, y la
+  contabilidad de **bonos**.
+- **backend** (Python) — el pegamento: lee la API v2 de Cal.diy
+  (disponibilidad, reservas), recibe sus webhooks, aplica la lógica de
+  bonos, dispara avisos y genera la web pública.
+- **Listmonk** — correo a alumnos. **Telegram** (bot) — avisos a
+  Julia ("nuevo alumno apuntado a la clase del jueves").
+- **InvoiceNinja** — facturación a demanda, aparte.
 
-## 4. Modelo de datos en NocoDB (a cerrar)
+## 4. Modelado de la clase en Cal.diy
 
-- **Agenda** (ya existe): cada ocurrencia gana `plazas` (aforo) y un
-  `plazas_libres` calculado o derivado del recuento de reservas.
-  `visible_web` pasa a significar "abierta a reserva".
-- **Alumnos** (nueva): nombre, contacto, consentimiento RGPD.
-- **Bonos** (nueva): alumno, tipo 4/8, fecha, caducidad (= fecha + 1
-  mes, campo calculado), créditos restantes.
-- **Reservas** (nueva): alumno + ocurrencia (id de Agenda) + estado
-  (reservada/asistida/cancelada) + bono del que se descuenta.
+- Cada clase es un **tipo de evento NO recurrente con seats** (aforo)
+  cuya **disponibilidad está restringida a su franja** (p. ej. horario
+  "Hatha martes" con un único tramo martes 19:00-20:00).
+- La función "recurring" de Cal.com NO se usa: significa que un mismo
+  reservante se lleva la serie entera, y además es excluyente con
+  seats (verificado en la UI). La repetición semanal la pone la
+  disponibilidad.
+- Con esto, el endpoint de slots devuelve exactamente las ocurrencias
+  de la clase, cada una con su aforo — lo que la web necesita.
+- RGPD en cada evento: "Share attendee information between guests"
+  DESMARCADO (los alumnos no se ven entre sí); "Show the number of
+  available seats" marcado (el aforo sí es público).
 
-El aforo se controla contando reservas activas de cada ocurrencia.
+## 5. Regla de oro: el motor escribe, el resto lee
 
-## 5. Flujo de reserva (apuntarse + ver plazas)
+- Las reservas las crea SIEMPRE el motor de Cal.diy (booker embebido o
+  enlazado desde la web). Nunca se escribe a mano en su base de datos
+  ni se crean reservas por fuera: saltaría su lógica (validación de
+  aforo, confirmaciones) y ataría al esquema interno.
+- El backend solo LEE su API (slots, bookings) y RECIBE sus webhooks.
+  Versiones de cabecera cal-api-version por recurso: event-types
+  2024-06-14, slots 2024-09-04, bookings 2024-08-13 (ver cliente.py).
 
-1. El alumno abre "Contratar clases" -> ve la disponibilidad
-   (ocurrencias con plazas libres, calculadas desde Reservas).
-2. Elige ocurrencia con plazas libres.
-3. Se identifica / da datos (consentimiento RGPD explícito).
-4. El backend crea la Reserva y, si tiene bono activo, descuenta un
-   crédito del más antiguo no caducado; si no, marca "pendiente de
-   cobro" y avisa a Julia.
-5. Plazas libres de la ocurrencia baja en uno (por recuento).
+## 6. Flujo de reserva
 
-Sin recordatorios automáticos ni portal de autoservicio en esta fase:
-"lo demás lo lleva Julia".
+1. La web pública pinta la disponibilidad con su estilo (el backend
+   lee slots y expone un endpoint propio de solo aforo).
+2. El alumno reserva en el booker de Cal.diy (embebido o enlazado),
+   con consentimiento RGPD explícito.
+3. Webhook BOOKING_CREATED (firmado HMAC) llega al backend
+   (handlers/webhooks.py): registra, descuenta bono si lo hay (o marca
+   pendiente de cobro), avisa a Julia por Telegram.
+4. BOOKING_CANCELLED: devuelve crédito si procede y avisa.
 
-## 6. Flujo de bonos
+## 7. Bonos
 
-1. Venta de bono: se registra en NocoDB (tabla Bonos).
-2. Al reservar/asistir: descuenta 1 crédito del bono activo más
-   antiguo no caducado; si no hay saldo, aviso a Julia ("cobrar suelta
-   o vender bono").
-3. Cancelación con antelación > X horas: devuelve el crédito.
-4. Diario 9:00 (tarea programada del backend): bonos que caducan en 3
-   días -> aviso de renovación al alumno.
+Viven FUERA de Cal.diy (NocoDB + backend), como estaba diseñado:
+- Bonos (tabla): alumno, tipo 4/8, fecha, caducidad (fecha + 1 mes),
+  créditos restantes.
+- Al llegar BOOKING_CREATED se descuenta 1 crédito del bono activo más
+  antiguo no caducado; sin saldo, aviso a Julia ("cobrar suelta o
+  vender bono").
+- Cancelación con antelación > X horas: devuelve el crédito.
+- Tarea diaria del backend: bonos que caducan en 3 días -> aviso de
+  renovación al alumno. Venta de bono -> aviso a Julia por Telegram.
 
-## 7. Disponibilidad reutilizable
+## 8. Lista de alumnos por clase + avisos
 
-Endpoint público de solo lectura en el backend: dado actividad o
-rango, devuelve ocurrencias con fecha, hora, lugar, plazas totales y
-libres, estado (abierta/llena/cerrada/cancelada). Solo aforo, **nunca
-nombres**. Un componente de front lo pinta con el estilo de la web;
-se embebe en la web pública ("Contratar clases") y en admin si hace
-falta. Reutiliza la lógica de la Agenda que ya existe.
+- La lista sale de la API de bookings de Cal.diy filtrada por la
+  ocurrencia (o del registro que el backend mantiene vía webhooks).
+- Aviso puntual solo a ese grupo, vía Listmonk o correo del backend;
+  copia oculta / envíos individuales: un alumno nunca ve a otro.
 
-## 8. Lista de alumnos por clase + avisos (admin)
+## 9. RGPD
 
-Lo que motivó la conversación:
+- Datos personales en servicios autohospedados (Cal.diy y NocoDB),
+  bajo control propio.
+- La vista pública de disponibilidad muestra solo aforo, nunca nombres.
+- Consentimiento explícito al reservar. InvoiceNinja solo si hay
+  factura.
 
-- En la ficha de una ocurrencia, admin pide al backend las reservas
-  activas de esa ocurrencia -> lista de alumnos (sale directa de
-  NocoDB, sin sistemas externos).
-- Esa lista es el **grupo destinatario** de un aviso puntual.
-- Envío vía **Listmonk** (o correo directo del backend): mensaje corto
-  solo a quien tiene reserva en esa clase. Copia oculta / envíos
-  individuales: un alumno nunca ve a otro.
-- Reutiliza la intención `avisar_alumnos` que ya se guarda en las
-  ocurrencias de la Agenda; ahora con destinatarios reales.
+## 10. Orden de trabajo
 
-## 9. Talleres y retiros
+1. Mini-página de disponibilidad con estilo web consumiendo slots
+   (valida el punto que queda de la exploración).
+2. Valorar la UI de Cal.diy como trastienda con ojos de Julia.
+3. Endpoint de webhooks en el backend (BOOKING_CREATED/CANCELLED,
+   verificación HMAC) + aviso Telegram a Julia.
+4. Modelo de bonos en NocoDB y su lógica en el backend.
+5. Avisos por clase vía Listmonk.
+6. Configurar las clases reales de Julia en Cal.diy y conectar la web.
+7. Limpieza e integración de infraestructura: retirar el servicio
+   calcom viejo del compose del proyecto, decidir si el stack cal.diy
+   se integra en el compose o sigue aparte, endurecer credenciales de
+   su Postgres, backups (restic) de su base, SMTP (EMAIL_FROM /
+   EMAIL_SERVER_*, hoy sin configurar: las confirmaciones por correo
+   no salen), revocar la API key de la exploración y 2FA de la cuenta
+   admin.
 
-Mismo mecanismo: ocurrencia puntual con plazas. Cobro por
-Bizum/transferencia (0% comisión). Pago online (Stripe ~1,5%+0,25€) es
-decisión aparte, solo si se quiere.
+## 11. Preguntas abiertas
 
-## 10. Privacidad (RGPD)
-
-- Datos personales de alumnos: NocoDB, autoalojado, bajo control
-  propio. Una sola ubicación, más fácil de auditar y de ejercer
-  derechos (acceso, borrado).
-- La vista pública de disponibilidad solo muestra aforo, nunca quién.
-- Avisos con copia oculta / individuales.
-- Consentimiento explícito al reservar.
-- InvoiceNinja solo si hay factura; ahí van datos fiscales.
-
-## 11. Orden de trabajo propuesto
-
-1. Modelo de datos en NocoDB: tablas Alumnos, Bonos, Reservas; campo
-   plazas en Agenda.
-2. Endpoint público de disponibilidad (solo aforo) + componente de
-   front reutilizable.
-3. Flujo de reserva en el backend (crear reserva, recuento de aforo).
-4. Lógica de bonos (descuento, caducidad, tarea diaria).
-5. Lista de alumnos por clase en admin.
-6. Avisos al grupo de una clase vía Listmonk.
-7. (Opcional) Facturación con InvoiceNinja a demanda.
-
-Cada paso es entregable por separado. El 1 condiciona el resto.
-
-## 12. Preguntas abiertas
-
-- Aforo: ¿`plazas_libres` como campo calculado en NocoDB, o recuento
-  en vivo en el backend al pedir disponibilidad? (rendimiento vs
-  simplicidad).
-- Reserva sin cuenta: ¿el alumno reserva solo con email/teléfono, o se
-  crea algún acceso? (afecta a la fricción y al RGPD).
-- Cancelación por el alumno: ¿se permite desde la web, o solo avisando
-  a Julia? (si se permite, hace falta algo de "portal", que era justo
-  lo que se decidió no construir ahora).
-- Avisos: ¿Listmonk o correo directo del backend? ¿remitente?
-- ¿Se retira Cal.com del compose, o se deja por si se le da otro uso?
-
-## 13. Alternativa en estudio: Cal.com como base del calendario
-
-Planteada el 17 jul: en vez de NocoDB como fuente única con Cal.com
-fuera, lo contrario — **Cal.com como fuente única del calendario**,
-NocoDB conserva lo demás (actividades, tarifas, textos web). Esto
-anula la objeción anterior (duplicar la semana tipo): si Cal.com
-*sustituye* en vez de *duplicar*, no hay dos fuentes que sincronizar.
-
-### Capacidades de Cal.com verificadas (17 jul, API v2)
-- Self-hosted sin límites: event types y bookings ilimitados;
-  webhooks, workflows y cobro incluidos.
-- API-first real: casi todo lo de la UI se puede hacer por API
-  (event-types, bookings, availability, slots).
-- Reservas **recurring** y **seated** (con plazas) de fábrica: es
-  exactamente "clase que se repite con aforo".
-- La API permite **leer disponibilidad y slots por rango** -> se puede
-  alimentar la web pública con las clases desde Cal.com.
-- Webhooks firmados (HMAC) BOOKING_CREATED/CANCELLED -> el backend
-  reacciona (bonos, avisos).
-- Embebible (atoms + OAuth) y personalizable.
-
-### Lo que cuesta este camino
-- **Se jubila el panel de Agenda construido hoy** (FullCalendar, menú
-  contextual, tarjetas, estados propios). El usuario acepta jubilarlo
-  *si Cal.com da algo mejor*. Parte se sustituye por la UI de Cal.com;
-  la gestión desde el panel propio se reharía contra la API de Cal.com
-  o se haría directamente en Cal.com.
-- **Cal.com no es base de datos general**: actividades, tarifas y
-  textos multi-idioma siguen en NocoDB. Así que el reparto real es
-  "Cal.com = calendario/reservas, NocoDB = todo lo demás". La web
-  pública tendría que leer de ambos (clases de Cal.com, contenidos de
-  NocoDB) -> un acoplamiento nuevo, distinto del que evitábamos.
-- **Modelo propio de Cal.com**: los estados "propuesta/programada/
-  en_curso/finalizada", el concepto de matriz de clases y la
-  generación de meses son nuestros; hay que ver cómo se expresan (o si
-  se pierden) en el modelo de Cal.com.
-- `build-web.py` pasaría a leer clases de la API de Cal.com además de
-  NocoDB.
-
-### Cómo queda el eje coste/beneficio con esta variante
-- Beneficio: alto y **ahora sí aprovechado** — no solo "apuntarse y
-  ver plazas", sino que Cal.com se hace cargo de todo el calendario y
-  las reservas, con recordatorios y portal que antes íbamos a dejar
-  fuera. Menos que construir a mano.
-- Coste: se desplaza de "sincronizar dos fuentes" a "migrar el
-  calendario a Cal.com + partir la web en dos orígenes + rehacer la
-  gestión contra su API". No es menor, pero es **de una sola vez**, no
-  recurrente.
-
-### Qué falta para decidir (siguiente paso)
-Explorar Cal.com como base de verdad antes de comprometerse:
-1. Montar en el Cal.com ya desplegado un evento recurrente con plazas
-   (una franja real de Julia) y ver si el modelo encaja.
-2. Probar leer sus slots por API para pintar la disponibilidad con el
-   estilo de la web -> valida el punto crítico (alimentar la web).
-3. Ver cómo se gestiona desde admin (¿la UI de Cal.com basta para
-   Julia, o hace falta seguir con panel propio contra su API?).
-4. Con eso, comparar de verdad contra "todo en NocoDB" (secciones
-   2-12) y elegir. No decidir el reparto hasta esta exploración.
-
-Estado: **decisión en pausa**. Dos caminos vivos —"todo en NocoDB"
-(secciones 2-12) y "Cal.com como base del calendario" (esta sección)—
-hasta hacer la exploración de arriba.
+- ¿Stack cal.diy dentro del compose del proyecto o aparte? (backups y
+  operación hablan de integrarlo; el aislamiento, de dejarlo aparte).
+- Identificación del alumno al reservar: solo email/teléfono en el
+  booker, ¿basta?
+- Ventana de cancelación X horas para devolver crédito (definir X).
+- Remitente y SMTP definitivos de Cal.diy y de los avisos.
+- Qué se retira del panel /admin propio y qué se conserva (todo lo que
+  no es calendario se conserva).
