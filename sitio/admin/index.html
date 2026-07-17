@@ -836,8 +836,28 @@ function _tarjetaClaseEditable(e, resaltar){
   </div>`;
 }
 
+function esDiaPasado(fechaStr){
+  if(!fechaStr) return false;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const d = new Date(fechaStr.slice(0,10) + "T00:00:00");
+  if(isNaN(d.getTime())) return false;
+  return d < hoy;
+}
+
+// Punto único de creación de clase en una fecha. Si el día ya pasó, advierte
+// antes de continuar; solo sigue si el usuario lo confirma.
+async function crearEnFecha(fechaStr, hora){
+  if(esDiaPasado(fechaStr)){
+    const ok = await confirmar(
+      "Este día ya ha pasado. Crear una clase en una fecha anterior a hoy no la programa ni avisa a nadie: solo queda anotada a efectos de registro histórico, para dejar constancia de una clase que ya se impartió. ¿Quieres continuar?",
+      "Fecha ya pasada");
+    if(!ok) return;
+  }
+  abrirModalAgenda({tipo:"puntual", fecha:fechaStr, hora_inicio:hora||""});
+}
+
 function nuevaEnFecha(fechaStr){
-  abrirModalAgenda({tipo:"puntual", fecha:fechaStr});
+  crearEnFecha(fechaStr, "");
 }
 
 async function guardarClaseDia(id){
@@ -981,7 +1001,7 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
   if(accion==="nueva"){
     const fecha = ctx.fecha || (e && (e.fecha||"").slice(0,10)) || "";
     const hora = ctx.hora || "";
-    abrirModalAgenda({tipo:"puntual", fecha, hora_inicio:hora});
+    await crearEnFecha(fecha, hora);
   }else if(accion==="editar"){
     abrirModalAgenda(e);
   }else if(accion==="visibilidad"){
