@@ -83,6 +83,40 @@ def bookings(desde=None, hasta=None):
     return _get("/v2/bookings", VERSIONES["bookings"], params or None)
 
 
+def aforo_por_hueco(event_type_id, desde, hasta):
+    """Devuelve {inicio_utc: {'total': N, 'ocupadas': M, 'libres': L}}
+    para cada franja del rango.
+
+    IMPORTANTE: el endpoint de slots reporta seatsRemaining/seatsBooked
+    pero NO los actualiza al reservar (verificado 17 jul 2026: una
+    reserva aceptada deja el slot en seatsRemaining=total). El motor de
+    Cal.diy sí descuenta bien (el booker muestra el aforo correcto), así
+    que aquí lo calculamos a mano: total del slot menos asistentes de
+    las reservas ACEPTADAS que caen en ese inicio. Este es el número
+    fiable para la vista pública.
+    """
+    dias = slots(event_type_id, desde, hasta).get("data", {})
+    reservas = bookings(desde, hasta).get("data", [])
+    ocupacion = {}
+    for b in reservas:
+        if b.get("status") != "accepted":
+            continue
+        ini = b.get("start")
+        ocupacion[ini] = ocupacion.get(ini, 0) + max(1, len(b.get("attendees", [])))
+    resultado = {}
+    for dia in dias:
+        for s in dias[dia]:
+            ini = s.get("start")
+            total = s.get("seatsTotal")
+            ocup = ocupacion.get(ini, 0)
+            resultado[ini] = {
+                "total": total,
+                "ocupadas": ocup,
+                "libres": (total - ocup) if isinstance(total, int) else None,
+            }
+    return resultado
+
+
 def _post(ruta, version, cuerpo):
     url, key = _cfg()
     datos = json.dumps(cuerpo).encode()

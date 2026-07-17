@@ -104,10 +104,13 @@ def _hora_local(iso_utc):
     return dt.astimezone(TZ).strftime("%H:%M")
 
 
-def _chip(franja):
-    hora = _hora_local(franja.get("start", ""))
-    total = franja.get("seatsTotal")
-    libres = franja.get("seatsRemaining")
+def _chip(inicio_utc, aforo):
+    """aforo: dict {'total','ocupadas','libres'} de cliente.aforo_por_hueco,
+    que ya trae el número real (slots reporta seatsRemaining sin
+    actualizar; ver cliente.aforo_por_hueco)."""
+    hora = _hora_local(inicio_utc)
+    total = aforo.get("total")
+    libres = aforo.get("libres")
     if total is None:
         return f'<span class="franja">{hora}</span>'
     if not libres:
@@ -132,11 +135,14 @@ def main():
     secciones = []
     for t in tipos:
         titulo = html.escape(t.get("title", "Clase"))
-        franjas_por_dia = cliente.slots(
-            t["id"], hoy.isoformat(), fin.isoformat()).get("data", {})
+        aforos = cliente.aforo_por_hueco(
+            t["id"], hoy.isoformat(), fin.isoformat())
+        por_dia = {}
+        for ini in sorted(aforos):
+            por_dia.setdefault(ini[:10], []).append(ini)
         filas = []
-        for dia in sorted(franjas_por_dia):
-            chips = "".join(_chip(f) for f in franjas_por_dia[dia])
+        for dia in sorted(por_dia):
+            chips = "".join(_chip(ini, aforos[ini]) for ini in por_dia[dia])
             filas.append(f'<div class="dia"><span class="fecha">'
                          f'{_fecha_larga(dia)}</span>'
                          f'<span class="franjas">{chips}</span></div>')
