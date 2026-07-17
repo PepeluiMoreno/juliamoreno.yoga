@@ -366,3 +366,66 @@ de pago infranqueable.
 Toca revisar la doc de self-hosting de Cal.diy (cal.diy) para ver como
 levanta la API v2 su propio compose, y rehacer el plan de build sobre
 Cal.diy en vez de sobre el Cal.com cerrado.
+
+## HALLAZGO 5 (17 jul) — el compose de Cal.diy YA trae la API v2
+
+Revisado el docker-compose.yml oficial de calcom/cal.diy y su
+troubleshooting. Dos cosas que despejan el build:
+
+### El servicio de la API v2 ya está en el compose
+El compose de Cal.diy incluye un servicio `calcom-api`
+(container_name: calcom-api) que se buildea desde
+`apps/api/v2/Dockerfile`. NO hay que improvisar el contenedor ni se
+cae en el error "Workspace @calcom/api-v2 not found" — el compose
+oficial lo trae resuelto. Se acabó el via crucis que temíamos.
+
+### Variables que la API v2 necesita (del troubleshooting de Cal.diy)
+En el .env RAÍZ (el compose las pasa al servicio calcom-api):
+  # obligatorias (sin ellas la API no arranca)
+  REDIS_URL=redis://redis:6379
+  JWT_SECRET=<aleatorio>
+  NEXTAUTH_SECRET=<el mismo del webapp>
+  CALENDSO_ENCRYPTION_KEY=<32 chars; NO cambiar si ya hay datos>
+  STRIPE_API_KEY=sk_test_placeholder   # placeholder si no se usa Stripe
+  STRIPE_WEBHOOK_SECRET=whsec_placeholder
+  # opcionales
+  WEB_APP_URL=https://reservas.juliamoreno.yoga
+  REDIS_PORT=6379
+  LOG_LEVEL=warn
+La API v2 tiene su propio apps/api/v2/.env.example con la lista
+completa.
+
+## DIAGNÓSTICO DEL VPS (confirmado 17 jul)
+- arch: x86_64 (imágenes normales, sin -arm)
+- RAM: 23 GB, ~19 libres -> riesgo de OOM en el build DESCARTADO
+- disco: 106 GB libres -> de sobra
+- redis: NO hay -> añadir contenedor redis (lo exige la API v2)
+- jmy-cal: no corría (profile [todo] sin levantar) -> partimos limpio
+- git 2.43, docker compose v5.1.3 -> al día
+
+## PLAN AFINADO — levantar Cal.diy + API v2
+Todo verde para intentarlo. Pasos:
+1. Clonar Cal.diy:
+     cd /opt/docker/apps
+     git clone https://github.com/calcom/cal.diy.git
+     cd cal.diy && cp .env.example .env
+2. Editar .env: DATABASE_URL al Postgres del proyecto (base calcom),
+   NEXTAUTH_SECRET y CALENDSO_ENCRYPTION_KEY, las vars de API v2 de
+   arriba (REDIS_URL, JWT_SECRET, STRIPE_* placeholder),
+   NEXT_PUBLIC_WEBAPP_URL=https://reservas.juliamoreno.yoga,
+   NEXT_PUBLIC_API_V2_URL=https://api-reservas.juliamoreno.yoga,
+   y generar NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY (Web Push).
+3. Añadir un servicio redis al compose (o usar el que traiga Cal.diy).
+4. Build + up guardando log:
+     docker compose build 2>&1 | tee /tmp/caldiy-build.log
+     docker compose up -d
+5. Ver que calcom-api arranca:
+     docker compose logs -f calcom-api
+6. Generar API key en la UI de Cal.diy (Settings -> Developer) — en
+   Cal.diy NO requiere Enterprise.
+7. Correr la sonda (backend/calcom/sonda.py) apuntando a la API.
+
+Avisos: CALENDSO_ENCRYPTION_KEY no cambiar si ya hay credenciales
+guardadas. Integrar con Traefik como el resto (api-reservas.* -> puerto
+del calcom-api). Pegar cualquier error del build/arranque tal cual para
+diagnosticarlo.
