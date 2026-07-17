@@ -166,3 +166,67 @@ Cada paso es entregable por separado. El 1 condiciona el resto.
   lo que se decidió no construir ahora).
 - Avisos: ¿Listmonk o correo directo del backend? ¿remitente?
 - ¿Se retira Cal.com del compose, o se deja por si se le da otro uso?
+
+## 13. Alternativa en estudio: Cal.com como base del calendario
+
+Planteada el 17 jul: en vez de NocoDB como fuente única con Cal.com
+fuera, lo contrario — **Cal.com como fuente única del calendario**,
+NocoDB conserva lo demás (actividades, tarifas, textos web). Esto
+anula la objeción anterior (duplicar la semana tipo): si Cal.com
+*sustituye* en vez de *duplicar*, no hay dos fuentes que sincronizar.
+
+### Capacidades de Cal.com verificadas (17 jul, API v2)
+- Self-hosted sin límites: event types y bookings ilimitados;
+  webhooks, workflows y cobro incluidos.
+- API-first real: casi todo lo de la UI se puede hacer por API
+  (event-types, bookings, availability, slots).
+- Reservas **recurring** y **seated** (con plazas) de fábrica: es
+  exactamente "clase que se repite con aforo".
+- La API permite **leer disponibilidad y slots por rango** -> se puede
+  alimentar la web pública con las clases desde Cal.com.
+- Webhooks firmados (HMAC) BOOKING_CREATED/CANCELLED -> el backend
+  reacciona (bonos, avisos).
+- Embebible (atoms + OAuth) y personalizable.
+
+### Lo que cuesta este camino
+- **Se jubila el panel de Agenda construido hoy** (FullCalendar, menú
+  contextual, tarjetas, estados propios). El usuario acepta jubilarlo
+  *si Cal.com da algo mejor*. Parte se sustituye por la UI de Cal.com;
+  la gestión desde el panel propio se reharía contra la API de Cal.com
+  o se haría directamente en Cal.com.
+- **Cal.com no es base de datos general**: actividades, tarifas y
+  textos multi-idioma siguen en NocoDB. Así que el reparto real es
+  "Cal.com = calendario/reservas, NocoDB = todo lo demás". La web
+  pública tendría que leer de ambos (clases de Cal.com, contenidos de
+  NocoDB) -> un acoplamiento nuevo, distinto del que evitábamos.
+- **Modelo propio de Cal.com**: los estados "propuesta/programada/
+  en_curso/finalizada", el concepto de matriz de clases y la
+  generación de meses son nuestros; hay que ver cómo se expresan (o si
+  se pierden) en el modelo de Cal.com.
+- `build-web.py` pasaría a leer clases de la API de Cal.com además de
+  NocoDB.
+
+### Cómo queda el eje coste/beneficio con esta variante
+- Beneficio: alto y **ahora sí aprovechado** — no solo "apuntarse y
+  ver plazas", sino que Cal.com se hace cargo de todo el calendario y
+  las reservas, con recordatorios y portal que antes íbamos a dejar
+  fuera. Menos que construir a mano.
+- Coste: se desplaza de "sincronizar dos fuentes" a "migrar el
+  calendario a Cal.com + partir la web en dos orígenes + rehacer la
+  gestión contra su API". No es menor, pero es **de una sola vez**, no
+  recurrente.
+
+### Qué falta para decidir (siguiente paso)
+Explorar Cal.com como base de verdad antes de comprometerse:
+1. Montar en el Cal.com ya desplegado un evento recurrente con plazas
+   (una franja real de Julia) y ver si el modelo encaja.
+2. Probar leer sus slots por API para pintar la disponibilidad con el
+   estilo de la web -> valida el punto crítico (alimentar la web).
+3. Ver cómo se gestiona desde admin (¿la UI de Cal.com basta para
+   Julia, o hace falta seguir con panel propio contra su API?).
+4. Con eso, comparar de verdad contra "todo en NocoDB" (secciones
+   2-12) y elegir. No decidir el reparto hasta esta exploración.
+
+Estado: **decisión en pausa**. Dos caminos vivos —"todo en NocoDB"
+(secciones 2-12) y "Cal.com como base del calendario" (esta sección)—
+hasta hacer la exploración de arriba.
