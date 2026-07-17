@@ -307,3 +307,62 @@ de la API desde el Dockerfile propio del monorepo:
 Cada error que salga, pegarlo tal cual y diagnosticarlo. Muchos "exit
 1" son entorno (RAM, contexto de build), no bugs irresolubles. El log
 completo es lo que dice la verdad.
+
+## HALLAZGO 4 (17 jul) — Cal.com se cerró; Cal.diy es la salida (REABRE el camino)
+
+Comparados Cal.com y Cal.diy. La diferencia lo explica TODO y cambia
+la recomendación.
+
+### Qué pasó (abril 2026, oficial)
+Cal.com movió su código de producción a un repo PRIVADO y pasó a
+código cerrado. El repo público es ahora **calcom/cal.diy**. Es decir,
+el "Cal.com open source" que teníamos instalado ya no existe como tal;
+se partió en dos:
+- **Cal.com**: cerrado, comercial, con licencia. Aquí está el muro
+  Enterprise y la API key de pago que nos bloqueaba.
+- **Cal.diy**: fork community, MIT, con TODO el código comercial
+  quitado. Sin license key.
+
+### Qué quitó Cal.diy y qué conservó (oficial)
+Quitado: API v1 entera, UI Enterprise (wizard de licencia, compliance,
+premium username, billing admin, traducción IA), Booking Audit,
+Impersonation.
+CONSERVADO: la lógica core de scheduling, la app store, los flujos de
+reserva, **y la API v2**.
+
+### La clave que desbloquea
+- **Cal.diy INCLUYE la API v2** (lo que se elimino fue la v1).
+- **NO requiere license key**: "todo funciona out of the box, sin
+  cuenta de Cal.com ni licencia".
+- 100% MIT, sin open-core.
+
+=> El muro "la API key requiere Enterprise" era del Cal.com CERRADO,
+   no de Cal.diy. En Cal.diy la API v2 y las API keys funcionan sin
+   pagar. **La via Cal.com-centric-por-API REVIVE con Cal.diy.**
+
+Probable causa de los errores de build que vimos en foros: gente
+usando la imagen del viejo Cal.com en transicion, no Cal.diy.
+
+### El "pero" (cambia de sitio, no desaparece)
+Cal.diy sigue desaconsejado para produccion POR SUS AUTORES, pero esa
+advertencia es de SOPORTE y SEGURIDAD (nadie te cubre), no de
+capacidad ni de licencia. Es "usalo bajo tu responsabilidad", no "no
+puedes". Para un negocio pequeno como el de Julia, autohospedado y con
+backups, es un riesgo asumible y valorable — muy distinto de un muro
+de pago infranqueable.
+
+### Replanteo del build
+- Clonar **calcom/cal.diy** (no calcom/cal.com), que ya trae la API v2
+  integrada y pensada para self-host sin licencia.
+- Revisar su docker-compose / docs propias (cal.diy tiene su web de
+  self-hosting): puede que la API v2 venga ya como servicio, sin el
+  via crucis de compilar sobre la imagen del webapp.
+- Migracion: la instancia actual (jmy-cal, imagen calcom/cal.com) esta
+  en transicion; conviene pasar a la imagen/compose de Cal.diy. Ojo:
+  CALENDSO_ENCRYPTION_KEY no debe cambiar (corrompe credenciales); si
+  se migra base, conservar esa key.
+
+### Estado: camino Cal.com-centric REABIERTO via Cal.diy
+Toca revisar la doc de self-hosting de Cal.diy (cal.diy) para ver como
+levanta la API v2 su propio compose, y rehacer el plan de build sobre
+Cal.diy en vez de sobre el Cal.com cerrado.
