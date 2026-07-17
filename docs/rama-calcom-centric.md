@@ -202,3 +202,53 @@ producción, muros de pago móviles), la opción **NocoDB-centric** —
 construir reservas sobre lo que ya controlas al 100%— evita todo este
 terreno movedizo. La exploración en rama ha cumplido su función:
 destapar estos costes antes de invertir tiempo en el VPS.
+
+## HALLAZGO 3 (17 jul) — middleware sí, pero solo de LECTURA
+
+Explorada la idea de un middleware que aísle la UI y hable con Cal.com
+por su base de datos PostgreSQL directamente (evitando la API y su muro
+Enterprise). La base de Cal.com ya está en el mismo Postgres del
+proyecto (DATABASE_URL ...@pg:5432/calcom), así que el backend la
+alcanza sin abrir nada nuevo.
+
+### Lo verificado del esquema (Prisma sobre Postgres)
+- Tablas claras: EventType (clases; seatsPerTimeSlot = plazas,
+  recurringEvent = recurrencia), Booking (reservas), Attendee.
+- Existe precedente de leer y hasta escribir reservas por SQL (wrapper
+  FDW de Cal.com). Técnicamente se puede.
+
+### El riesgo de ESCRIBIR en su base (decisivo)
+- El esquema lleva lógica de negocio dentro: bookingUid como string
+  plano para auditoría, anonimización al borrar, etc.
+- Crear una reserva en Cal.com dispara efectos: evento de calendario
+  (EventManager), recordatorios obligatorios, validación de aforo,
+  estado PENDING/ACCEPTED según requiresConfirmation.
+- Insertar filas a mano SALTA todo eso: sin recordatorios, sin evento,
+  sin validar plazas, y atado al esquema interno -> una actualización
+  de Cal.com rompe el middleware en silencio.
+
+### Recomendación de Claude (firme)
+Middleware **solo de LECTURA**:
+- Cal.com crea las reservas (booker/webhooks), con su lógica completa.
+- El middleware LEE de su base: disponibilidad (plazas libres) y lista
+  de reservas por clase. Leer es estable; no dispara efectos.
+- La UI la controla la web propia (pinta disponibilidad leyendo del
+  middleware; para reservar, booker embebido o redirección).
+- Avisos y lista de alumnos salen de lo leído.
+
+NO escribir en la base de Cal.com. Si se necesita crear reservas
+programáticamente, es señal de que Cal.com no está aportando su valor
+(su motor) y conviene NocoDB-centric.
+
+### Conclusión del análisis (las dos opciones netas)
+1. **Cal.com de solo lectura + UI propia** — usa el motor de Cal.com
+   para crear/validar/recordar; el middleware solo lee. Menos frágil
+   que escribir. Pero arrastra que la edición libre (Cal.diy) está
+   desaconsejada para producción por la propia Cal.com.
+2. **NocoDB-centric** — reservas sobre lo que ya se controla al 100%,
+   sin terceros con licencias movedizas. Más construcción, cero
+   dependencia frágil.
+
+Recomendación global: si Cal.com, opción 1 (leer, no escribir). Pero la
+más limpia y sin sorpresas de terceros es NocoDB-centric. Decisión del
+usuario pendiente; el análisis está cerrado.
