@@ -252,3 +252,58 @@ programáticamente, es señal de que Cal.com no está aportando su valor
 Recomendación global: si Cal.com, opción 1 (leer, no escribir). Pero la
 más limpia y sin sorpresas de terceros es NocoDB-centric. Decisión del
 usuario pendiente; el análisis está cerrado.
+
+## PLAN — intentar el build de la API v2 en el VPS (17 jul)
+
+Decisión: intentarlo y leer los errores reales antes de descartar. Va
+en esta rama, no toca main. Coste acotado (una tarde).
+
+### Datos del VPS a confirmar antes (rellenar):
+- arch: ____   RAM: ____   disco libre: ____
+- redis corriendo: sí/no
+- versión imagen calcom actual: ____
+
+Importante: el build de la API v2 necesita ~4GB RAM. Si el VPS tiene
+menos, el `yarn install` puede morir por OOM (esa es una causa real del
+"exit code 1" que se ve en los foros, no siempre es un bug del código).
+
+### Estrategia para evitar el error "Workspace @calcom/api-v2 not found"
+Ese error sale al intentar arrancar la API con la imagen del WEBAPP
+(que no contiene ese workspace). La vía correcta es BUILDAR la imagen
+de la API desde el Dockerfile propio del monorepo:
+  apps/api/v2/  (tiene su Dockerfile)
+
+### Pasos
+1. Clonar el monorepo EN LA MISMA VERSIÓN que corre el webapp (para que
+   el esquema de la base coincida):
+     cd /opt/docker/apps/juliamoreno    # o donde se prefiera
+     git clone --depth 1 --branch <VERSION> https://github.com/calcom/cal.com.git calcom-src
+   (VERSION = la que devuelva el inspect del contenedor, p.ej. v5.6.x)
+
+2. Redis: si no hay, añadir un contenedor redis al stack (la API v2 lo
+   exige por REDIS_URL).
+
+3. Build de la API v2 con su Dockerfile:
+     cd calcom-src
+     docker build -f apps/api/v2/Dockerfile -t jmy-cal-api:local .
+   —> AQUÍ es donde saldrán los errores reveladores. Guardar el log
+      completo: docker build ... 2>&1 | tee /tmp/calapi-build.log
+
+4. Según el error:
+   - "yarn install exit 1" + OOM en dmesg -> falta RAM: añadir swap
+     temporal (fallocate 4G) y reintentar.
+   - "Workspace not found" -> se está buildando desde el contexto/
+     Dockerfile equivocado; usar el de apps/api/v2.
+   - fallo de prisma/DATABASE_URL en build -> pasar las vars de build.
+   - fallo de versión de node/yarn -> el Dockerfile del monorepo fija
+     la suya; no forzar otra.
+
+5. Si la imagen se construye, levantarla apuntando al Postgres de
+   calcom (mismo DATABASE_URL que el webapp) + Redis, exponer por
+   Traefik en api-reservas.juliamoreno.yoga, y correr la sonda
+   (backend/calcom/sonda.py).
+
+### Regla
+Cada error que salga, pegarlo tal cual y diagnosticarlo. Muchos "exit
+1" son entorno (RAM, contexto de build), no bugs irresolubles. El log
+completo es lo que dice la verdad.
