@@ -81,3 +81,42 @@ def bookings(desde=None, hasta=None):
     if hasta:
         params["beforeEnd"] = hasta
     return _get("/v2/bookings", VERSIONES["bookings"], params or None)
+
+
+def _post(ruta, version, cuerpo):
+    url, key = _cfg()
+    datos = json.dumps(cuerpo).encode()
+    req = urllib.request.Request(f"{url}{ruta}", data=datos, method="POST")
+    req.add_header("Authorization", f"Bearer {key}")
+    req.add_header("cal-api-version", version)
+    req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        cuerpo_err = e.read().decode("utf-8", "replace")
+        raise RuntimeError(f"Cal.diy {e.code} en {ruta}: {cuerpo_err[:300]}")
+
+
+def crear_reserva(event_type_id, inicio_utc, nombre, email,
+                  zona="Europe/Madrid", idioma="es"):
+    """Crea una reserva A TRAVÉS DEL MOTOR de Cal.diy (regla de oro:
+    nunca escribir en su base por fuera). inicio_utc en ISO con Z, tal
+    como lo devuelve el endpoint de slots."""
+    return _post("/v2/bookings", VERSIONES["bookings"], {
+        "start": inicio_utc,
+        "eventTypeId": event_type_id,
+        "attendee": {
+            "name": nombre,
+            "email": email,
+            "timeZone": zona,
+            "language": idioma,
+        },
+    })
+
+
+def cancelar_reserva(uid, motivo="Cancelación de prueba"):
+    """Cancela una reserva por su uid, también a través del motor."""
+    return _post(f"/v2/bookings/{uid}/cancel", VERSIONES["bookings"], {
+        "cancellationReason": motivo,
+    })
