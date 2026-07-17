@@ -8,8 +8,8 @@ fuera del motor), no directamente en NocoDB. Tras reservar, deja una
 copia ligera en NocoDB para la lista de alumnos por clase y los avisos.
 
 Dos rutas:
-  GET  /api/disponibilidad?dias=N  → aforo por hueco (para pintar la web)
-  POST /api/reservar               → {event_type_id, inicio, nombre, email}
+  GET  /disponibilidad?dias=N  → aforo por hueco (para pintar la web)
+  POST /reservar                  → {event_type_id, inicio, nombre, email}
 
 El aforo se calcula por cruce (cliente.aforo_por_hueco): el endpoint de
 slots de Cal.diy reporta seatsRemaining sin actualizar, pero el motor
@@ -26,8 +26,8 @@ from .. import datos
 from ..calcom import cliente
 from ..util import limpio, valido_texto
 
-RUTA_DISPONIBILIDAD = "/api/disponibilidad"
-RUTA_RESERVAR = "/api/reservar"
+RUTA_DISPONIBILIDAD = "/disponibilidad"
+RUTA_RESERVAR = "/reservar"
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -132,7 +132,7 @@ def _reservar(body):
 
 def handle(req):
     # El servidor no separa la query string: req.path puede llegar como
-    # "/api/disponibilidad?dias=20". Partimos aquí (opción A: no tocar el
+    # "/disponibilidad?dias=20". Partimos aquí (opción A: no tocar el
     # servidor central, que ya funciona para el resto de handlers).
     ruta, _, query = req.path.partition("?")
     if req.metodo == "GET" and ruta == RUTA_DISPONIBILIDAD:
