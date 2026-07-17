@@ -84,6 +84,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dia-clase-canc{opacity:.6}
 .dia-clase-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
 .dia-clase-tit{font-weight:700;color:var(--tinta);font-size:.92rem}
+.dia-clase-tit-input{width:100%;font-weight:700;color:var(--tinta);font-size:.92rem;border:1px solid transparent;border-radius:5px;padding:.25rem .3rem;font-family:inherit;background:transparent}
+.dia-clase-tit-input:hover,.dia-clase-tit-input:focus{border-color:var(--linea);background:#fff;outline:none}
 .dia-clase-badge{font-size:.72rem;background:#fdeceb;color:#8a2b26;padding:.1rem .4rem;border-radius:4px}
 .dia-clase-campos{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem}
 .dia-clase label{display:block;font-size:.72rem;color:var(--gris);font-weight:600;margin:0}
@@ -302,7 +304,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
           <label for="ag-tipo">Tipo</label>
           <select id="ag-tipo">
             <option value="recurrente">Clase que se repite (genera las de este mes)</option>
-            <option value="puntual">Sesión puntual (una fecha concreta)</option>
+            <option value="puntual">Clase puntual (una fecha concreta)</option>
           </select>
 
           <div id="ag-recurrente-campos">
@@ -347,7 +349,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <!-- Menú contextual del calendario (clic derecho sobre una clase) -->
   <div id="menuContextual">
     <div class="mc-tit" id="mcTitulo"></div>
-    <button data-accion="nueva" id="mcNueva">+ Nueva clase o sesión este día</button>
+    <button data-accion="nueva" id="mcNueva">+ Nueva clase este día</button>
     <button data-accion="editar" id="mcEditar">Editar</button>
     <button data-accion="visibilidad" id="mcVisibilidad">Ocultar de la web</button>
     <div class="mc-sep" id="mcSep"></div>
@@ -803,9 +805,10 @@ let _diaClases = {};
 function _tarjetaClaseEditable(e, resaltar){
   const canc = e.estado==="cancelada";
   const dur = e.duracion_min || 60;
+  const tit = (e.titulo||"").replace(/"/g,'&quot;');
   return `<div class="dia-clase${resaltar?' dia-clase-activa':''}${canc?' dia-clase-canc':''}" data-id="${e.Id}">
     <div class="dia-clase-cab">
-      <span class="dia-clase-tit">${e.titulo||"(sin título)"}</span>
+      <input type="text" class="dia-clase-tit-input" value="${tit}" data-campo="titulo" data-id="${e.Id}" placeholder="Título de la clase">
       ${canc?'<span class="dia-clase-badge">cancelada</span>':''}
     </div>
     <div class="dia-clase-campos">
@@ -821,9 +824,11 @@ function _tarjetaClaseEditable(e, resaltar){
     <label class="dia-clase-lugar">Lugar
       <input type="text" value="${(e.lugar||"").replace(/"/g,'&quot;')}" data-campo="lugar" data-id="${e.Id}">
     </label>
-    <div class="dia-clase-acciones">
+    <label class="check" style="margin:.5rem 0 0;display:flex;align-items:center;gap:.5rem;font-size:.85rem">
+      <input type="checkbox" style="width:auto" data-campo="visible_web" data-id="${e.Id}"${e.visible_web!==false?' checked':''}> Visible en la web
+    </label>
+    <div class="dia-clase-acciones" style="margin-top:.7rem">
       <button class="btn-mini" onclick='guardarClaseDia(${e.Id})'>Guardar</button>
-      <button class="btn-mini" onclick='abrirModalAgenda(_diaClases[${e.Id}])'>Editar todo</button>
     </div>
   </div>`;
 }
@@ -836,15 +841,20 @@ async function guardarClaseDia(id){
   const caja = document.querySelector(`.dia-clase[data-id="${id}"]`);
   if(!caja) return;
   const datos = {Id: id};
+  let fechaDia = "";
   caja.querySelectorAll("[data-campo]").forEach(el=>{
     const campo = el.dataset.campo;
-    datos[campo] = campo==="duracion_min" ? parseInt(el.value) : el.value;
+    if(el.type === "checkbox") datos[campo] = el.checked;
+    else if(campo === "duracion_min") datos[campo] = parseInt(el.value);
+    else datos[campo] = el.value;
   });
+  const clase = _diaClases[id];
+  if(clase) fechaDia = (clase.fecha||"").slice(0,10);
   try{
     const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
       headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
     const d = await r.json();
-    if(d.ok){ await cargarAgenda(); }
+    if(d.ok){ await cargarAgenda(); if(fechaDia) mostrarClasesDelDia(fechaDia, id); }
     else await avisar(d.error||"No se pudo guardar.", "Error");
   }catch(e){ await avisar("Error de conexión.", "Error"); }
 }
@@ -928,7 +938,7 @@ function abrirMenuContextual(ev, ctx){
   const horaCtx = !esClase && ctx.hora ? ctx.hora : null;
   $("#mcNueva").textContent = horaCtx
     ? `+ Nueva clase a las ${horaCtx}`
-    : "+ Nueva clase o sesión este día";
+    : "+ Nueva clase este día";
 
   // Entradas sobre una clase concreta: solo si hay clase
   const cancelada = e.estado==="cancelada";
