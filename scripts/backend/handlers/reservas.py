@@ -44,6 +44,17 @@ def _ahora_iso():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
+def _actividad_id_de(cal_id):
+    """id de la actividad enlazada con ese tipo de evento, o "" si ninguna."""
+    try:
+        for fila in datos.lee("Actividades"):
+            if int(fila.get("cal_event_type_id") or 0) == int(cal_id):
+                return fila.get("id") or ""
+    except Exception:
+        pass
+    return ""
+
+
 def _actividad_de(cal_id):
     """Ficha de la actividad de NocoDB enlazada con esa clase de Cal.diy.
 
@@ -187,6 +198,10 @@ def _disponibilidad(body_dias, solo_clase=None):
             entrada = {
                 "event_type_id": t["id"],
                 "titulo": t.get("title"),
+                # El id de actividad es dato público (va en las URLs de
+                # interés), y el backoffice lo necesita para pedir la lista
+                # de alumnos de una sesión sin tener que adivinarlo.
+                "actividad_id": _actividad_id_de(t["id"]),
                 "huecos": huecos,
             }
             # Solo al pedir una clase concreta: la ficha para la cabecera.

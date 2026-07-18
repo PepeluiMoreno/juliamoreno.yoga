@@ -56,7 +56,7 @@ def _clases():
     return salida
 
 
-def _sesiones(desde, hasta):
+def _sesiones(desde, hasta, solo_actividad=None):
     tel_idx = _telefonos()
     reservas = cliente.bookings(desde, hasta).get("data", [])
 
@@ -80,6 +80,8 @@ def _sesiones(desde, hasta):
 
     salida = []
     for cal_id, act_id, titulo in _clases():
+        if solo_actividad and act_id != solo_actividad:
+            continue
         try:
             aforo = cliente.aforo_por_hueco(cal_id, desde, hasta)
         except Exception:
@@ -125,7 +127,10 @@ def handle(req):
     hasta = par.get("hasta") or (hoy + datetime.timedelta(days=dias)).isoformat()
 
     try:
+        ses = _sesiones(desde, hasta, par.get("actividad") or None)
         return 200, {"ok": True, "desde": desde, "hasta": hasta,
-                     "sesiones": _sesiones(desde, hasta)}
+                     "sesiones": ses,
+                     "totales": {"sesiones": len(ses),
+                                 "alumnos": sum(x["ocupadas"] for x in ses)}}
     except Exception as e:
         return 502, {"error": "no se pudieron leer las sesiones: %s" % e}

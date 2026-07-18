@@ -151,6 +151,35 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .lst-cuerpo{max-height:min(52vh,420px);overflow:auto;margin-bottom:1.2rem}
 .lst-sesion{font-size:.82rem;font-weight:600;margin:.9rem 0 .3rem}
 .lst-sesion:first-child{margin-top:0}
+.ses-filtro{display:flex;flex-wrap:wrap;gap:.8rem 1rem;align-items:flex-end;
+  background:#faf8f4;border:1px solid var(--linea);border-radius:10px;
+  padding:.9rem 1rem;margin-bottom:1.1rem}
+.ses-filtro label{display:block;font-size:.74rem;color:var(--gris);font-weight:600;margin-bottom:.2rem}
+.ses-filtro input[type=date],.ses-filtro select{padding:.42rem .55rem;border:1px solid var(--linea);
+  border-radius:6px;font-family:inherit;font-size:.9rem}
+.ses-filtro-acc{display:flex;align-items:center;gap:.9rem;margin-left:auto}
+.ses-filtro-acc .check{display:flex;align-items:center;gap:.4rem;font-size:.85rem;margin:0}
+.ses-filtro-acc .check input{width:auto}
+.ses-resumen{color:var(--gris);font-size:.85rem;margin:0 0 .8rem}
+.ses-fila{cursor:pointer}
+.ses-fila.abierta{background:var(--cielo-claro)}
+.ses-fila .ses-flecha{color:var(--gris);font-size:.8rem;margin-left:.4rem}
+.ses-alumnos{border:1px solid var(--linea);border-top:none;border-radius:0 0 8px 8px;
+  background:#fff;padding:.8rem 1rem 1rem;margin:-.35rem 0 .8rem}
+.ses-tabla{width:100%;border-collapse:collapse;font-size:.9rem}
+.ses-tabla th{text-align:left;font-size:.74rem;color:var(--gris);font-weight:600;
+  padding:.3rem .4rem;border-bottom:1px solid var(--linea)}
+.ses-tabla td{padding:.4rem;border-bottom:1px solid #f0ece5}
+.ses-tabla tr:last-child td{border-bottom:none}
+.ses-tabla input[type=checkbox]{width:auto}
+.ses-tabla .col-sel{width:2rem}
+.ses-acciones{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;
+  margin-top:.8rem;padding-top:.7rem;border-top:1px solid var(--linea)}
+.ses-acciones .cuantos{font-size:.82rem;color:var(--gris);margin-right:auto}
+.ses-docs{margin-top:.7rem;padding:.7rem .8rem;background:#faf8f4;
+  border:1px solid var(--linea);border-radius:8px}
+.ses-nota{font-size:.82rem;color:var(--gris);margin:.6rem 0 0;
+  background:#f4f1ec;border-radius:6px;padding:.5rem .7rem}
 .ses-dia{margin:1.4rem 0 .5rem;font-size:.82rem;font-weight:700;
   color:var(--gris);text-transform:capitalize;letter-spacing:.02em}
 .ses-dia:first-child{margin-top:0}
@@ -232,17 +261,22 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <section class="vista oculto" id="vista-sesiones">
     <h1>Sesiones</h1>
     <p style="color:var(--gris);margin:-.4rem 0 1.2rem;font-size:.92rem">
-      Quién viene a cada clase. Pulsa una sesión para sus acciones.</p>
-    <div class="listas-barra" style="display:flex;gap:.6rem;align-items:center;margin-bottom:1.2rem">
-      <label for="ses-dias" style="font-size:.85rem;color:var(--gris)">Próximos</label>
-      <select id="ses-dias" style="padding:.4rem .6rem;border:1px solid var(--linea);border-radius:6px;font-family:inherit">
-        <option value="7">7 días</option>
-        <option value="15" selected>15 días</option>
-        <option value="30">30 días</option>
-      </select>
-      <label class="check" style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;margin-left:.6rem">
-        <input type="checkbox" id="ses-solo-con" style="width:auto"> Solo con alumnos</label>
+      Quién viene a cada clase. Pulsa una sesión para desplegar sus alumnos.</p>
+
+    <div class="ses-filtro">
+      <div><label for="ses-desde">Desde</label>
+        <input type="date" id="ses-desde"></div>
+      <div><label for="ses-hasta">Hasta</label>
+        <input type="date" id="ses-hasta"></div>
+      <div><label for="ses-actividad">Actividad</label>
+        <select id="ses-actividad"><option value="">Todas</option></select></div>
+      <div class="ses-filtro-acc">
+        <button class="btn-mini" id="ses-buscar">Ver sesiones</button>
+        <label class="check"><input type="checkbox" id="ses-solo-con"> Solo con alumnos</label>
+      </div>
     </div>
+
+    <p id="sesResumen" class="ses-resumen"></p>
     <div id="sesLista"></div>
   </section>
 
@@ -1828,13 +1862,43 @@ async function _inscritosDe(e){
 // que están llenas.
 const API_SESIONES = "https://api.juliamoreno.yoga/admin/api/sesiones";
 let sesCache = [];
+let sesAbierta = null;               // clave de la sesión desplegada
+const sesSel = new Map();            // clave de sesión -> Set de índices
+
+function _hoyISO(d){ return new Date(Date.now() + (d||0)*864e5).toISOString().slice(0,10); }
+function _claveSes(s){ return `${s.event_type_id}|${s.inicio}`; }
+
+async function sesOpcionesActividad(){
+  const sel = $("#ses-actividad");
+  if(sel.options.length > 1) return;
+  if(!actsCache){
+    try{
+      const r = await fetch(API, {credentials:"include"});
+      const d = await r.json();
+      actsCache = d.actividades || [];
+    }catch(err){ actsCache = []; }
+  }
+  sel.innerHTML = '<option value="">Todas</option>'
+    + actsCache.map(a=>`<option value="${a.id}">${_escL(a.titulo_es||a.id)}</option>`).join("");
+}
 
 async function cargarSesiones(){
   const cont = $("#sesLista");
-  const dias = $("#ses-dias").value;
+  await sesOpcionesActividad();
+  if(!$("#ses-desde").value) $("#ses-desde").value = _hoyISO(0);
+  if(!$("#ses-hasta").value) $("#ses-hasta").value = _hoyISO(15);
+  const desde = $("#ses-desde").value, hasta = $("#ses-hasta").value;
+  if(desde > hasta){
+    cont.innerHTML = '<p style="color:#8a2b26">La fecha inicial es posterior a la final.</p>';
+    return;
+  }
+  const act = $("#ses-actividad").value;
   cont.innerHTML = '<p style="color:var(--gris)">Cargando…</p>';
+  $("#sesResumen").textContent = "";
   try{
-    const r = await fetch(`${API_SESIONES}?dias=${dias}`, {credentials:"include"});
+    let u = `${API_SESIONES}?desde=${desde}&hasta=${hasta}`;
+    if(act) u += `&actividad=${encodeURIComponent(act)}`;
+    const r = await fetch(u, {credentials:"include"});
     if(r.status === 401){
       cont.innerHTML = '<p style="color:#8a2b26">Sesión caducada: vuelve a entrar.</p>';
       return;
@@ -1845,6 +1909,7 @@ async function cargarSesiones(){
       return;
     }
     sesCache = d.sesiones || [];
+    sesAbierta = null; sesSel.clear();
     pintarSesiones();
   }catch(err){
     cont.innerHTML = '<p style="color:#8a2b26">Error de conexión.</p>';
@@ -1855,12 +1920,19 @@ function pintarSesiones(){
   const cont = $("#sesLista");
   const soloCon = $("#ses-solo-con").checked;
   const lista = soloCon ? sesCache.filter(s=>s.ocupadas>0) : sesCache;
+
+  const nAl = lista.reduce((n,s)=>n+s.ocupadas, 0);
+  $("#sesResumen").textContent = lista.length
+    ? `${lista.length} sesión(es) · ${nAl} alumno(s) apuntado(s)`
+    : "";
+
   if(!lista.length){
     cont.innerHTML = `<p style="color:var(--gris)">${soloCon
-      ? "Ninguna sesión tiene alumnos apuntados en este periodo."
+      ? "Ninguna sesión tiene alumnos apuntados con este filtro."
       : "No hay sesiones en este periodo."}</p>`;
     return;
   }
+
   let html = "", diaPrev = "";
   lista.forEach((s, i)=>{
     const d = new Date(s.inicio);
@@ -1870,49 +1942,152 @@ function pintarSesiones(){
     const libres = s.libres, n = s.ocupadas;
     let cls = "ses-vacia", txt = "Sin alumnos";
     if(n > 0){
-      cls = "ses-hay";
-      txt = `${n} de ${s.total ?? "?"}`;
+      cls = "ses-hay"; txt = `${n} de ${s.total ?? "?"}`;
       if(libres === 0){ cls = "ses-llena"; txt += " · completa"; }
       else if(libres !== null && libres <= 3){ cls = "ses-pocas"; txt += ` · quedan ${libres}`; }
     }
-    html += `<div class="ses-fila" data-idx="${i}">
+    const clave = _claveSes(s), abierta = sesAbierta === clave;
+    html += `<div class="ses-fila${abierta?" abierta":""}" data-idx="${i}">
       <span class="ses-hora">${hora}</span>
       <span class="ses-tit">${_escL(s.titulo)}</span>
-      <span class="ses-cont ${cls}">${txt}</span></div>`;
+      <span class="ses-cont ${cls}">${txt}</span>
+      <span class="ses-flecha">${abierta?"▾":"▸"}</span></div>`;
+    if(abierta) html += bloqueAlumnos(s);
   });
   cont.innerHTML = html;
+
   cont.querySelectorAll(".ses-fila").forEach(el=>{
     const s = lista[parseInt(el.dataset.idx)];
-    el.addEventListener("click", ev=> menuSesion(ev, s));
-    el.addEventListener("contextmenu", ev=>{ ev.preventDefault(); menuSesion(ev, s); });
+    el.addEventListener("click", ()=>{
+      const clave = _claveSes(s);
+      sesAbierta = (sesAbierta === clave) ? null : clave;
+      pintarSesiones();
+    });
+  });
+  if(sesAbierta) engancharAlumnos(lista.find(x=>_claveSes(x)===sesAbierta));
+}
+
+function bloqueAlumnos(s){
+  if(!s.ocupadas){
+    return `<div class="ses-alumnos"><p style="color:var(--gris);font-size:.88rem;margin:0">
+      Nadie apuntado en esta sesión.</p></div>`;
+  }
+  const clave = _claveSes(s);
+  const sel = sesSel.get(clave) || new Set();
+  const filas = s.alumnos.map((a,i)=>`<tr>
+      <td class="col-sel"><input type="checkbox" data-i="${i}"${sel.has(i)?" checked":""}></td>
+      <td>${_escL(a.nombre)}</td>
+      <td>${_escL(a.telefono)||"—"}</td>
+      <td>${_escL(a.email)||"—"}</td></tr>`).join("");
+  const todos = sel.size === s.alumnos.length;
+  return `<div class="ses-alumnos" data-clave="${clave}">
+    <table class="ses-tabla">
+      <thead><tr><th class="col-sel"><input type="checkbox" id="sesTodos"${todos?" checked":""}></th>
+      <th>Nombre</th><th>Teléfono</th><th>Correo</th></tr></thead>
+      <tbody>${filas}</tbody></table>
+    <div class="ses-acciones">
+      <span class="cuantos" id="sesCuantos">${sel.size} seleccionado(s)</span>
+      <button class="btn-mini" id="sesDocs"${sel.size?"":" disabled"}>Imprimir documentos…</button>
+      <button class="btn-mini" id="sesAviso"${sel.size?"":" disabled"}>Enviar aviso…</button>
+    </div>
+    <div id="sesPanel"></div>
+  </div>`;
+}
+
+function engancharAlumnos(s){
+  if(!s) return;
+  const clave = _claveSes(s);
+  const cont = document.querySelector(`.ses-alumnos[data-clave="${clave}"]`);
+  if(!cont) return;
+  const sel = sesSel.get(clave) || new Set();
+  const refrescar = ()=>{
+    sesSel.set(clave, sel);
+    $("#sesCuantos").textContent = `${sel.size} seleccionado(s)`;
+    $("#sesDocs").disabled = !sel.size;
+    $("#sesAviso").disabled = !sel.size;
+    const todos = cont.querySelector("#sesTodos");
+    if(todos) todos.checked = sel.size === s.alumnos.length;
+    $("#sesPanel").innerHTML = "";
+  };
+  cont.querySelectorAll("tbody input[type=checkbox]").forEach(c=>
+    c.addEventListener("change", ev=>{
+      ev.stopPropagation();
+      const i = parseInt(c.dataset.i);
+      c.checked ? sel.add(i) : sel.delete(i);
+      refrescar();
+    }));
+  const todos = cont.querySelector("#sesTodos");
+  if(todos) todos.addEventListener("change", ev=>{
+    ev.stopPropagation();
+    sel.clear();
+    if(todos.checked) s.alumnos.forEach((_,i)=>sel.add(i));
+    cont.querySelectorAll("tbody input[type=checkbox]").forEach(c=>
+      c.checked = sel.has(parseInt(c.dataset.i)));
+    refrescar();
+  });
+  cont.addEventListener("click", ev=> ev.stopPropagation());
+  $("#sesDocs").addEventListener("click", ()=> panelDocumentos(s, sel));
+  $("#sesAviso").addEventListener("click", ()=> panelAviso(s, sel));
+}
+
+function _seleccionados(s, sel){
+  return [...sel].sort((a,b)=>a-b).map(i=> s.alumnos[i]);
+}
+
+function panelDocumentos(s, sel){
+  // Mismo registro DOCUMENTOS que la agenda, pero acotado a los alumnos
+  // marcados: la papelería se saca para quien la necesita, no para toda
+  // la clase.
+  $("#sesPanel").innerHTML = `<div class="ses-docs">
+    ${DOCUMENTOS.map(d=>`<label class="lst-doc">
+      <input type="checkbox" value="${d.id}"${d.id==="lista"?" checked":""}>
+      <span><span class="lst-doc-nom">${_escL(d.nombre)}</span>
+      <span class="lst-doc-des">${_escL(d.descripcion)}</span></span></label>`).join("")}
+    <div class="ses-acciones" style="border:none;padding-top:.5rem">
+      <span class="cuantos">Se imprimirán para ${sel.size} alumno(s)</span>
+      <button class="btn-mini" id="sesDocsImp">Imprimir</button>
+    </div></div>`;
+  $("#sesDocsImp").addEventListener("click", ()=>{
+    const ids = [...$("#sesPanel").querySelectorAll("input:checked")].map(x=>x.value);
+    if(!ids.length) return;
+    const sesion = Object.assign({}, s, {alumnos: _seleccionados(s, sel)});
+    sesion.total = sesion.alumnos.length;
+    const cuerpo = DOCUMENTOS.filter(d=>ids.includes(d.id))
+                             .map(d=>d.generar([sesion])).join("");
+    _ventanaImpresion("Documentos de clase", cuerpo);
   });
 }
 
-function menuSesion(ev, s){
-  ev.stopPropagation();
-  // Se reutiliza el menú de la agenda, con las acciones que tienen
-  // sentido sobre una sesión concreta del motor de reservas.
-  mcCtx = {sesion: s};
-  const menu = $("#menuContextual");
-  const d = new Date(s.inicio);
-  $("#mcTitulo").textContent = s.titulo + " · "
-    + d.toLocaleString("es-ES",{weekday:"short",day:"numeric",month:"numeric",
-        hour:"2-digit",minute:"2-digit",timeZone:"Europe/Madrid"});
-  ["mcNueva","mcEditar","mcVisibilidad","mcAplazar","mcTrasladar","mcCancelar",
-   "mcReactivar","mcBorrar","mcSep"].forEach(id=> $("#"+id).style.display = "none");
-  $("#mcLista").style.display = "block";
-  $("#mcLista").textContent = s.ocupadas
-    ? `Ver los ${s.ocupadas} alumno(s)…`
-    : "Ver lista de alumnos…";
-  menu.style.display = "block";
-  const mw = menu.offsetWidth, mh = menu.offsetHeight;
-  let x = ev.clientX, y = ev.clientY;
-  if(x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
-  if(y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
-  menu.style.left = x + "px"; menu.style.top = y + "px";
+function panelAviso(s, sel){
+  // Honesto: la interfaz está, el canal de envío no. Antes que un botón
+  // que finge funcionar, se dice qué falta y se ofrece lo que sí se
+  // puede hacer hoy, que es copiar los contactos.
+  const quienes = _seleccionados(s, sel);
+  const tels = quienes.map(a=>a.telefono).filter(Boolean);
+  const mails = quienes.map(a=>a.email).filter(Boolean);
+  $("#sesPanel").innerHTML = `<div class="ses-docs">
+    <p class="ses-nota" style="margin:0 0 .7rem">
+      Todavía no hay canal de envío conectado: el aviso automático por
+      WhatsApp o correo está pendiente. Mientras tanto, copia los contactos
+      y manda el mensaje desde tu propio WhatsApp o correo.</p>
+    <div class="ses-acciones" style="border:none;padding-top:0">
+      <span class="cuantos">${quienes.length} alumno(s): ${tels.length} con
+        teléfono, ${mails.length} con correo</span>
+      <button class="btn-mini" id="sesCopTel"${tels.length?"":" disabled"}>Copiar teléfonos</button>
+      <button class="btn-mini" id="sesCopMail"${mails.length?"":" disabled"}>Copiar correos</button>
+    </div>
+    <p id="sesCopOk" style="font-size:.82rem;color:var(--mar);margin:.5rem 0 0"></p></div>`;
+  const copiar = (txt, que)=>{
+    navigator.clipboard.writeText(txt).then(
+      ()=> $("#sesCopOk").textContent = `${que} copiados al portapapeles.`,
+      ()=> $("#sesCopOk").textContent = "No se pudo copiar.");
+  };
+  if(tels.length) $("#sesCopTel").addEventListener("click", ()=> copiar(tels.join(", "), "Teléfonos"));
+  if(mails.length) $("#sesCopMail").addEventListener("click", ()=> copiar(mails.join(", "), "Correos"));
 }
 
-$("#ses-dias").addEventListener("change", cargarSesiones);
+$("#ses-buscar").addEventListener("click", cargarSesiones);
+$("#ses-actividad").addEventListener("change", cargarSesiones);
 $("#ses-solo-con").addEventListener("change", pintarSesiones);
 
 // --- Navegación entre vistas del menú lateral ---
