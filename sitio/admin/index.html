@@ -574,10 +574,23 @@ $("#btn-guardar").onclick = async ()=>{
 // --- Dashboard (panel de control) ---
 const API_RESUMEN = "https://api.juliamoreno.yoga/admin/api/resumen";
 async function cargarDash(){
+  // Nada de fallar en silencio: si el resumen no carga, el panel se
+  // quedaba vacío sin explicar por qué y parecía que no hay actividades.
+  const _fallo = (txt)=>{
+    $("#dashOfertadas").innerHTML =
+      `<p style="color:#8a2b26">${txt}</p>`;
+    $("#dashPrep").innerHTML = "";
+  };
   try{
     const r = await fetch(API_RESUMEN, {credentials:"include"});
-    if(!r.ok) return;
+    if(!r.ok){
+      _fallo(r.status === 401
+        ? "Sesión caducada: vuelve a entrar."
+        : `No se pudo cargar el resumen (error ${r.status}).`);
+      return;
+    }
     const d = await r.json();
+    if(d.error){ _fallo(d.error); return; }
     const tt = d.totales || {};
     const cont = [
       ["Ofertadas", tt.ofertadas],
@@ -608,7 +621,7 @@ async function cargarDash(){
         ${p.umbral>0?`<div class="dash-barra"><div class="dash-barra-fill" style="width:${pct}%"></div></div>`:''}
       </div>`;
     }).join("") : '<p style="color:var(--gris)">No hay actividades en preparación.</p>';
-  }catch(e){}
+  }catch(e){ _fallo("Error de conexión al cargar el resumen."); }
 }
 
 
