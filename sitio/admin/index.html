@@ -149,6 +149,12 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .lst-cuerpo{max-height:min(52vh,420px);overflow:auto;margin-bottom:1.2rem}
 .lst-sesion{font-size:.82rem;font-weight:600;margin:.9rem 0 .3rem}
 .lst-sesion:first-child{margin-top:0}
+.lst-doc{display:flex;gap:.6rem;align-items:flex-start;padding:.6rem .1rem;
+  border-bottom:1px solid var(--linea)}
+.lst-doc:last-child{border-bottom:none}
+.lst-doc input{width:auto;margin-top:.2rem}
+.lst-doc-nom{font-weight:600;font-size:.9rem;display:block}
+.lst-doc-des{font-size:.8rem;color:var(--gris)}
 .lst-alc{opacity:.65}
 .lst-alc.activa{opacity:1;background:var(--mar);color:#fff;border-color:var(--mar)}
 .menu-item{display:block;padding:.7rem 1.5rem;color:var(--gris-hondo);text-decoration:none;font-weight:600;font-size:.95rem;border-left:3px solid transparent}
@@ -396,9 +402,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <div class="lst-cuerpo" id="lstCuerpo"></div>
       <div class="modal-botones">
         <button class="btn-sec" id="lstCerrar">Cerrar</button>
-        <button class="btn-sec" id="lstConsent">Consentimientos</button>
         <button class="btn-sec" id="lstGuardar">Guardar (CSV)</button>
-        <button class="btn" id="lstImprimir">Imprimir</button>
+        <button class="btn" id="lstDocs">Imprimir documentos…</button>
       </div>
     </div>
   </div>
@@ -1320,7 +1325,16 @@ function _cuandoClase(e){
        + (e.hora_inicio ? ", " + e.hora_inicio.slice(0,5) : "");
 }
 
-function cerrarModalLista(){ $("#lstFondo").hidden = true; lstSesiones = []; }
+function cerrarModalLista(){
+  $("#lstFondo").hidden = true; lstSesiones = []; _modoListado();
+}
+
+function _modoListado(){
+  const b = $("#lstDocs");
+  if(!b) return;
+  b.textContent = "Imprimir documentos…";
+  delete b.dataset.modo;
+}
 
 async function cargarListalet lstSesiones = [];
 
@@ -1332,6 +1346,7 @@ async function cargarLista(alcance){
   let url = `${API_LISTAS}?actividad=${encodeURIComponent(e.actividad_id||"")}`
           + `&desde=${desde}&hasta=${hasta}`;
   if(alcance==="dia" && e.hora_inicio) url += `&hora=${encodeURIComponent(e.hora_inicio.slice(0,5))}`;
+  _modoListado();
   salida.innerHTML = '<p style="font-size:.85rem;color:var(--gris)">Cargando…</p>';
   try{
     const r = await fetch(url, {credentials:"include"});
@@ -1354,16 +1369,14 @@ $("#lstFondo").addEventListener("click", ev=>{ if(ev.target.id==="lstFondo") cer
 document.addEventListener("keydown", ev=>{
   if(ev.key==="Escape" && !$("#lstFondo").hidden) cerrarModalLista();
 });
-$("#lstImprimir").addEventListener("click", ()=>{
-  if(lstSesiones.length) imprimirLista(lstSesiones);
+$("#lstDocs").addEventListener("click", ()=>{
+  if(!lstSesiones.length) return;
+  if($("#lstDocs").dataset.modo === "docs") imprimirSeleccionados();
+  else abrirSelectorDocumentos();
 });
 $("#lstGuardar").addEventListener("click", ()=>{
   if(lstSesiones.length) guardarCSV(lstSesiones);
 });
-$("#lstConsent").addEventListener("click", ()=>{
-  if(lstSesiones.length) imprimirConsentimientos(lstSesiones);
-});
-
 function guardarCSV(sesiones){
   // CSV y no PDF: el PDF ya sale del diálogo de impresión ("Guardar como
   // PDF"), mientras que esto se abre en una hoja de cálculo y sirve para
@@ -1410,20 +1423,79 @@ function _ventanaImpresion(titulo, cuerpo){
   setTimeout(()=>w.print(), 300);
 }
 
-function imprimirLista(sesiones){
-  const cuerpo = sesiones.map(s=>{
+
+// --- Documentos imprimibles de una clase ------------------------------
+// Registro, no botonera: cuando haga falta un documento nuevo se añade
+// una entrada aquí y aparece solo en el selector. "generar" recibe las
+// sesiones ya cargadas y devuelve el HTML de sus hojas.
+const DOCUMENTOS = [
+  {
+    id: "lista",
+    nombre: "Lista de clase",
+    descripcion: "Nombre, teléfono y una columna para firmar. Para pasar lista o dar por consumida la sesión del bono.",
+    generar: docLista,
+  },
+  {
+    id: "contactos",
+    nombre: "Lista de contactos",
+    descripcion: "Nombre, teléfono y correo, sin columna de firma. Para avisar de un cambio de última hora.",
+    generar: docContactos,
+  },
+  {
+    id: "consentimientos",
+    nombre: "Consentimientos",
+    descripcion: "Una hoja por alumno con la declaración de aptitud y la cláusula de datos. Texto de plantilla: conviene revisarlo con un profesional.",
+    generar: docConsentimientos,
+  },
+];
+
+function abrirSelectorDocumentos(){
+  const cuerpo = $("#lstCuerpo");
+  cuerpo.dataset.previo = cuerpo.innerHTML;
+  cuerpo.innerHTML = DOCUMENTOS.map(d=>`
+    <label class="lst-doc">
+      <input type="checkbox" value="${d.id}" ${d.id==="lista"?"checked":""}>
+      <span><span class="lst-doc-nom">${_escL(d.nombre)}</span>
+      <span class="lst-doc-des">${_escL(d.descripcion)}</span></span>
+    </label>`).join("");
+  $("#lstDocs").textContent = "Imprimir seleccionados";
+  $("#lstDocs").dataset.modo = "docs";
+}
+
+function imprimirSeleccionados(){
+  const ids = [].slice.call($("#lstCuerpo").querySelectorAll("input:checked"))
+                .map(x=>x.value);
+  if(!ids.length) return;
+  const cuerpo = DOCUMENTOS.filter(d=>ids.includes(d.id))
+                           .map(d=>d.generar(lstSesiones)).join("");
+  _ventanaImpresion("Documentos de clase", cuerpo);
+}
+
+function docLista(sesiones){
+  return sesiones.map(s=>{
     const filas = s.alumnos.map((a,n)=>
       `<tr><td>${n+1}</td><td>${_escL(a.nombre)}</td><td>${_escL(a.telefono)}</td>
        <td class="firma"></td></tr>`).join("");
-    return `<h1>${_escL(s.titulo)}</h1>
+    return `<div class="hoja"><h1>${_escL(s.titulo)}</h1>
       <p class="cuando">${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
       <table><thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th>
-      <th class="firma">Firma</th></tr></thead><tbody>${filas}</tbody></table>`;
+      <th class="firma">Firma</th></tr></thead><tbody>${filas}</tbody></table></div>`;
   }).join("");
-  _ventanaImpresion("Lista de alumnos", cuerpo);
 }
 
-function imprimirConsentimientos(sesiones){
+function docContactos(sesiones){
+  return sesiones.map(s=>{
+    const filas = s.alumnos.map((a,n)=>
+      `<tr><td>${n+1}</td><td>${_escL(a.nombre)}</td><td>${_escL(a.telefono)}</td>
+       <td>${_escL(a.email)}</td></tr>`).join("");
+    return `<div class="hoja"><h1>Contactos · ${_escL(s.titulo)}</h1>
+      <p class="cuando">${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
+      <table><thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th>
+      <th>Correo</th></tr></thead><tbody>${filas}</tbody></table></div>`;
+  }).join("");
+}
+
+function docConsentimientos(sesiones){
   // Una hoja por alumno. El texto es una PLANTILLA de partida: conviene
   // que lo revise un profesional antes de usarlo en serio.
   const hojas = [];
@@ -1449,7 +1521,7 @@ function imprimirConsentimientos(sesiones){
     supresión escribiendo a Julia Moreno.</p>
     <div class="linea-firma">Firma del alumno/a — Fecha</div>
   </div>`)));
-  _ventanaImpresion("Consentimientos", hojas.join(""));
+  return hojas.join("");
 }
 
 
