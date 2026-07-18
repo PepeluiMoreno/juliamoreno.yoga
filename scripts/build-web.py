@@ -195,25 +195,24 @@ def seccion_actividades(data, idioma):
             franjas_data.append({"id": fid, "etiqueta": etiq})
 
         out.append('      <article class="clase">')
-        out.append('        <div class="clase-cab">')
         # UN solo badge, el más informativo. Si la clase ya es reservable,
         # lo que le importa al visitante es si queda sitio, no en qué punto
         # del ciclo está; si no lo es, se muestra el ciclo de vida.
+        # Se prepara aquí y se pinta DEBAJO DEL PRECIO, junto al botón: es
+        # lo último que se lee antes de decidir.
         aforo = ln.get("aforo")
         clases_badge = {"propuesta": "badge-tent", "programada": "badge-prog",
                         "en_curso": "badge-conf", "finalizada": "badge-hueco"}
         if aforo:
-            out.append(f'          <p class="badge {AFORO_CLASE[aforo]}">'
-                       f'{AFORO_ETQ[aforo].get(idioma, AFORO_ETQ[aforo]["es"])}'
-                       f'</p>')
-        elif estado in clases_badge:
+            badge = (f'          <p class="badge {AFORO_CLASE[aforo]}">'
+                     f'{AFORO_ETQ[aforo].get(idioma, AFORO_ETQ[aforo]["es"])}</p>')
+        elif estado in clases_badge and estado != "finalizada":
             etq_est = (t(estado) or ESTADO_ETQ[estado].get(idioma)
                        or ESTADO_ETQ[estado]["es"])
-            out.append(f'          <p class="badge {clases_badge[estado]}">'
-                       f'{etq_est}</p>')
+            badge = (f'          <p class="badge {clases_badge[estado]}">'
+                     f'{etq_est}</p>')
         else:
-            out.append('          <p class="badge badge-hueco">&nbsp;</p>')
-        out.append('        </div>')
+            badge = ""
         out.append('        <div class="clase-cuerpo">')
         if ln.get("foto"):
             out.append(f'          <img src="{ln["foto"]}" alt="{titulo}" class="clase-foto">')
@@ -239,6 +238,8 @@ def seccion_actividades(data, idioma):
         precio = (ln.get("precio") or "").strip()
         if precio:
             out.append(f'          <p class="clase-precio">{precio}</p>')
+        if badge:
+            out.append(badge)
         if estado == "propuesta" and ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
             faltan = umbral - interes
             out.append(f'          <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
