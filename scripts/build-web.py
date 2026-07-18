@@ -57,8 +57,17 @@ def fecha_legible(iso, idioma):
 
 # Etiqueta del botón de reserva por idioma, por si no está en las
 # etiquetas de interfaz de contenido.json.
-RESERVAR_ETQ = {"es": "Reservar plaza", "en": "Book a place",
-                "fr": "Réserver une place", "de": "Platz buchen"}
+RESERVAR_ETQ = {"es": "Reservar mi plaza", "en": "Book my place",
+                "fr": "Réserver ma place", "de": "Meinen Platz buchen"}
+# Salida secundaria: en yoga la objeción no suele ser el precio sino "¿es
+# para mí?". Un enlace discreto a contacto recoge esa duda en vez de
+# perderla en un abandono silencioso.
+PREGUNTA_ETQ = {"es": "¿Te encaja? Pregúntanos",
+                "en": "Not sure? Ask us",
+                "fr": "Un doute ? Écris-nous",
+                "de": "Unsicher? Frag uns"}
+CONTACTO_ANCLA = {"es": "#contacto", "en": "#contact",
+                  "fr": "#contact", "de": "#kontakt"}
 
 
 def seccion_actividades(data, idioma):
@@ -128,6 +137,9 @@ def seccion_actividades(data, idioma):
             faltan = umbral - interes
             out.append(f'          <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
         out.append('        </div>')
+        pregunta = (f'          <p class="clase-pregunta">'
+                    f'<a href="{CONTACTO_ANCLA.get(idioma, "#contacto")}">'
+                    f'{PREGUNTA_ETQ.get(idioma, PREGUNTA_ETQ["es"])}</a></p>')
         if estado == "propuesta":
             fr_json = _json.dumps(franjas_data, ensure_ascii=False).replace('"', "&quot;")
             el = "1" if elegible else "0"
@@ -138,18 +150,22 @@ def seccion_actividades(data, idioma):
             out.append(f'          <p class="consent">{t("form_consent")}</p>')
             out.append(f'          <p class="ok" hidden>{t("form_ok")}</p>')
             out.append('        </form>')
+            out.append(pregunta)
         else:
             # Actividad ya programada o en curso: si está enlazada con una
             # clase de Cal.diy (cal_event_type_id), se ofrece reservar plaza.
             # El enlace lleva ?clase=<id> para que el alumno vea ESA clase.
+            # REGLA DE NEGOCIO: ninguna tarjeta sin acción. Si la clase es
+            # reservable, el CTA es reservar; si no lo es todavía, al menos
+            # se ofrece preguntar. Una tarjeta muda es la peor casilla:
+            # la clase existe, la miran con interés y no hay dónde pulsar.
             cal_id = int(ln.get("cal_event_type_id", 0) or 0)
+            out.append('        <div class="clase-form">')
             if cal_id:
-                etq = t("reservar") or RESERVAR_ETQ.get(idioma, "Reservar")
-                out.append('        <div class="clase-form">')
+                etq = t("reservar") or RESERVAR_ETQ.get(idioma, RESERVAR_ETQ["es"])
                 out.append(f'          <a class="btn" href="/reservar.html?clase={cal_id}">{etq}</a>')
-                out.append('        </div>')
-            else:
-                out.append('        <div class="clase-form-hueco"></div>')
+            out.append(pregunta)
+            out.append('        </div>')
         out.append('      </article>')
     out.append('    </div>')
     out.append('    <div class="modal-franjas" id="modalFranjas" hidden>')
