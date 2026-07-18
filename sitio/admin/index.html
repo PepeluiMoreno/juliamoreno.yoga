@@ -95,6 +95,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dia-clase-acciones .btn-mini{flex:1}
 .agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
 .agenda-acciones-sel{background:var(--cielo-claro);border:1px solid var(--linea);border-radius:10px;padding:1rem;margin-bottom:1rem}
+.fc-daygrid-day-number,.fc-col-header-cell[data-date]{cursor:pointer}
 #menuContextual{position:fixed;z-index:2000;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 28px rgba(21,63,84,.18);padding:.35rem;min-width:210px;display:none}
 #menuContextual button{display:block;width:100%;text-align:left;background:none;border:none;padding:.55rem .7rem;border-radius:6px;font-family:inherit;font-size:.9rem;color:var(--tinta);cursor:pointer}
 #menuContextual button:hover{background:var(--cielo-claro)}
@@ -709,6 +710,10 @@ async function cargarAgenda(){
       eventStartEditable: true,
       eventDurationEditable: false,
       dateClick: function(info){
+        // El número del día y la cabecera abren el menú de acciones, no el
+        // listado: si no, un mismo clic haría dos cosas a la vez.
+        if(info.jsEvent && info.jsEvent.target.closest(
+             ".fc-daygrid-day-number, .fc-col-header-cell[data-date]")) return;
         // info.dateStr puede traer hora (vista semana/día); nos quedamos con la fecha
         const fecha = (info.dateStr || fechaLocalISO(info.date)).slice(0,10);
         mostrarClasesDelDia(fecha);
@@ -937,6 +942,14 @@ async function guardarClaseDia(id){
 let mcCtx = null;
 let hoverTimer = null;
 
+const DIAS_CORTO = ["dom","lun","mar","mié","jue","vie","sáb"];
+function _tituloDia(iso, hora){
+  if(!iso) return "Día";
+  const d = new Date(iso + "T12:00:00");
+  const etq = `${DIAS_CORTO[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`;
+  return hora ? `${etq} · ${hora}` : etq;
+}
+
 function fechaLocalISO(d){
   if(!d || isNaN(d.getTime())) return "";
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,"0"), dd = String(d.getDate()).padStart(2,"0");
@@ -947,9 +960,20 @@ function fechaLocalISO(d){
 // punto donde ocurrió el evento del ratón. Devuelve null si fue sobre una clase.
 function contextoHueco(ev){
   if(ev.target.closest(".fc-event")) return null;  // sobre una clase, no hueco
+
+  // La cabecera del día ("mié 15/7") vale en cualquier vista y significa
+  // "este día entero", sin hora.
+  const cab = ev.target.closest(".fc-col-header-cell[data-date]");
+  if(cab) return {fecha: cab.getAttribute("data-date")};
+
   const vista = calendario ? calendario.view.type : "dayGridMonth";
   if(vista === "dayGridMonth"){
-    const cell = ev.target.closest("[data-date]");
+    // Solo sobre el NÚMERO del día. En el resto de la celda el menú no
+    // aporta: el hueco vacío de un mes no es un momento concreto, y
+    // abrirlo en cualquier punto resultaba invasivo.
+    const num = ev.target.closest(".fc-daygrid-day-number");
+    if(!num) return null;
+    const cell = num.closest("[data-date]");
     if(!cell) return null;
     return {fecha: cell.getAttribute("data-date")};
   }
@@ -986,6 +1010,31 @@ function engancharMenuHuecos(){
     ev.preventDefault(); ev.stopPropagation();
     abrirMenuContextual(ev, ctx);
   });
+
+  // Sobrevuelo: solo sobre el número del día y la cabecera del día, que
+  // son zonas pequeñas y con significado. En la rejilla de horas se deja
+  // el clic derecho: un menú saltando al pasar el ratón por la agenda
+  // sería insufrible.
+  cont.addEventListener("mouseover", function(ev){
+    const zona = ev.target.closest(".fc-daygrid-day-number, .fc-col-header-cell[data-date]");
+    if(!zona) return;
+    const ctx = contextoHueco(ev);
+    if(ctx) programarHoverMenu(ev, ctx, zona);
+  });
+  cont.addEventListener("mouseout", function(ev){
+    if(ev.target.closest(".fc-daygrid-day-number, .fc-col-header-cell[data-date]"))
+      cancelarHoverMenu();
+  });
+
+  // Clic normal sobre esas mismas zonas: abre el menú al momento.
+  cont.addEventListener("click", function(ev){
+    const zona = ev.target.closest(".fc-daygrid-day-number, .fc-col-header-cell[data-date]");
+    if(!zona) return;
+    const ctx = contextoHueco(ev);
+    if(!ctx) return;
+    ev.preventDefault(); ev.stopPropagation();
+    abrirMenuContextual(ev, ctx);
+  });
 }
 
 function programarHoverMenu(ev, ctx, el){
@@ -1004,11 +1053,13 @@ function abrirMenuContextual(ev, ctx){
 
   // Título del menú
   $("#mcTitulo").textContent = esClase ? (e.titulo || "Clase")
-                                        : ("Día " + (ctx.fecha||"").slice(8) + "/" + (ctx.fecha||"").slice(5,7));
+                                        : _tituloDia(ctx.fecha, ctx.hora);
 
   // Entrada de creación: siempre disponible. Refleja la hora si el contexto
   // la trae (vistas Semana/Día); si no, solo el día.
-  $("#mcNueva").style.display = "block";
+  // Crear solo donde significa "crear aquí": el número del día, la
+  // cabecera del día o una hora concreta. Nunca sobre una clase.
+  $("#mcNueva").style.display = esClase ? "none" : "block";
   const horaCtx = !esClase && ctx.hora ? ctx.hora : null;
   $("#mcNueva").textContent = horaCtx
     ? `+ Nueva clase a las ${horaCtx}`
