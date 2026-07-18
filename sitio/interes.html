@@ -67,7 +67,7 @@
 <body>
 <div class="marco">
   <h1>Julia Moreno · Yoga</h1>
-  <p class="lema">Dime que te interesa y te aviso cuando se monte.</p>
+  <p class="lema" id="lema">Déjame tus datos y te aviso.</p>
   <div id="contenido"><p class="vacio">Cargando…</p></div>
   <p class="dudas"><a href="/#contacto">¿Prefieres preguntar antes? Escríbenos</a></p>
 </div>
@@ -139,6 +139,13 @@ async function cargar() {
       location.replace(`/reservar.html?clase=${a.cal_event_type_id}`);
       return;
     }
+    // El lema cambia según por qué no es reservable todavía: una
+    // propuesta se monta si hay grupo; una en curso sin horario fijo
+    // (p. ej. ciclo lunar) se avisa cuando haya próxima sesión.
+    document.getElementById("lema").textContent =
+      a.estado === "propuesta"
+        ? "Dime que te interesa y te aviso cuando se monte."
+        : "Déjame tus datos y te aviso de la próxima sesión.";
     cont.innerHTML = ficha(a) + formulario(a);
     document.getElementById("enviar").addEventListener("click", () => enviar(a));
   } catch (e) {

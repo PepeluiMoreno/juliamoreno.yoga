@@ -68,10 +68,6 @@ PREGUNTA_ETQ = {"es": "¿Te encaja? Pregúntanos",
                 "de": "Unsicher? Frag uns"}
 CONTACTO_ANCLA = {"es": "#contacto", "en": "#contact",
                   "fr": "#contact", "de": "#kontakt"}
-# Botón para las clases en curso que aún no son reservables por Cal.diy:
-# antes quedaban con un enlace de texto y parecían tarjetas sin acción.
-PREGUNTA_BTN = {"es": "Pregúntanos", "en": "Ask us",
-                "fr": "Écris-nous", "de": "Frag uns"}
 
 
 def seccion_actividades(data, idioma):
@@ -168,12 +164,12 @@ def seccion_actividades(data, idioma):
                 etq = t("reservar") or RESERVAR_ETQ.get(idioma, RESERVAR_ETQ["es"])
                 out.append(f'          <a class="btn" href="/reservar.html?clase={cal_id}">{etq}</a>')
             else:
-                # Aún no reservable: el CTA es preguntar, con el MISMO
-                # estilo que los demás. Una tarjeta, un botón: todas
-                # iguales, sin enlaces sueltos que rompan el ritmo.
-                out.append(f'          <a class="btn" '
-                           f'href="{CONTACTO_ANCLA.get(idioma, "#contacto")}">'
-                           f'{PREGUNTA_BTN.get(idioma, PREGUNTA_BTN["es"])}</a>')
+                # En curso pero todavía no reservable (p. ej. sin horario
+                # semanal fijo). Se recoge el interés en vez de mandar a un
+                # formulario de contacto genérico: así la persona queda
+                # anotada y Julia puede avisarla de la próxima sesión.
+                out.append(f'          <a class="btn" href="/interes.html?actividad={aid}">'
+                           f'{t("interesa")}</a>')
             out.append('        </div>')
         out.append('      </article>')
     out.append('    </div>')
