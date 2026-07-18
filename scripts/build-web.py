@@ -136,6 +136,14 @@ def _aforo(cal_id, dias=30):
     try:
         import datetime
         sys.path.insert(0, str(RAIZ / "scripts"))
+        # Las credenciales de Cal.diy salen del .env, igual que las de
+        # NocoDB. Sin esto, build-web.py no podía consultar el aforo y las
+        # clases reservables se quedaban con el badge de ciclo de vida en
+        # vez de "Admitiendo alumnos" / "Últimas plazas".
+        import nocolib as _nc
+        _nc.carga_env()
+        os.environ.setdefault("CALCOM_API_URL",
+                              "https://api-reservas.juliamoreno.yoga")
         from backend.calcom import cliente
         hoy = datetime.date.today()
         fin = hoy + datetime.timedelta(days=dias)
