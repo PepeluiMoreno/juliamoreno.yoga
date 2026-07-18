@@ -59,6 +59,12 @@
   .aviso.error { display: block; background: #fbeceb; color: #a3352c; }
   .aviso.exito { display: block; background: #e9f5ee; color: var(--ok); }
   .vacio { opacity: .6; font-style: italic; }
+  .gracias {
+    background: #f4efe7; border-left: 3px solid var(--mar);
+    border-radius: 8px; padding: .9rem 1.1rem; margin-bottom: 1.2rem;
+  }
+  .gracias p { margin: 0 0 .5rem; font-size: .95rem; }
+  .gracias p:last-child { margin-bottom: 0; }
   .dudas { margin-top: 2rem; font-size: .9rem; }
   .dudas a { color: var(--mar); opacity: .8; text-decoration: underline; }
   .dudas a:hover { opacity: 1; }
@@ -98,6 +104,17 @@ function ficha(a) {
     </section>`;
 }
 
+function gracias() {
+  // No quedan plazas: se agradece el interés y se recoge el contacto para
+  // avisar de la próxima edición. Mejor eso que una puerta cerrada.
+  return `<div class="gracias">
+    <p><strong>Gracias por tu interés.</strong> Las plazas de esta edición
+    están agotadas.</p>
+    <p>Si me dejas tus datos, te aviso en cuanto programe una nueva —tendrás
+    preferencia sobre quien llegue después.</p>
+  </div>`;
+}
+
 function formulario(a) {
   // Las franjas solo se preguntan si la actividad las tiene marcadas como
   // elegibles: así se sabe qué horario le vendría bien a cada persona.
@@ -117,7 +134,8 @@ function formulario(a) {
     <input type="text" id="contacto" maxlength="120">
     ${bloque}
     <div class="aviso" id="aviso"></div>
-    <button class="btn" id="enviar">Me interesa</button>
+    <button class="btn" id="enviar">${a.completa
+      ? "Avísame de la próxima" : "Me interesa"}</button>
     <p class="consent">Al enviar aceptas que Julia Moreno guarde tu nombre y
     contacto para avisarte sobre esta actividad.</p>`;
 }
@@ -143,10 +161,11 @@ async function cargar() {
     // propuesta se monta si hay grupo; una en curso sin horario fijo
     // (p. ej. ciclo lunar) se avisa cuando haya próxima sesión.
     document.getElementById("lema").textContent =
-      a.estado === "propuesta"
+      a.completa ? "Esta edición está completa."
+      : a.estado === "propuesta"
         ? "Dime que te interesa y te aviso cuando se monte."
         : "Déjame tus datos y te aviso de la próxima sesión.";
-    cont.innerHTML = ficha(a) + formulario(a);
+    cont.innerHTML = ficha(a) + (a.completa ? gracias() : "") + formulario(a);
     document.getElementById("enviar").addEventListener("click", () => enviar(a));
   } catch (e) {
     cont.innerHTML = '<p class="vacio">No se pudo cargar la actividad. ' +

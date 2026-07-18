@@ -85,7 +85,24 @@ def _ficha(fila):
         "franjas": fila.get("franjas"),
         "franjas_elegibles": bool(fila.get("franjas_elegibles")),
         "cal_event_type_id": int(fila.get("cal_event_type_id") or 0),
+        "completa": _sin_plazas(int(fila.get("cal_event_type_id") or 0)),
     }
+
+
+def _sin_plazas(cal_id, dias=30):
+    """¿Sin plazas a ninguna hora del próximo mes? Ante cualquier duda
+    (error, sin clase enlazada) se responde False: mejor no avisar que
+    avisar en falso."""
+    if not cal_id:
+        return False
+    try:
+        hoy = datetime.date.today()
+        fin = hoy + datetime.timedelta(days=dias)
+        aforo = cliente.aforo_por_hueco(cal_id, hoy.isoformat(), fin.isoformat())
+        return bool(aforo) and all((v.get("libres") or 0) <= 0
+                                   for v in aforo.values())
+    except Exception:
+        return False
 
 
 def _actividad(aid):
@@ -205,6 +222,14 @@ def _reservar(body):
         })
     except Exception:
         registro_ok = False
+
+    # Si esa reserva ha dejado la clase sin plazas, la web debe reflejarlo:
+    # el badge "No quedan plazas" se calcula al generar el sitio.
+    try:
+        from ..web import dispara_rebuild
+        dispara_rebuild()
+    except Exception:
+        pass
 
     return 200, {"ok": True, "uid": uid, "registro_auxiliar": registro_ok}
 

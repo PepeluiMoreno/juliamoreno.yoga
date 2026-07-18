@@ -59,6 +59,19 @@ def fecha_legible(iso, idioma):
 # etiquetas de interfaz de contenido.json.
 RESERVAR_ETQ = {"es": "Reservar mi plaza", "en": "Book my place",
                 "fr": "Réserver ma place", "de": "Meinen Platz buchen"}
+# Etiquetas de estado. Van aquí y no en contenido.json porque las claves
+# de allí ('tentativa', 'confirmada') no coincidían con los estados y los
+# badges salían VACÍOS: pastillas de color sin texto.
+ESTADO_ETQ = {
+    "propuesta": {"es": "En preparación", "en": "In preparation",
+                  "fr": "En préparation", "de": "In Vorbereitung"},
+    "programada": {"es": "Programada", "en": "Scheduled",
+                   "fr": "Programmée", "de": "Geplant"},
+    "en_curso": {"es": "En curso", "en": "Running",
+                 "fr": "En cours", "de": "Laufend"},
+}
+COMPLETA_ETQ = {"es": "No quedan plazas", "en": "Fully booked",
+                "fr": "Complet", "de": "Ausgebucht"}
 # Salida secundaria: en yoga la objeción no suele ser el precio sino "¿es
 # para mí?". Un enlace discreto a contacto recoge esa duda en vez de
 # perderla en un abandono silencioso.
@@ -68,6 +81,32 @@ PREGUNTA_ETQ = {"es": "¿Te encaja? Pregúntanos",
                 "de": "Unsicher? Frag uns"}
 CONTACTO_ANCLA = {"es": "#contacto", "en": "#contact",
                   "fr": "#contact", "de": "#kontakt"}
+
+
+def _sin_plazas(cal_id, dias=30):
+    """¿La clase está llena a TODAS las horas del próximo mes?
+
+    Se consulta el aforo real de Cal.diy (calculado cruzando huecos y
+    reservas; el seatsRemaining del endpoint de slots no se actualiza).
+    Si no se puede consultar —sin credenciales, Cal.diy caído— se
+    devuelve False a propósito: es preferible no poner el aviso que
+    ponerlo por error y espantar a quien sí tenía plaza.
+    """
+    if not cal_id:
+        return False
+    try:
+        import datetime
+        sys.path.insert(0, str(RAIZ / "scripts"))
+        from backend.calcom import cliente
+        hoy = datetime.date.today()
+        fin = hoy + datetime.timedelta(days=dias)
+        aforo = cliente.aforo_por_hueco(int(cal_id), hoy.isoformat(),
+                                        fin.isoformat())
+        if not aforo:
+            return False
+        return all((v.get("libres") or 0) <= 0 for v in aforo.values())
+    except Exception:
+        return False
 
 
 def seccion_actividades(data, idioma):
@@ -104,14 +143,20 @@ def seccion_actividades(data, idioma):
 
         out.append('      <article class="clase">')
         out.append('        <div class="clase-cab">')
-        if estado == "propuesta":
-            out.append(f'          <p class="badge badge-tent">{t("propuesta")}</p>')
-        elif estado == "programada":
-            out.append(f'          <p class="badge badge-prog">{t("programada")}</p>')
-        elif estado == "en_curso":
-            out.append(f'          <p class="badge badge-conf">{t("en_curso")}</p>')
+        clases_badge = {"propuesta": "badge-tent", "programada": "badge-prog",
+                        "en_curso": "badge-conf"}
+        if estado in clases_badge:
+            etq_est = (t(estado) or ESTADO_ETQ[estado].get(idioma)
+                       or ESTADO_ETQ[estado]["es"])
+            out.append(f'          <p class="badge {clases_badge[estado]}">'
+                       f'{etq_est}</p>')
         else:
             out.append('          <p class="badge badge-hueco">&nbsp;</p>')
+        # Sin plazas a ninguna hora: se avisa junto al nombre, para que
+        # nadie entre a reservar y se lleve el chasco.
+        if ln.get("completa"):
+            out.append(f'          <p class="badge badge-lleno">'
+                       f'{COMPLETA_ETQ.get(idioma, COMPLETA_ETQ["es"])}</p>')
         out.append('        </div>')
         out.append('        <div class="clase-cuerpo">')
         if ln.get("foto"):
@@ -160,9 +205,9 @@ def seccion_actividades(data, idioma):
             # la clase existe, la miran con interés y no hay dónde pulsar.
             cal_id = int(ln.get("cal_event_type_id", 0) or 0)
             out.append('        <div class="clase-form">')
-            if cal_id:
-                etq = t("reservar") or RESERVAR_ETQ.get(idioma, RESERVAR_ETQ["es"])
-                out.append(f'          <a class="btn" href="/reservar.html?clase={cal_id}">{etq}</a>')
+            if cal_id and not ln.get("completa"):
+                out.append(f'          <a class="btn" href="/reservar.html?clase={cal_id}">'
+                           f'{t("interesa")}</a>')
             else:
                 # En curso pero todavía no reservable (p. ej. sin horario
                 # semanal fijo). Se recoge el interés en vez de mandar a un
@@ -347,6 +392,7 @@ def desde_nocodb(data):
             "franjas_elegibles": bool(fila.get("franjas_elegibles")),
             "cal_event_type_id": fila.get("cal_event_type_id") or 0,
             "nivel": fila.get("nivel") or "",
+            "completa": _sin_plazas(fila.get("cal_event_type_id")),
             "visible": bool(fila.get("visible")),
             "titulo": idi("titulo"), "texto": idi("texto"), "franjas": franjas,
         })
