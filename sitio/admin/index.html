@@ -95,6 +95,30 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dia-clase-acciones .btn-mini{flex:1}
 .agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
 .agenda-acciones-sel{background:var(--cielo-claro);border:1px solid var(--linea);border-radius:10px;padding:1rem;margin-bottom:1rem}
+
+/* --- Vista mensual: etiquetas, no viñetas ------------------------------
+   El punto y la hora delante hacían que cada celda pareciera una lista de
+   apuntes. Como bloque centrado se lee la clase de un vistazo, y además
+   queda igual que en Semana y Día, donde ya eran bloques de color. */
+.fc-daygrid-event{
+  display:block;text-align:center;white-space:normal;
+  font-size:.7rem;line-height:1.2;font-weight:600;
+  border-radius:5px;padding:.14rem .25rem;margin:1px 3px;border:none}
+.fc-daygrid-event .fc-event-title{white-space:normal;text-align:center;
+  padding:0;font-weight:600}
+.fc-daygrid-event .fc-event-time,
+.fc-daygrid-event-dot{display:none}
+.fc-daygrid-day-events{margin-top:.15rem}
+
+/* Hoy y la semana en curso. La semana, un tinte apenas perceptible que
+   agrupa; hoy, el mismo tono subido y con el número resaltado, para que
+   se distingan entre sí y no compitan con las clases. */
+.fc .fc-semana-actual{background:#f2f6f8}
+.fc .fc-day-today{background:#e2edf2 !important}
+.fc .fc-day-today .fc-daygrid-day-number{
+  background:var(--mar);color:#fff;border-radius:999px;
+  min-width:1.5rem;text-align:center;padding:.1rem .35rem;font-weight:700}
+.fc .fc-col-header-cell.fc-day-today{background:#e2edf2}
 .fc-daygrid-day-number,.fc-col-header-cell[data-date]{cursor:pointer}
 .oculto-edicion{display:none}
 .marca-etq{font-weight:400;opacity:.72}
@@ -805,6 +829,27 @@ async function cargarAgenda(){
       slotMinTime: "07:00:00",
       slotMaxTime: "23:00:00",
       allDaySlot: false,
+      // Vista mensual: bloque en vez de punto + hora. En el mes la
+      // pregunta es QUÉ hay cada día, no a qué hora; la hora se ve en
+      // Semana, en Día y en la cabecera del menú contextual.
+      views: {
+        dayGridMonth: {
+          eventDisplay: "block",
+          displayEventTime: false,
+          dayMaxEventRows: 4,
+        },
+      },
+      // Marcar la semana en curso: FullCalendar solo distingue el día de
+      // hoy, y al preparar la semana conviene verla entera de un golpe.
+      dayCellClassNames: function(arg){
+        const d = new Date(arg.date); d.setHours(12,0,0,0);
+        const hoy = new Date(); hoy.setHours(12,0,0,0);
+        const lunes = new Date(hoy);
+        lunes.setDate(hoy.getDate() - ((hoy.getDay()+6)%7));
+        const domingo = new Date(lunes);
+        domingo.setDate(lunes.getDate()+6);
+        return (d >= lunes && d <= domingo) ? ["fc-semana-actual"] : [];
+      },
       height: "calc(100vh - 170px)",
       editable: true,
       eventStartEditable: true,
@@ -1180,8 +1225,9 @@ function abrirMenuContextual(ev, ctx){
   const e = ctx.clase || {};
 
   // Título del menú
-  $("#mcTitulo").textContent = esClase ? (e.titulo || "Clase")
-                                        : _tituloDia(ctx.fecha, ctx.hora);
+  $("#mcTitulo").textContent = esClase
+    ? (e.titulo || "Clase") + (e.hora_inicio ? " · " + e.hora_inicio.slice(0,5) : "")
+    : _tituloDia(ctx.fecha, ctx.hora);
 
   // Entrada de creación: siempre disponible. Refleja la hora si el contexto
   // la trae (vistas Semana/Día); si no, solo el día.
