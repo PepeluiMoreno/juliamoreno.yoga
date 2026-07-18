@@ -1467,9 +1467,12 @@ async function cargarLista(alcance){
   // en vez de lanzar una petición condenada y enseñar un error opaco.
   if(!e.actividad_id){
     _modoListado();
-    _aviso("Esta entrada de la agenda no está asociada a ninguna actividad, "
-         + "así que no tiene reservas. Asóciala desde Actividades si quieres "
-         + "que se pueda reservar.");
+    // Cuidado con el texto: la actividad puede existir perfectamente; lo
+    // que falta es el VÍNCULO desde esta fila de la agenda.
+    _aviso("Esta clase de la agenda no tiene actividad asignada, así que no "
+         + "se sabe a qué reservas corresponde. La actividad puede existir "
+         + "igualmente: lo que falta es el vínculo. Asígnalo en Editar → "
+         + "Actividad.");
     return;
   }
   const fecha = (e.fecha||"").slice(0,10);
