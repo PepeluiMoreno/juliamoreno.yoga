@@ -97,15 +97,24 @@ def main():
         return 0
 
     a_escribir = exactas + (dudosas if con_dudosas else [])
+    # NocoDB v2 espera una LISTA de registros en el PATCH, no uno suelto:
+    # enviando un dict la llamada no surte efecto.
+    lote = [{"Id": fila["Id"], "actividad_id": aid}
+            for fila, aid, _ in a_escribir]
     n = 0
-    for fila, aid, _ in a_escribir:
+    for i in range(0, len(lote), 50):
+        trozo = lote[i:i+50]
         try:
-            nc.api(url, tok, "PATCH", f"/api/v2/tables/{ids['Agenda']}/records",
-                   {"Id": fila["Id"], "actividad_id": aid})
-            n += 1
+            nc.api(url, tok, "PATCH",
+                   f"/api/v2/tables/{ids['Agenda']}/records", trozo)
+            n += len(trozo)
         except Exception as e:
-            print(f"  fallo en Id={fila.get('Id')}: {e}")
-    print(f"\n{n} entrada(s) vinculadas.")
+            print(f"  fallo escribiendo {len(trozo)} registro(s): {e}")
+
+    # Comprobar de verdad que quedaron escritas, en vez de fiarse del 200.
+    quedan = [f for f in nc.records(url, tok, ids["Agenda"], limit=1000)
+              if not (f.get("actividad_id") or "").strip()]
+    print(f"\n{n} entrada(s) enviadas. Sin vínculo ahora: {len(quedan)}.")
     if huerfanas or (dudosas and not con_dudosas):
         print("Las que quedan se arreglan a mano en Agenda → Editar → Actividad.")
     return 0
