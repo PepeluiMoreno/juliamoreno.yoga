@@ -380,6 +380,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <button data-accion="lista" id="mcLista">Sacar lista de alumnos…</button>
     <button data-accion="visibilidad" id="mcVisibilidad">Ocultar de la web</button>
     <div class="mc-sep" id="mcSep"></div>
+    <button data-accion="aplazar" id="mcAplazar">Aplazar clase…</button>
+    <button data-accion="trasladar" id="mcTrasladar">Trasladar clase…</button>
     <button data-accion="cancelar" id="mcCancelar">Cancelar clase…</button>
     <button data-accion="reactivar" id="mcReactivar">Reactivar clase</button>
     <button data-accion="borrar" id="mcBorrar" class="peligro">Eliminar</button>
@@ -1017,6 +1019,8 @@ function abrirMenuContextual(ev, ctx){
   $("#mcLista").style.display = esClase ? "block" : "none";
   $("#mcVisibilidad").style.display = esClase ? "block" : "none";
   $("#mcVisibilidad").textContent = (e.visible_web!==false) ? "Ocultar de la web" : "Mostrar en la web";
+  $("#mcAplazar").style.display = (esClase && !cancelada) ? "block" : "none";
+  $("#mcTrasladar").style.display = (esClase && !cancelada) ? "block" : "none";
   $("#mcCancelar").style.display = (esClase && !cancelada) ? "block" : "none";
   $("#mcReactivar").style.display = (esClase && cancelada) ? "block" : "none";
   $("#mcBorrar").style.display = puedeEliminar ? "block" : "none";
@@ -1059,6 +1063,10 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
     }catch(err){ await avisar("Error de conexión.", "Error"); }
   }else if(accion==="lista"){
     abrirModalLista(e);
+  }else if(accion==="aplazar"){
+    mostrarMoverEnSidebar(e, "fecha");
+  }else if(accion==="trasladar"){
+    mostrarMoverEnSidebar(e, "lugar");
   }else if(accion==="cancelar"){
     mostrarCancelacionEnSidebar(e);
   }else if(accion==="reactivar"){
@@ -1442,6 +1450,102 @@ function imprimirConsentimientos(sesiones){
     <div class="linea-firma">Firma del alumno/a — Fecha</div>
   </div>`)));
   _ventanaImpresion("Consentimientos", hojas.join(""));
+}
+
+
+// --- Aplazar / Trasladar una clase -----------------------------------
+// "Editar" es un cajón genérico; estas son las cosas que de verdad le
+// pasan a una clase: se cae, se mueve de día o cambia de sitio. Nombrar
+// la tarea en el menú se usa mejor que nombrar el formulario.
+// Comparten panel porque el flujo es el mismo (qué cambia + avisar).
+async function mostrarMoverEnSidebar(e, que){
+  $("#agEditorVacio").classList.add("oculto");
+  $("#agEditorForm").classList.add("oculto");
+  $("#agEditorDia").classList.remove("oculto");
+  const aplazar = que === "fecha";
+  $("#agDiaTitulo").textContent = aplazar ? "Aplazar clase" : "Trasladar clase";
+  const hoy = new Date().toISOString().slice(0,10);
+  const campos = aplazar
+    ? `<label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600">Nueva fecha
+         <input type="date" id="mv-fecha" value="${(e.fecha||"").slice(0,10)}" min="${hoy}"
+           style="width:100%;padding:.5rem;border:1px solid var(--linea);border-radius:6px;margin-top:.2rem;font-family:inherit;box-sizing:border-box">
+       </label>
+       <label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600;margin-top:.5rem">Hora (opcional)
+         <input type="time" id="mv-hora" value="${(e.hora_inicio||"").slice(0,5)}"
+           style="width:100%;padding:.5rem;border:1px solid var(--linea);border-radius:6px;margin-top:.2rem;font-family:inherit;box-sizing:border-box">
+       </label>`
+    : `<label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600">Nuevo lugar
+         <input type="text" id="mv-lugar" value="${_escL(e.lugar||"")}" maxlength="120" placeholder="Ej. Estudio Maro"
+           style="width:100%;padding:.5rem;border:1px solid var(--linea);border-radius:6px;margin-top:.2rem;font-family:inherit;box-sizing:border-box">
+       </label>`;
+  $("#agDiaLista").innerHTML = `
+    <div class="dia-clase dia-clase-activa">
+      <div class="dia-clase-cab"><span class="dia-clase-tit">${_escL(e.titulo||"Clase")}</span></div>
+      <p style="font-size:.82rem;color:var(--gris);margin:.2rem 0 .7rem">
+        ${_escL((e.fecha||"").slice(0,10))} · ${_escL((e.hora_inicio||"").slice(0,5))}
+        ${e.lugar ? "· " + _escL(e.lugar) : ""}</p>
+      ${campos}
+      <label class="check" style="margin-top:.8rem;display:flex;align-items:center;gap:.5rem;font-size:.88rem">
+        <input type="checkbox" id="mv-avisar" style="width:auto" checked> Avisar a los alumnos</label>
+      <p id="mv-inscritos" style="font-size:.78rem;color:var(--gris);margin:.6rem 0 0"></p>
+      <div class="dia-clase-acciones" style="margin-top:.9rem">
+        <button class="btn-mini" id="mv-confirmar">${aplazar?"Aplazar":"Trasladar"}</button>
+      </div>
+    </div>`;
+
+  // Cuántos alumnos hay inscritos: sin este dato el cambio se hace a
+  // ciegas, y mover una clase con gente apuntada no es lo mismo que
+  // mover una vacía.
+  _inscritosDe(e).then(n=>{
+    const el = $("#mv-inscritos");
+    if(!el) return;
+    if(n === null){ el.textContent = ""; return; }
+    el.innerHTML = n === 0
+      ? "Nadie inscrito todavía en esta sesión."
+      : `<strong>${n} alumno(s) inscrito(s)</strong> en esta sesión. Su reserva
+         seguirá figurando con los datos anteriores en el sistema de reservas:
+         conviene avisarles.`;
+  });
+
+  $("#mv-confirmar").addEventListener("click", async ()=>{
+    const cuerpo = {Id: e.Id, avisar_alumnos: $("#mv-avisar").checked};
+    if(aplazar){
+      const f = $("#mv-fecha").value;
+      if(!f){ await avisar("Indica la nueva fecha.", "Falta la fecha"); return; }
+      if(f === (e.fecha||"").slice(0,10) && $("#mv-hora").value === (e.hora_inicio||"").slice(0,5)){
+        await avisar("La fecha y la hora son las mismas.", "Sin cambios"); return;
+      }
+      cuerpo.fecha = f;
+      if($("#mv-hora").value) cuerpo.hora_inicio = $("#mv-hora").value;
+    }else{
+      const l = $("#mv-lugar").value.trim();
+      if(!l){ await avisar("Indica el nuevo lugar.", "Falta el lugar"); return; }
+      if(l === (e.lugar||"")){ await avisar("El lugar es el mismo.", "Sin cambios"); return; }
+      cuerpo.lugar = l;
+    }
+    try{
+      const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
+        headers:{"Content-Type":"application/json"}, body:JSON.stringify(cuerpo)});
+      const d = await r.json();
+      if(d.ok){
+        await cargarAgenda();
+        mostrarClasesDelDia(cuerpo.fecha || (e.fecha||"").slice(0,10));
+      }else await avisar(d.error||"No se pudo guardar.", "Error");
+    }catch(err){ await avisar("Error de conexión.", "Error"); }
+  });
+}
+
+async function _inscritosDe(e){
+  const f = (e.fecha||"").slice(0,10);
+  if(!f || !e.actividad_id) return null;
+  try{
+    let u = `${API_LISTAS}?actividad=${encodeURIComponent(e.actividad_id)}&desde=${f}&hasta=${f}`;
+    if(e.hora_inicio) u += `&hora=${encodeURIComponent(e.hora_inicio.slice(0,5))}`;
+    const r = await fetch(u, {credentials:"include"});
+    const d = await r.json();
+    if(!d.ok || d.aviso) return null;
+    return (d.sesiones||[]).reduce((n,s)=> n + (s.total||0), 0);
+  }catch(err){ return null; }
 }
 
 // --- Navegación entre vistas del menú lateral ---
