@@ -46,12 +46,13 @@ def _telefonos():
 
 
 def _clase_de(actividad_id):
-    """(cal_event_type_id, titulo) de la actividad, o (None, None)."""
+    """(cal_event_type_id, titulo, existe). cal_event_type_id es 0 si la
+    actividad existe pero aún no tiene clase de reservas asociada."""
     for fila in datos.lee("Actividades"):
         if fila.get("id") == actividad_id:
             return (int(fila.get("cal_event_type_id") or 0),
-                    fila.get("titulo_es") or actividad_id)
-    return None, None
+                    fila.get("titulo_es") or actividad_id, True)
+    return 0, actividad_id, False
 
 
 def _sesiones(cal_id, titulo, desde, hasta, hora=None):
@@ -121,11 +122,17 @@ def handle(req):
         return 422, {"error": "faltan actividad, desde o hasta"}
 
     try:
-        cal_id, titulo = _clase_de(actividad)
+        cal_id, titulo, existe = _clase_de(actividad)
+        if not existe:
+            return 200, {"ok": True, "sesiones": [],
+                         "aviso": "La actividad '%s' no aparece en la tabla "
+                                  "de Actividades: puede que se renombrara o "
+                                  "se borrara." % actividad}
         if not cal_id:
             return 200, {"ok": True, "sesiones": [],
-                         "aviso": "Esta actividad no tiene clase de reservas "
-                                  "asociada, asi que no hay alumnos apuntados."}
+                         "aviso": "'%s' todavia no tiene clase de reservas en "
+                                  "el motor, asi que nadie ha podido "
+                                  "apuntarse. Se crea con alta_clases." % titulo}
         return 200, {"ok": True,
                      "sesiones": _sesiones(cal_id, titulo, desde, hasta, hora)}
     except Exception as e:

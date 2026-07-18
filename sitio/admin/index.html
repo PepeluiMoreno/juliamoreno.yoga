@@ -1434,7 +1434,19 @@ let lstSesiones = [];
 async function cargarLista(alcance){
   const e = lstClase, salida = $("#lstCuerpo");
   if(!e) return;
+  const _aviso = (txt)=>{ salida.innerHTML =
+    `<p style="font-size:.85rem;color:var(--gris)">${_escL(txt)}</p>`; };
+  // Sin actividad detrás no hay clase de reservas que consultar: se dice,
+  // en vez de lanzar una petición condenada y enseñar un error opaco.
+  if(!e.actividad_id){
+    _modoListado();
+    _aviso("Esta entrada de la agenda no está asociada a ninguna actividad, "
+         + "así que no tiene reservas. Asóciala desde Actividades si quieres "
+         + "que se pueda reservar.");
+    return;
+  }
   const fecha = (e.fecha||"").slice(0,10);
+  if(!fecha){ _modoListado(); _aviso("Esta clase no tiene fecha."); return; }
   const [desde, hasta] = _rango(alcance, fecha);
   let url = `${API_LISTAS}?actividad=${encodeURIComponent(e.actividad_id||"")}`
           + `&desde=${desde}&hasta=${hasta}`;
@@ -1443,17 +1455,25 @@ async function cargarLista(alcance){
   salida.innerHTML = '<p style="font-size:.85rem;color:var(--gris)">Cargando…</p>';
   try{
     const r = await fetch(url, {credentials:"include"});
-    const d = await r.json();
-    if(!d.ok) throw new Error(d.error||"");
-    if(d.aviso){ salida.innerHTML = `<p style="font-size:.85rem;color:var(--gris)">${_escL(d.aviso)}</p>`; return; }
+    if(r.status === 401){ _aviso("Sesión caducada: vuelve a entrar."); return; }
+    const d = await r.json().catch(()=>({}));
+    // El motivo concreto, no un "no se pudo": si el fallo se puede
+    // arreglar, hay que decir cuál es.
+    if(!r.ok || !d.ok){
+      _aviso(d.error || `El servidor respondió ${r.status}.`);
+      return;
+    }
+    if(d.aviso){ _aviso(d.aviso); return; }
     if(!d.sesiones.length){
-      salida.innerHTML = '<p style="font-size:.85rem;color:var(--gris)">Nadie apuntado todavía.</p>';
+      _aviso("Nadie apuntado todavía en " + (alcance==="dia" ? "esta sesión."
+           : alcance==="semana" ? "esta semana." : "este mes."));
       return;
     }
     lstSesiones = d.sesiones;
     salida.innerHTML = d.sesiones.map(_bloqueSesion).join("");
   }catch(err){
-    salida.innerHTML = '<p style="font-size:.85rem;color:#8a2b26">No se pudo cargar la lista.</p>';
+    salida.innerHTML = '<p style="font-size:.85rem;color:#8a2b26">Error de '
+      + 'conexión al pedir la lista.</p>';
   }
 }
 
