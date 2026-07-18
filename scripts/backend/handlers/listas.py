@@ -1,18 +1,22 @@
 """
-backend.handlers.listas — /admin/api/listas: alumnos apuntados por sesión.
+backend.handlers.listas — /admin/api/listas: alumnos de UNA clase.
 
 Ruta bajo /admin, así que va protegida por Authelia (y además se exige
 req.usuario): son datos personales de los alumnos y no pueden quedar
 expuestos como las rutas públicas de reserva.
+
+Se pide siempre acotada: una actividad concreta y un rango de fechas. La
+lista se saca desde la AGENDA, sobre la clase seleccionada, y según su
+recurrencia se puede pedir esa sesión, la semana o el mes.
+
+    /admin/api/listas?actividad=<id>&desde=YYYY-MM-DD&hasta=YYYY-MM-DD
+    ...&hora=HH:MM   (opcional: solo esa sesión del día)
 
 De dónde sale cada dato:
   - Quién está apuntado: de Cal.diy, que es el motor y la fuente de
     verdad de las reservas (incluidas las hechas desde su propio booker).
   - El teléfono: de la copia en NocoDB (tabla Reservas), porque Cal.diy
     no lo pide. Se cruza por uid de reserva y, si no, por email.
-
-Devuelve las sesiones del rango con su lista, pensado para que Julia
-pase lista, recoja firmas o imprima consentimientos.
 """
 import datetime
 
@@ -22,7 +26,7 @@ from ..calcom import cliente
 RUTA = "/admin/api/listas"
 
 
-def _copias(desde, hasta):
+def _telefonos():
     """{clave: telefono} desde la tabla Reservas, por uid y por email."""
     idx = {}
     try:
@@ -32,58 +36,67 @@ def _copias(desde, hasta):
                 continue
             uid = (fila.get("cal_uid") or "").strip()
             email = (fila.get("email") or "").strip().lower()
-            ini = str(fila.get("inicio") or "")
             if uid:
-                idx[f"uid:{uid}"] = tel
+                idx["uid:" + uid] = tel
             if email:
-                idx[f"em:{email}"] = tel
-                if ini:
-                    idx[f"em:{email}|{ini}"] = tel
+                idx["em:" + email] = tel
     except Exception:
         pass
     return idx
 
 
-def _sesiones(dias):
-    hoy = datetime.date.today()
-    fin = hoy + datetime.timedelta(days=dias)
-    tipos = {}
-    for t in cliente.event_types().get("data", []):
-        tipos[t.get("id")] = t.get("title")
+def _clase_de(actividad_id):
+    """(cal_event_type_id, titulo) de la actividad, o (None, None)."""
+    for fila in datos.lee("Actividades"):
+        if fila.get("id") == actividad_id:
+            return (int(fila.get("cal_event_type_id") or 0),
+                    fila.get("titulo_es") or actividad_id)
+    return None, None
 
-    tel_idx = _copias(hoy.isoformat(), fin.isoformat())
-    reservas = cliente.bookings(hoy.isoformat(), fin.isoformat()).get("data", [])
+
+def _sesiones(cal_id, titulo, desde, hasta, hora=None):
+    tel_idx = _telefonos()
+    reservas = cliente.bookings(desde, hasta).get("data", [])
 
     por_sesion = {}
     for b in reservas:
         if b.get("status") != "accepted":
             continue
-        ini = b.get("start")
-        eid = b.get("eventTypeId") or b.get("eventType", {}).get("id")
-        clave = f"{eid}|{ini}"
-        s = por_sesion.setdefault(clave, {
-            "inicio": ini,
-            "event_type_id": eid,
-            "titulo": tipos.get(eid) or "Clase",
-            "alumnos": [],
+        eid = b.get("eventTypeId") or (b.get("eventType") or {}).get("id")
+        if eid != cal_id:
+            continue
+        ini = b.get("start") or ""
+        s = por_sesion.setdefault(ini, {
+            "inicio": ini, "event_type_id": eid,
+            "titulo": titulo, "alumnos": [],
         })
         for a in b.get("attendees", []):
             email = (a.get("email") or "").strip().lower()
             uid = b.get("uid") or ""
-            tel = (tel_idx.get(f"uid:{uid}")
-                   or tel_idx.get(f"em:{email}|{ini}")
-                   or tel_idx.get(f"em:{email}")
-                   or a.get("phoneNumber") or "")
             s["alumnos"].append({
                 "nombre": a.get("name") or "",
                 "email": a.get("email") or "",
-                "telefono": tel,
+                "telefono": (tel_idx.get("uid:" + uid)
+                             or tel_idx.get("em:" + email)
+                             or a.get("phoneNumber") or ""),
             })
 
-    salida = sorted(por_sesion.values(), key=lambda x: x["inicio"] or "")
-    for s in salida:
+    salida = []
+    for s in sorted(por_sesion.values(), key=lambda x: x["inicio"]):
+        # "Solo esta clase" llega con hora: se compara con la hora local,
+        # que es la que Julia ve en la agenda.
+        if hora:
+            try:
+                d = datetime.datetime.fromisoformat(
+                    s["inicio"].replace("Z", "+00:00"))
+                local = d + datetime.timedelta(hours=2)  # Europe/Madrid
+                if local.strftime("%H:%M") != hora:
+                    continue
+            except Exception:
+                pass
         s["alumnos"].sort(key=lambda a: a["nombre"].lower())
         s["total"] = len(s["alumnos"])
+        salida.append(s)
     return salida
 
 
@@ -94,14 +107,26 @@ def handle(req):
     if not req.usuario:
         return 401, {"error": "no autenticado"}
 
-    dias = 30
-    for par in query.split("&"):
-        if par.startswith("dias="):
-            try:
-                dias = max(1, min(int(par[5:]), 120))
-            except ValueError:
-                pass
+    par = {}
+    for trozo in query.split("&"):
+        k, _, v = trozo.partition("=")
+        if k:
+            par[k] = v
+
+    actividad = par.get("actividad", "")
+    desde = par.get("desde", "")
+    hasta = par.get("hasta", "")
+    hora = par.get("hora") or None
+    if not actividad or not desde or not hasta:
+        return 422, {"error": "faltan actividad, desde o hasta"}
+
     try:
-        return 200, {"ok": True, "sesiones": _sesiones(dias)}
+        cal_id, titulo = _clase_de(actividad)
+        if not cal_id:
+            return 200, {"ok": True, "sesiones": [],
+                         "aviso": "Esta actividad no tiene clase de reservas "
+                                  "asociada, asi que no hay alumnos apuntados."}
+        return 200, {"ok": True,
+                     "sesiones": _sesiones(cal_id, titulo, desde, hasta, hora)}
     except Exception as e:
-        return 502, {"error": f"no se pudieron leer las listas: {e}"}
+        return 502, {"error": "no se pudieron leer las listas: %s" % e}

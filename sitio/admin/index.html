@@ -139,17 +139,11 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .layout{display:flex;width:100%;min-height:calc(100vh - 60px)}
 .menu-lateral{width:200px;flex-shrink:0;background:#fff;border-right:1px solid var(--linea);padding:1.5rem 0}
 .menu-lateral nav{display:flex;flex-direction:column}
-.listas-barra{display:flex;gap:.6rem;align-items:center;margin-bottom:1.2rem}
-.sesion{border:1px solid #e5e0d8;border-radius:10px;padding:1rem 1.2rem;
-  margin-bottom:1.2rem;background:#fff}
-.sesion header{display:flex;flex-wrap:wrap;align-items:baseline;gap:.6rem 1rem}
-.sesion h2{font-size:1.1rem;margin:0}
-.sesion .cuando{margin:0;opacity:.75;font-size:.9rem}
-.sesion .acciones{margin-left:auto;display:flex;gap:.5rem}
-.tabla-alumnos{width:100%;border-collapse:collapse;margin-top:.8rem;font-size:.92rem}
-.tabla-alumnos th,.tabla-alumnos td{border-bottom:1px solid #eee7dd;
-  padding:.4rem .5rem;text-align:left}
-.tabla-alumnos th{opacity:.7;font-weight:600}
+.tabla-alumnos{width:100%;border-collapse:collapse;font-size:.85rem}
+.tabla-alumnos td{border-bottom:1px solid #eee7dd;padding:.3rem .35rem;text-align:left}
+.tabla-alumnos td:first-child{width:1.6rem;color:var(--gris)}
+.lst-alc{opacity:.65}
+.lst-alc.activa{opacity:1;background:var(--mar);color:#fff;border-color:var(--mar)}
 .menu-item{display:block;padding:.7rem 1.5rem;color:var(--gris-hondo);text-decoration:none;font-weight:600;font-size:.95rem;border-left:3px solid transparent}
 .menu-item:hover{background:var(--cielo-claro)}
 .menu-item.activa{color:var(--mar);border-left-color:var(--mar);background:var(--cielo-claro)}
@@ -189,7 +183,6 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <a href="#" class="menu-item activa" data-vista="panel">Panel de control</a>
       <a href="#" class="menu-item" data-vista="agenda">Agenda</a>
       <a href="#" class="menu-item" data-vista="actividades">Actividades</a>
-      <a href="#" class="menu-item" data-vista="listas">Listas de clase</a>
       <a href="#" class="menu-item" data-vista="tarifas">Tarifas</a>
       <a href="#" class="menu-item" data-vista="estados">Estado</a>
     </nav>
@@ -302,22 +295,6 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <div class="pie">Panel de gestión · <a href="/">volver a la web</a></div>
   </section>
 
-  <section class="vista oculto" id="vista-listas">
-    <h1>Listas de clase</h1>
-    <p class="sub">Quién viene a cada sesión. Para pasar lista, recoger
-    firmas o imprimir consentimientos.</p>
-    <div class="listas-barra no-print">
-      <label for="lst-dias">Próximos</label>
-      <select id="lst-dias">
-        <option value="7">7 días</option>
-        <option value="15" selected>15 días</option>
-        <option value="30">30 días</option>
-      </select>
-      <button class="btn-sec" id="lst-recargar">Actualizar</button>
-    </div>
-    <div id="lst-contenido"><p class="vacio">Cargando…</p></div>
-  </section>
-
   <section class="vista oculto" id="vista-tarifas">
     <h1>Tarifas</h1>
     <p style="color:var(--gris)">Sección en preparación.</p>
@@ -393,6 +370,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <div class="mc-tit" id="mcTitulo"></div>
     <button data-accion="nueva" id="mcNueva">+ Nueva clase este día</button>
     <button data-accion="editar" id="mcEditar">Editar</button>
+    <button data-accion="lista" id="mcLista">Sacar lista de alumnos…</button>
     <button data-accion="visibilidad" id="mcVisibilidad">Ocultar de la web</button>
     <div class="mc-sep" id="mcSep"></div>
     <button data-accion="cancelar" id="mcCancelar">Cancelar clase…</button>
@@ -1013,6 +991,7 @@ function abrirMenuContextual(ev, ctx){
   const puedeEliminar = esClase && (e.tipo==="puntual") && !anunciada && !enCurso;
 
   $("#mcEditar").style.display = esClase ? "block" : "none";
+  $("#mcLista").style.display = esClase ? "block" : "none";
   $("#mcVisibilidad").style.display = esClase ? "block" : "none";
   $("#mcVisibilidad").textContent = (e.visible_web!==false) ? "Ocultar de la web" : "Mostrar en la web";
   $("#mcCancelar").style.display = (esClase && !cancelada) ? "block" : "none";
@@ -1055,6 +1034,8 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
       const d = await r.json();
       if(d.ok){ cargarAgenda(); } else await avisar(d.error||"No se pudo cambiar.", "Error");
     }catch(err){ await avisar("Error de conexión.", "Error"); }
+  }else if(accion==="lista"){
+    mostrarListaEnSidebar(e);
   }else if(accion==="cancelar"){
     mostrarCancelacionEnSidebar(e);
   }else if(accion==="reactivar"){
@@ -1238,72 +1219,116 @@ $("#ag-borrar").addEventListener("click", async ()=>{
 });
 
 
-// --- Listas de clase: quién viene a cada sesión ---
+
+// --- Lista de alumnos de una clase (desde el menú contextual) ---------
+// Se saca SIEMPRE sobre una clase concreta de la agenda. El alcance que
+// se ofrece depende de su recurrencia: una clase puntual solo puede ser
+// ella misma; una recurrente admite además su semana y su mes.
 const API_LISTAS = "https://api.juliamoreno.yoga/admin/api/listas";
 const DIAS_SEM = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
 const MESES_L = ["enero","febrero","marzo","abril","mayo","junio","julio",
   "agosto","septiembre","octubre","noviembre","diciembre"];
+let lstClase = null;
 
+function _escL(x){
+  return String(x==null?"":x).replace(/[&<>"']/g,
+    c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
 function _fechaSesion(iso){
   const d = new Date(iso);
   const hora = d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",
     timeZone:"Europe/Madrid"});
   return `${DIAS_SEM[d.getDay()]} ${d.getDate()} de ${MESES_L[d.getMonth()]} · ${hora}`;
 }
-function _esc(x){
-  return String(x||"").replace(/[&<>"']/g,
-    c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function _rango(alcance, fechaISO){
+  const f = new Date(fechaISO + "T12:00:00");
+  if(alcance==="dia") return [fechaISO, fechaISO];
+  if(alcance==="semana"){
+    const dow = (f.getDay()+6)%7;                 // lunes = 0
+    const ini = new Date(f); ini.setDate(f.getDate()-dow);
+    const fin = new Date(ini); fin.setDate(ini.getDate()+6);
+    return [ini.toISOString().slice(0,10), fin.toISOString().slice(0,10)];
+  }
+  const ini = new Date(f.getFullYear(), f.getMonth(), 1);
+  const fin = new Date(f.getFullYear(), f.getMonth()+1, 0);
+  return [ini.toISOString().slice(0,10), fin.toISOString().slice(0,10)];
 }
 
-async function cargarListas(){
-  const cont = document.getElementById("lst-contenido");
-  const dias = document.getElementById("lst-dias").value;
-  cont.innerHTML = '<p class="vacio">Cargando…</p>';
+function mostrarListaEnSidebar(e){
+  lstClase = e;
+  $("#agEditorVacio").classList.add("oculto");
+  $("#agEditorForm").classList.add("oculto");
+  $("#agEditorDia").classList.remove("oculto");
+  $("#agDiaTitulo").textContent = "Lista de alumnos";
+  const recurrente = e.tipo === "recurrente";
+  const opciones = recurrente
+    ? `<button class="btn-mini lst-alc activa" data-alc="dia">Solo esta clase</button>
+       <button class="btn-mini lst-alc" data-alc="semana">Esta semana</button>
+       <button class="btn-mini lst-alc" data-alc="mes">Este mes</button>`
+    : `<button class="btn-mini lst-alc activa" data-alc="dia">Solo esta clase</button>`;
+  $("#agDiaLista").innerHTML = `
+    <div class="dia-clase dia-clase-activa">
+      <div class="dia-clase-cab"><span class="dia-clase-tit">${_escL(e.titulo||"Clase")}</span></div>
+      <p style="font-size:.82rem;color:var(--gris);margin:.2rem 0 .7rem">
+        ${_escL(e.fecha||"")} · ${_escL(e.hora_inicio||"")}${recurrente?" · clase que se repite":" · clase puntual"}</p>
+      <div class="lst-alcance" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.8rem">${opciones}</div>
+      <div id="lst-salida"><p style="font-size:.85rem;color:var(--gris)">Cargando…</p></div>
+    </div>`;
+  $("#agDiaLista").querySelectorAll(".lst-alc").forEach(b=>
+    b.addEventListener("click", ()=>{
+      $("#agDiaLista").querySelectorAll(".lst-alc").forEach(x=>x.classList.remove("activa"));
+      b.classList.add("activa");
+      cargarLista(b.dataset.alc);
+    }));
+  cargarLista("dia");
+}
+
+async function cargarLista(alcance){
+  const e = lstClase, salida = $("#lst-salida");
+  if(!e) return;
+  const fecha = (e.fecha||"").slice(0,10);
+  const [desde, hasta] = _rango(alcance, fecha);
+  let url = `${API_LISTAS}?actividad=${encodeURIComponent(e.actividad_id||"")}`
+          + `&desde=${desde}&hasta=${hasta}`;
+  if(alcance==="dia" && e.hora_inicio) url += `&hora=${encodeURIComponent(e.hora_inicio.slice(0,5))}`;
+  salida.innerHTML = '<p style="font-size:.85rem;color:var(--gris)">Cargando…</p>';
   try{
-    const r = await fetch(`${API_LISTAS}?dias=${dias}`, {credentials:"include"});
+    const r = await fetch(url, {credentials:"include"});
     const d = await r.json();
     if(!d.ok) throw new Error(d.error||"");
+    if(d.aviso){ salida.innerHTML = `<p style="font-size:.85rem;color:var(--gris)">${_escL(d.aviso)}</p>`; return; }
     if(!d.sesiones.length){
-      cont.innerHTML = '<p class="vacio">No hay nadie apuntado en este periodo.</p>';
+      salida.innerHTML = '<p style="font-size:.85rem;color:var(--gris)">Nadie apuntado todavía.</p>';
       return;
     }
-    cont.innerHTML = d.sesiones.map(_tarjetaSesion).join("");
-    cont.querySelectorAll("[data-imprimir]").forEach(b=>
-      b.addEventListener("click", ()=> imprimirLista(d.sesiones[+b.dataset.imprimir])));
-    cont.querySelectorAll("[data-consent]").forEach(b=>
-      b.addEventListener("click", ()=> imprimirConsentimientos(d.sesiones[+b.dataset.consent])));
-  }catch(e){
-    cont.innerHTML = '<p class="vacio">No se pudieron cargar las listas.</p>';
+    salida.innerHTML = d.sesiones.map(_bloqueSesion).join("")
+      + `<div class="dia-clase-acciones" style="margin-top:.9rem">
+           <button class="btn-mini" id="lst-imprimir">Imprimir lista</button>
+           <button class="btn-mini" id="lst-consent">Consentimientos</button>
+         </div>`;
+    $("#lst-imprimir").addEventListener("click", ()=> imprimirLista(d.sesiones));
+    $("#lst-consent").addEventListener("click", ()=> imprimirConsentimientos(d.sesiones));
+  }catch(err){
+    salida.innerHTML = '<p style="font-size:.85rem;color:#8a2b26">No se pudo cargar la lista.</p>';
   }
 }
 
-function _tarjetaSesion(s, i){
-  const filas = s.alumnos.map((a,n)=>`<tr><td>${n+1}</td><td>${_esc(a.nombre)}</td>`
-    + `<td>${_esc(a.telefono)||"—"}</td><td>${_esc(a.email)}</td></tr>`).join("");
-  return `<article class="sesion">
-    <header>
-      <h2>${_esc(s.titulo)}</h2>
-      <p class="cuando">${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
-      <div class="acciones no-print">
-        <button class="btn-sec" data-imprimir="${i}">Imprimir lista</button>
-        <button class="btn-sec" data-consent="${i}">Consentimientos</button>
-      </div>
-    </header>
-    <table class="tabla-alumnos">
-      <thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th><th>Correo</th></tr></thead>
-      <tbody>${filas}</tbody>
-    </table>
-  </article>`;
+function _bloqueSesion(s){
+  const filas = s.alumnos.map((a,n)=>
+    `<tr><td>${n+1}</td><td>${_escL(a.nombre)}</td><td>${_escL(a.telefono)||"—"}</td></tr>`).join("");
+  return `<p style="font-size:.8rem;font-weight:600;margin:.7rem 0 .25rem">
+      ${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
+    <table class="tabla-alumnos"><tbody>${filas}</tbody></table>`;
 }
 
-function _ventana(titulo, cuerpo){
+function _ventanaImpresion(titulo, cuerpo){
   const w = window.open("", "_blank");
   w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
-    <title>${_esc(titulo)}</title><style>
-    body{font-family:system-ui,sans-serif;color:#153f54;margin:2cm 1.6cm;}
+    <title>${_escL(titulo)}</title><style>
+    body{font-family:system-ui,sans-serif;color:#153f54;margin:2cm 1.6cm}
     h1{font-size:1.3rem;margin:0 0 .2rem}
     .cuando{margin:0 0 1.2rem;opacity:.75;font-size:.95rem}
-    table{width:100%;border-collapse:collapse;font-size:.95rem}
+    table{width:100%;border-collapse:collapse;font-size:.95rem;margin-bottom:1.6rem}
     th,td{border:1px solid #cfc9bf;padding:.45rem .6rem;text-align:left}
     th{background:#f2efe9}
     .firma{width:32%}
@@ -1314,28 +1339,31 @@ function _ventana(titulo, cuerpo){
       padding-top:.3rem;font-size:.85rem}
     @media print{@page{margin:1.5cm}}
     </style></head><body>${cuerpo}</body></html>`);
-  w.document.close();
-  w.focus();
+  w.document.close(); w.focus();
   setTimeout(()=>w.print(), 300);
 }
 
-function imprimirLista(s){
-  const filas = s.alumnos.map((a,n)=>`<tr><td>${n+1}</td><td>${_esc(a.nombre)}</td>`
-    + `<td>${_esc(a.telefono)||""}</td><td class="firma"></td></tr>`).join("");
-  _ventana(`Lista · ${s.titulo}`, `
-    <h1>${_esc(s.titulo)}</h1>
-    <p class="cuando">${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
-    <table><thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th>
-    <th class="firma">Firma</th></tr></thead><tbody>${filas}</tbody></table>`);
+function imprimirLista(sesiones){
+  const cuerpo = sesiones.map(s=>{
+    const filas = s.alumnos.map((a,n)=>
+      `<tr><td>${n+1}</td><td>${_escL(a.nombre)}</td><td>${_escL(a.telefono)}</td>
+       <td class="firma"></td></tr>`).join("");
+    return `<h1>${_escL(s.titulo)}</h1>
+      <p class="cuando">${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
+      <table><thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th>
+      <th class="firma">Firma</th></tr></thead><tbody>${filas}</tbody></table>`;
+  }).join("");
+  _ventanaImpresion("Lista de alumnos", cuerpo);
 }
 
-function imprimirConsentimientos(s){
+function imprimirConsentimientos(sesiones){
   // Una hoja por alumno. El texto es una PLANTILLA de partida: conviene
   // que lo revise un profesional antes de usarlo en serio.
-  const hojas = s.alumnos.map(a=>`<div class="hoja">
+  const hojas = [];
+  sesiones.forEach(s=> s.alumnos.forEach(a=> hojas.push(`<div class="hoja">
     <h1>Declaración de aptitud y consentimiento</h1>
-    <p class="cuando">${_esc(s.titulo)} · ${_fechaSesion(s.inicio)}</p>
-    <p class="legal"><strong>Alumno/a:</strong> ${_esc(a.nombre)}</p>
+    <p class="cuando">${_escL(s.titulo)} · ${_fechaSesion(s.inicio)}</p>
+    <p class="legal"><strong>Alumno/a:</strong> ${_escL(a.nombre)}</p>
     <p class="legal">Declaro que participo de forma libre y voluntaria en esta
     sesión de yoga; que me encuentro en condiciones físicas adecuadas para
     realizarla y que no padezco, hasta donde conozco, lesión, dolencia ni
@@ -1353,12 +1381,9 @@ function imprimirConsentimientos(s){
     las clases. Puedo ejercer mis derechos de acceso, rectificación y
     supresión escribiendo a Julia Moreno.</p>
     <div class="linea-firma">Firma del alumno/a — Fecha</div>
-  </div>`).join("");
-  _ventana(`Consentimientos · ${s.titulo}`, hojas);
+  </div>`)));
+  _ventanaImpresion("Consentimientos", hojas.join(""));
 }
-
-document.getElementById("lst-recargar").addEventListener("click", cargarListas);
-document.getElementById("lst-dias").addEventListener("change", cargarListas);
 
 // --- Navegación entre vistas del menú lateral ---
 document.querySelectorAll(".menu-item").forEach(item=>{
@@ -1371,7 +1396,6 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     document.getElementById("vista-"+vista).classList.remove("oculto");
     if(vista==="panel") cargarDash();
     if(vista==="actividades") cargar();
-    if(vista==="listas") cargarListas();
     if(vista==="agenda"){ cargarAgenda(); setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 50); }
   });
 });
