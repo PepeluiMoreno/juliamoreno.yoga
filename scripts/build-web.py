@@ -91,6 +91,31 @@ AFORO_CLASE = {"abierta": "badge-abierta", "ultimas": "badge-ultimas",
 # A partir de cuántas plazas libres se avisa de que quedan pocas. Solo se
 # muestra si es cierto: la urgencia inventada se nota y quema la confianza.
 UMBRAL_ULTIMAS = 3
+
+# Iconos del badge: refuerzan el significado sin depender del color, que es
+# lo que salva a quien no distingue verde de rojo. Monocromos y heredando
+# currentColor, para que sigan al tono de cada estado.
+_SVG = ('<svg class="badge-ico" viewBox="0 0 16 16" width="13" height="13" '
+        'fill="none" stroke="currentColor" stroke-width="1.6" '
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '{}</svg>')
+ICONOS = {
+    # visto: hay sitio
+    "abierta": _SVG.format('<path d="M3 8.5l3.2 3.2L13 5"/>'),
+    # reloj de arena: quedan pocas, corre el tiempo
+    "ultimas": _SVG.format('<path d="M5 2h6M5 14h6M5.5 2c0 3 5 3.5 5 6s-5 3-5 6"/>'),
+    # candado: cerrado
+    "completa": _SVG.format('<rect x="3.5" y="7" width="9" height="6" rx="1"/>'
+                            '<path d="M5.8 7V5.2a2.2 2.2 0 0 1 4.4 0V7"/>'),
+    # herramienta: en preparación
+    "propuesta": _SVG.format('<path d="M8 2v3M8 11v3M2 8h3M11 8h3"/>'
+                             '<circle cx="8" cy="8" r="2.2"/>'),
+    # calendario: programada
+    "programada": _SVG.format('<rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/>'
+                              '<path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/>'),
+    # en marcha
+    "en_curso": _SVG.format('<circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.2l2 1.4"/>'),
+}
 # Salida secundaria: en yoga la objeción no suele ser el precio sino "¿es
 # para mí?". Un enlace discreto a contacto recoge esa duda en vez de
 # perderla en un abandono silencioso.
@@ -204,13 +229,16 @@ def seccion_actividades(data, idioma):
         clases_badge = {"propuesta": "badge-tent", "programada": "badge-prog",
                         "en_curso": "badge-conf", "finalizada": "badge-hueco"}
         if aforo:
-            badge = (f'          <p class="badge {AFORO_CLASE[aforo]}">'
-                     f'{AFORO_ETQ[aforo].get(idioma, AFORO_ETQ[aforo]["es"])}</p>')
+            badge = (f'          <p class="clase-estado"><span class="badge '
+                     f'{AFORO_CLASE[aforo]}">{ICONOS.get(aforo, "")}'
+                     f'{AFORO_ETQ[aforo].get(idioma, AFORO_ETQ[aforo]["es"])}'
+                     f'</span></p>')
         elif estado in clases_badge and estado != "finalizada":
             etq_est = (t(estado) or ESTADO_ETQ[estado].get(idioma)
                        or ESTADO_ETQ[estado]["es"])
-            badge = (f'          <p class="badge {clases_badge[estado]}">'
-                     f'{etq_est}</p>')
+            badge = (f'          <p class="clase-estado"><span class="badge '
+                     f'{clases_badge[estado]}">{ICONOS.get(estado, "")}'
+                     f'{etq_est}</span></p>')
         else:
             badge = ""
         out.append('        <div class="clase-cuerpo">')
