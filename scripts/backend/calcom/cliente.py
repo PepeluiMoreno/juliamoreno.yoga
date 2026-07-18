@@ -101,6 +101,12 @@ def aforo_por_hueco(event_type_id, desde, hasta):
     for b in reservas:
         if b.get("status") != "accepted":
             continue
+        # OJO: hay que filtrar por clase. Agrupar solo por hora de inicio
+        # mezclaba las reservas de dos clases que coincidieran en horario
+        # y le atribuía a una los alumnos de la otra.
+        eid = b.get("eventTypeId") or (b.get("eventType") or {}).get("id")
+        if eid != event_type_id:
+            continue
         ini = b.get("start")
         ocupacion[ini] = ocupacion.get(ini, 0) + max(1, len(b.get("attendees", [])))
     resultado = {}

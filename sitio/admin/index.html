@@ -151,6 +151,20 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .lst-cuerpo{max-height:min(52vh,420px);overflow:auto;margin-bottom:1.2rem}
 .lst-sesion{font-size:.82rem;font-weight:600;margin:.9rem 0 .3rem}
 .lst-sesion:first-child{margin-top:0}
+.ses-dia{margin:1.4rem 0 .5rem;font-size:.82rem;font-weight:700;
+  color:var(--gris);text-transform:capitalize;letter-spacing:.02em}
+.ses-dia:first-child{margin-top:0}
+.ses-fila{display:flex;align-items:center;gap:.9rem;padding:.7rem .9rem;
+  background:#fff;border:1px solid var(--linea);border-radius:9px;
+  margin-bottom:.45rem;cursor:pointer}
+.ses-fila:hover{border-color:var(--mar);box-shadow:0 2px 10px rgba(21,63,84,.08)}
+.ses-hora{font-weight:700;font-size:.92rem;min-width:3.4rem}
+.ses-tit{flex:1;font-size:.92rem}
+.ses-cont{font-size:.82rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;white-space:nowrap}
+.ses-vacia{background:#f0eeea;color:#6a635a}
+.ses-hay{background:#e3efe4;color:#3a6b47}
+.ses-pocas{background:#fceeda;color:#8a5008}
+.ses-llena{background:#f7e3e0;color:#98392c}
 .lst-doc{display:flex;gap:.6rem;align-items:flex-start;padding:.6rem .1rem;
   border-bottom:1px solid var(--linea)}
 .lst-doc:last-child{border-bottom:none}
@@ -197,6 +211,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <nav>
       <a href="#" class="menu-item activa" data-vista="panel">Panel de control</a>
       <a href="#" class="menu-item" data-vista="agenda">Agenda</a>
+      <a href="#" class="menu-item" data-vista="sesiones">Sesiones</a>
       <a href="#" class="menu-item" data-vista="actividades">Actividades</a>
       <a href="#" class="menu-item" data-vista="tarifas">Tarifas</a>
       <a href="#" class="menu-item" data-vista="estados">Estado</a>
@@ -212,6 +227,23 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <div class="dash-prep" id="dashOfertadas"></div>
     <h2 style="margin-top:1.5rem;font-size:1.1rem">Actividades en preparación</h2>
     <div class="dash-prep" id="dashPrep"></div>
+  </section>
+
+  <section class="vista oculto" id="vista-sesiones">
+    <h1>Sesiones</h1>
+    <p style="color:var(--gris);margin:-.4rem 0 1.2rem;font-size:.92rem">
+      Quién viene a cada clase. Pulsa una sesión para sus acciones.</p>
+    <div class="listas-barra" style="display:flex;gap:.6rem;align-items:center;margin-bottom:1.2rem">
+      <label for="ses-dias" style="font-size:.85rem;color:var(--gris)">Próximos</label>
+      <select id="ses-dias" style="padding:.4rem .6rem;border:1px solid var(--linea);border-radius:6px;font-family:inherit">
+        <option value="7">7 días</option>
+        <option value="15" selected>15 días</option>
+        <option value="30">30 días</option>
+      </select>
+      <label class="check" style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;margin-left:.6rem">
+        <input type="checkbox" id="ses-solo-con" style="width:auto"> Solo con alumnos</label>
+    </div>
+    <div id="sesLista"></div>
   </section>
 
   <section class="vista oculto" id="vista-actividades">
@@ -1179,7 +1211,19 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
       if(d.ok){ cargarAgenda(); } else await avisar(d.error||"No se pudo cambiar.", "Error");
     }catch(err){ await avisar("Error de conexión.", "Error"); }
   }else if(accion==="lista"){
-    abrirModalLista(e);
+    // Desde la vista de sesiones llega una sesión del motor, no una
+    // entrada de agenda: se adapta a lo que espera la modal.
+    if(ctx.sesion){
+      const d = new Date(ctx.sesion.inicio);
+      abrirModalLista({
+        titulo: ctx.sesion.titulo,
+        actividad_id: ctx.sesion.actividad_id,
+        fecha: d.toISOString().slice(0,10),
+        hora_inicio: d.toLocaleTimeString("es-ES",
+          {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Madrid"}),
+        tipo: "puntual",
+      });
+    }else abrirModalLista(e);
   }else if(accion==="aplazar"){
     mostrarMoverEnSidebar(e, "fecha");
   }else if(accion==="trasladar"){
@@ -1776,6 +1820,101 @@ async function _inscritosDe(e){
   }catch(err){ return null; }
 }
 
+
+// --- Vista de sesiones: quién viene a cada clase ----------------------
+// Hermana de la agenda, no sustituta: la agenda contesta "qué clases hay
+// el jueves" y esta "cuánta gente viene". Se listan también las sesiones
+// vacías, porque saber que nadie se ha apuntado es tan útil como saber
+// que están llenas.
+const API_SESIONES = "https://api.juliamoreno.yoga/admin/api/sesiones";
+let sesCache = [];
+
+async function cargarSesiones(){
+  const cont = $("#sesLista");
+  const dias = $("#ses-dias").value;
+  cont.innerHTML = '<p style="color:var(--gris)">Cargando…</p>';
+  try{
+    const r = await fetch(`${API_SESIONES}?dias=${dias}`, {credentials:"include"});
+    if(r.status === 401){
+      cont.innerHTML = '<p style="color:#8a2b26">Sesión caducada: vuelve a entrar.</p>';
+      return;
+    }
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok){
+      cont.innerHTML = `<p style="color:#8a2b26">${_escL(d.error || "El servidor respondió " + r.status)}</p>`;
+      return;
+    }
+    sesCache = d.sesiones || [];
+    pintarSesiones();
+  }catch(err){
+    cont.innerHTML = '<p style="color:#8a2b26">Error de conexión.</p>';
+  }
+}
+
+function pintarSesiones(){
+  const cont = $("#sesLista");
+  const soloCon = $("#ses-solo-con").checked;
+  const lista = soloCon ? sesCache.filter(s=>s.ocupadas>0) : sesCache;
+  if(!lista.length){
+    cont.innerHTML = `<p style="color:var(--gris)">${soloCon
+      ? "Ninguna sesión tiene alumnos apuntados en este periodo."
+      : "No hay sesiones en este periodo."}</p>`;
+    return;
+  }
+  let html = "", diaPrev = "";
+  lista.forEach((s, i)=>{
+    const d = new Date(s.inicio);
+    const dia = `${DIAS_SEM[d.getDay()]} ${d.getDate()} de ${MESES_L[d.getMonth()]}`;
+    if(dia !== diaPrev){ html += `<p class="ses-dia">${dia}</p>`; diaPrev = dia; }
+    const hora = d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Madrid"});
+    const libres = s.libres, n = s.ocupadas;
+    let cls = "ses-vacia", txt = "Sin alumnos";
+    if(n > 0){
+      cls = "ses-hay";
+      txt = `${n} de ${s.total ?? "?"}`;
+      if(libres === 0){ cls = "ses-llena"; txt += " · completa"; }
+      else if(libres !== null && libres <= 3){ cls = "ses-pocas"; txt += ` · quedan ${libres}`; }
+    }
+    html += `<div class="ses-fila" data-idx="${i}">
+      <span class="ses-hora">${hora}</span>
+      <span class="ses-tit">${_escL(s.titulo)}</span>
+      <span class="ses-cont ${cls}">${txt}</span></div>`;
+  });
+  cont.innerHTML = html;
+  cont.querySelectorAll(".ses-fila").forEach(el=>{
+    const s = lista[parseInt(el.dataset.idx)];
+    el.addEventListener("click", ev=> menuSesion(ev, s));
+    el.addEventListener("contextmenu", ev=>{ ev.preventDefault(); menuSesion(ev, s); });
+  });
+}
+
+function menuSesion(ev, s){
+  ev.stopPropagation();
+  // Se reutiliza el menú de la agenda, con las acciones que tienen
+  // sentido sobre una sesión concreta del motor de reservas.
+  mcCtx = {sesion: s};
+  const menu = $("#menuContextual");
+  const d = new Date(s.inicio);
+  $("#mcTitulo").textContent = s.titulo + " · "
+    + d.toLocaleString("es-ES",{weekday:"short",day:"numeric",month:"numeric",
+        hour:"2-digit",minute:"2-digit",timeZone:"Europe/Madrid"});
+  ["mcNueva","mcEditar","mcVisibilidad","mcAplazar","mcTrasladar","mcCancelar",
+   "mcReactivar","mcBorrar","mcSep"].forEach(id=> $("#"+id).style.display = "none");
+  $("#mcLista").style.display = "block";
+  $("#mcLista").textContent = s.ocupadas
+    ? `Ver los ${s.ocupadas} alumno(s)…`
+    : "Ver lista de alumnos…";
+  menu.style.display = "block";
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  let x = ev.clientX, y = ev.clientY;
+  if(x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
+  if(y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
+  menu.style.left = x + "px"; menu.style.top = y + "px";
+}
+
+$("#ses-dias").addEventListener("change", cargarSesiones);
+$("#ses-solo-con").addEventListener("change", pintarSesiones);
+
 // --- Navegación entre vistas del menú lateral ---
 document.querySelectorAll(".menu-item").forEach(item=>{
   item.addEventListener("click", e=>{
@@ -1786,6 +1925,7 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     document.querySelectorAll(".vista").forEach(v=>v.classList.add("oculto"));
     document.getElementById("vista-"+vista).classList.remove("oculto");
     if(vista==="panel") cargarDash();
+    if(vista==="sesiones") cargarSesiones();
     if(vista==="actividades") cargar();
     if(vista==="agenda"){ cargarAgenda(); setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 50); }
   });
