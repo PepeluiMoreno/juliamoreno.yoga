@@ -347,14 +347,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
             <p style="font-size:.8rem;color:var(--gris);margin:.3rem 0 0">Se generarán las clases de este mes en los días marcados.</p>
           </div>
 
-          <div id="ag-puntual-campos" class="oculto ag-mover">
+          <div id="ag-puntual-campos" class="oculto ag-al-crear">
             <label for="ag-fecha">Fecha</label>
             <input type="date" id="ag-fecha">
           </div>
 
           <div class="fila">
             <div id="ag-hora-fila"><label for="ag-hora-ini">Hora inicio</label><input type="time" id="ag-hora-ini"></div>
-            <div><label for="ag-duracion">Duración</label>
+            <div class="ag-al-crear"><label for="ag-duracion">Duración</label>
               <select id="ag-duracion">
                 <option value="45">45 min</option>
                 <option value="60" selected>60 min</option>
@@ -365,19 +365,21 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
             </div>
           </div>
 
-          <div class="ag-mover">
+          <div class="ag-al-crear">
             <label for="ag-lugar">Lugar</label>
             <input type="text" id="ag-lugar" placeholder="Ej. Estudio Maro">
           </div>
           <p id="ag-aviso-mover" class="oculto"
              style="font-size:.8rem;color:var(--gris);background:#f4f1ec;
                     border-radius:6px;padding:.55rem .7rem;margin:.9rem 0 0">
-            Para cambiar la fecha, la hora o el lugar de esta clase usa
-            <strong>Aplazar</strong> o <strong>Trasladar</strong> en su menú:
-            avisan a los alumnos y dicen cuántos hay inscritos.
+            Aquí solo se cambian la denominación y el tipo. Para la fecha,
+            la hora o la duración usa <strong>Aplazar</strong>; para el sitio,
+            <strong>Trasladar</strong>; para la visibilidad,
+            <strong>Ocultar de la web</strong>. Esas acciones avisan a los
+            alumnos y dicen cuántos hay inscritos.
           </p>
 
-          <label class="check" style="margin-top:.9rem"><input type="checkbox" id="ag-visible" checked> Mostrar en la web pública</label>
+          <label class="check ag-al-crear" style="margin-top:.9rem"><input type="checkbox" id="ag-visible" checked> Mostrar en la web pública</label>
 
           <div class="modal-botones" style="margin-top:1.2rem">
             <button type="button" class="btn btn-peligro oculto" id="ag-borrar">Borrar</button>
@@ -847,7 +849,7 @@ function abrirModalAgenda(e){
   // mover una clase con gente apuntada sin enterarse. Al CREAR siguen
   // visibles, que entonces no hay nadie a quien avisar.
   const editando = !!e.Id;
-  document.querySelectorAll(".ag-mover").forEach(el=>
+  document.querySelectorAll(".ag-al-crear").forEach(el=>
     el.classList.toggle("oculto-edicion", editando));
   $("#ag-hora-fila").classList.toggle("oculto-edicion", editando);
   $("#ag-aviso-mover").classList.toggle("oculto", !editando);
@@ -1319,6 +1321,7 @@ $("#ag-guardar").addEventListener("click", async ()=>{
     // los alumnos. Aquí ni se envían: así no hay manera de pisarlos sin
     // pasar por ese aviso.
     delete datos.hora_inicio; delete datos.lugar; delete datos.fecha;
+    delete datos.duracion_min; delete datos.visible_web;
   }
   const metodo = editId ? "PATCH" : "POST";
   if(editId) datos.Id = parseInt(editId);
@@ -1625,16 +1628,22 @@ async function mostrarMoverEnSidebar(e, que){
   $("#agEditorForm").classList.add("oculto");
   $("#agEditorDia").classList.remove("oculto");
   const aplazar = que === "fecha";
-  $("#agDiaTitulo").textContent = aplazar ? "Aplazar clase" : "Trasladar clase";
+  $("#agDiaTitulo").textContent = aplazar ? "Aplazar o reprogramar" : "Trasladar clase";
   const hoy = new Date().toISOString().slice(0,10);
   const campos = aplazar
     ? `<label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600">Nueva fecha
          <input type="date" id="mv-fecha" value="${(e.fecha||"").slice(0,10)}" min="${hoy}"
            style="width:100%;padding:.5rem;border:1px solid var(--linea);border-radius:6px;margin-top:.2rem;font-family:inherit;box-sizing:border-box">
        </label>
-       <label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600;margin-top:.5rem">Hora (opcional)
+       <label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600;margin-top:.5rem">Hora
          <input type="time" id="mv-hora" value="${(e.hora_inicio||"").slice(0,5)}"
            style="width:100%;padding:.5rem;border:1px solid var(--linea);border-radius:6px;margin-top:.2rem;font-family:inherit;box-sizing:border-box">
+       </label>
+       <label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600;margin-top:.5rem">Duración
+         <select id="mv-duracion"
+           style="width:100%;padding:.5rem;border:1px solid var(--linea);border-radius:6px;margin-top:.2rem;font-family:inherit;box-sizing:border-box">
+           ${[45,60,75,90,120].map(m=>`<option value="${m}"${m===(e.duracion_min||60)?" selected":""}>${m} min</option>`).join("")}
+         </select>
        </label>`
     : `<label style="display:block;font-size:.72rem;color:var(--gris);font-weight:600">Nuevo lugar
          <input type="text" id="mv-lugar" value="${_escL(e.lugar||"")}" maxlength="120" placeholder="Ej. Estudio Maro"
@@ -1674,11 +1683,15 @@ async function mostrarMoverEnSidebar(e, que){
     if(aplazar){
       const f = $("#mv-fecha").value;
       if(!f){ await avisar("Indica la nueva fecha.", "Falta la fecha"); return; }
-      if(f === (e.fecha||"").slice(0,10) && $("#mv-hora").value === (e.hora_inicio||"").slice(0,5)){
-        await avisar("La fecha y la hora son las mismas.", "Sin cambios"); return;
+      const durIgual = parseInt($("#mv-duracion").value) === (e.duracion_min||60);
+      if(f === (e.fecha||"").slice(0,10)
+         && $("#mv-hora").value === (e.hora_inicio||"").slice(0,5) && durIgual){
+        await avisar("No has cambiado nada.", "Sin cambios"); return;
       }
       cuerpo.fecha = f;
       if($("#mv-hora").value) cuerpo.hora_inicio = $("#mv-hora").value;
+      const dur = parseInt($("#mv-duracion").value);
+      if(dur && dur !== (e.duracion_min||60)) cuerpo.duracion_min = dur;
     }else{
       const l = $("#mv-lugar").value.trim();
       if(!l){ await avisar("Indica el nuevo lugar.", "Falta el lugar"); return; }
