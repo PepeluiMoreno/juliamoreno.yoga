@@ -1469,10 +1469,13 @@ async function cargarLista(alcance){
     _modoListado();
     // Cuidado con el texto: la actividad puede existir perfectamente; lo
     // que falta es el VÍNCULO desde esta fila de la agenda.
-    _aviso("Esta clase de la agenda no tiene actividad asignada, así que no "
-         + "se sabe a qué reservas corresponde. La actividad puede existir "
-         + "igualmente: lo que falta es el vínculo. Asígnalo en Editar → "
-         + "Actividad.");
+    // Hay clases que legítimamente no llevan actividad: una sesión privada
+    // o una particular no se reservan por la web. Así que se informa sin
+    // dar por hecho que falta algo por arreglar.
+    _aviso("Esta clase no tiene actividad asignada, así que no admite "
+         + "reservas por la web ni tiene lista de alumnos. Si es una sesión "
+         + "privada o particular, es lo normal. Si debería poder reservarse, "
+         + "asígnale su actividad en Editar → Actividad.");
     return;
   }
   const fecha = (e.fecha||"").slice(0,10);
