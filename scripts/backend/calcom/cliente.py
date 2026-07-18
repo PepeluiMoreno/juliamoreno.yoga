@@ -191,7 +191,10 @@ def crear_tipo_evento(titulo, slug, minutos, plazas, schedule_id,
     """Crea la clase como tipo de evento con aforo.
 
     RGPD: showAttendeeInfo en False (los alumnos no se ven entre sí) y
-    showAvailableSeatsCount en True (el aforo sí es público).
+    showAvailabilityCount en True (el aforo sí es público). OJO con el
+    nombre: es showAvailabilityCount, no showAvailableSeatsCount — la API
+    descarta el campo desconocido y luego se queja del obligatorio que
+    falta, con un 400 que despista.
     """
     cuerpo = {
         "title": titulo,
@@ -202,7 +205,7 @@ def crear_tipo_evento(titulo, slug, minutos, plazas, schedule_id,
         "seats": {
             "seatsPerTimeSlot": plazas,
             "showAttendeeInfo": False,
-            "showAvailableSeatsCount": True,
+            "showAvailabilityCount": True,
         },
     }
     if lugar:
