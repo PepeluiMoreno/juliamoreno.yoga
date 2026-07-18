@@ -199,12 +199,12 @@ footer a{color:inherit}
 /* Etiqueta informativa, NO acción: tono suave para que el único elemento
    sólido de la tarjeta sea el botón. En mayúsculas y con espaciado
    ocupaba el doble y empujaba el título. */
-/* Última línea de la tarjeta antes del botón, alineada a la derecha. */
-.clase-estado{margin:.5rem 0 0;text-align:right;line-height:0}
-.badge{display:inline-flex;align-items:center;gap:.35rem;
-  font-size:.76rem;font-weight:600;padding:.25rem .7rem;
-  border-radius:999px;line-height:1.35;vertical-align:middle}
-.badge-ico{flex:0 0 auto;opacity:.9}
+/* Última línea antes del botón, a la derecha. Va fuera de .clase-cuerpo
+   (que crece con flex:1) para quedar anclada al pie: todos los badges a
+   la misma altura, con independencia del texto de arriba. */
+.clase-estado{margin:.9rem 0 0;text-align:right}
+.badge{display:inline-block;font-size:.76rem;font-weight:600;
+  padding:.25rem .7rem;border-radius:999px;line-height:1.35}
 .badge-tent{background:#eceae6;color:#6a635a}
 .badge-conf{background:#e7ebee;color:#4f5f6b}
 .badge-prog{background:#e7ebee;color:#4f5f6b}

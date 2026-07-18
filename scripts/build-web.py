@@ -92,30 +92,6 @@ AFORO_CLASE = {"abierta": "badge-abierta", "ultimas": "badge-ultimas",
 # muestra si es cierto: la urgencia inventada se nota y quema la confianza.
 UMBRAL_ULTIMAS = 3
 
-# Iconos del badge: refuerzan el significado sin depender del color, que es
-# lo que salva a quien no distingue verde de rojo. Monocromos y heredando
-# currentColor, para que sigan al tono de cada estado.
-_SVG = ('<svg class="badge-ico" viewBox="0 0 16 16" width="13" height="13" '
-        'fill="none" stroke="currentColor" stroke-width="1.6" '
-        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        '{}</svg>')
-ICONOS = {
-    # visto: hay sitio
-    "abierta": _SVG.format('<path d="M3 8.5l3.2 3.2L13 5"/>'),
-    # reloj de arena: quedan pocas, corre el tiempo
-    "ultimas": _SVG.format('<path d="M5 2h6M5 14h6M5.5 2c0 3 5 3.5 5 6s-5 3-5 6"/>'),
-    # candado: cerrado
-    "completa": _SVG.format('<rect x="3.5" y="7" width="9" height="6" rx="1"/>'
-                            '<path d="M5.8 7V5.2a2.2 2.2 0 0 1 4.4 0V7"/>'),
-    # herramienta: en preparación
-    "propuesta": _SVG.format('<path d="M8 2v3M8 11v3M2 8h3M11 8h3"/>'
-                             '<circle cx="8" cy="8" r="2.2"/>'),
-    # calendario: programada
-    "programada": _SVG.format('<rect x="2.5" y="3.5" width="11" height="10" rx="1.5"/>'
-                              '<path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/>'),
-    # en marcha
-    "en_curso": _SVG.format('<circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.2l2 1.4"/>'),
-}
 # Salida secundaria: en yoga la objeción no suele ser el precio sino "¿es
 # para mí?". Un enlace discreto a contacto recoge esa duda en vez de
 # perderla en un abandono silencioso.
@@ -223,21 +199,22 @@ def seccion_actividades(data, idioma):
         # UN solo badge, el más informativo. Si la clase ya es reservable,
         # lo que le importa al visitante es si queda sitio, no en qué punto
         # del ciclo está; si no lo es, se muestra el ciclo de vida.
-        # Se prepara aquí y se pinta DEBAJO DEL PRECIO, junto al botón: es
-        # lo último que se lee antes de decidir.
+        # Se prepara aquí y se pinta al PIE de la tarjeta, pegado al
+        # botón: es lo último que se lee antes de decidir, y así queda a
+        # la misma altura en todas las tarjetas.
         aforo = ln.get("aforo")
         clases_badge = {"propuesta": "badge-tent", "programada": "badge-prog",
                         "en_curso": "badge-conf", "finalizada": "badge-hueco"}
         if aforo:
             badge = (f'          <p class="clase-estado"><span class="badge '
-                     f'{AFORO_CLASE[aforo]}">{ICONOS.get(aforo, "")}'
+                     f'{AFORO_CLASE[aforo]}">'
                      f'{AFORO_ETQ[aforo].get(idioma, AFORO_ETQ[aforo]["es"])}'
                      f'</span></p>')
         elif estado in clases_badge and estado != "finalizada":
             etq_est = (t(estado) or ESTADO_ETQ[estado].get(idioma)
                        or ESTADO_ETQ[estado]["es"])
             badge = (f'          <p class="clase-estado"><span class="badge '
-                     f'{clases_badge[estado]}">{ICONOS.get(estado, "")}'
+                     f'{clases_badge[estado]}">'
                      f'{etq_est}</span></p>')
         else:
             badge = ""
@@ -266,8 +243,6 @@ def seccion_actividades(data, idioma):
         precio = (ln.get("precio") or "").strip()
         if precio:
             out.append(f'          <p class="clase-precio">{precio}</p>')
-        if badge:
-            out.append(badge)
         if estado == "propuesta" and ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
             faltan = umbral - interes
             # En positivo: lo que se consigue, no lo que falta. Y singular
@@ -277,6 +252,12 @@ def seccion_actividades(data, idioma):
             out.append(f'          <p class="contador">'
                        f'{plantilla.replace("{n}", str(faltan))}</p>')
         out.append('        </div>')
+        # El badge va FUERA del cuerpo: como .clase-cuerpo crece para
+        # llenar la tarjeta, todo lo que venga después queda pegado al
+        # pie. Así los badges de todas las tarjetas caen a la misma
+        # altura por larga que sea la descripción de arriba.
+        if badge:
+            out.append(badge)
         if estado == "propuesta":
             # Los datos (nombre y contacto) se piden en su propia vista,
             # no dentro de la tarjeta: el grid queda limpio, todas las
