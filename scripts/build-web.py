@@ -146,9 +146,6 @@ def seccion_actividades(data, idioma):
             faltan = umbral - interes
             out.append(f'          <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
         out.append('        </div>')
-        pregunta = (f'          <p class="clase-pregunta">'
-                    f'<a href="{CONTACTO_ANCLA.get(idioma, "#contacto")}">'
-                    f'{PREGUNTA_ETQ.get(idioma, PREGUNTA_ETQ["es"])}</a></p>')
         if estado == "propuesta":
             # Los datos (nombre y contacto) se piden en su propia vista,
             # no dentro de la tarjeta: el grid queda limpio, todas las
@@ -156,7 +153,6 @@ def seccion_actividades(data, idioma):
             out.append('        <div class="clase-form">')
             out.append(f'          <a class="btn" href="/interes.html?actividad={aid}">'
                        f'{t("interesa")}</a>')
-            out.append(pregunta)
             out.append('        </div>')
         else:
             # Actividad ya programada o en curso: si está enlazada con una
@@ -171,11 +167,11 @@ def seccion_actividades(data, idioma):
             if cal_id:
                 etq = t("reservar") or RESERVAR_ETQ.get(idioma, RESERVAR_ETQ["es"])
                 out.append(f'          <a class="btn" href="/reservar.html?clase={cal_id}">{etq}</a>')
-                out.append(pregunta)
             else:
-                # Aún no reservable: el CTA es preguntar, y va como BOTÓN
-                # (un enlace de texto se leía como tarjeta sin acción).
-                out.append(f'          <a class="btn btn-sec" '
+                # Aún no reservable: el CTA es preguntar, con el MISMO
+                # estilo que los demás. Una tarjeta, un botón: todas
+                # iguales, sin enlaces sueltos que rompan el ritmo.
+                out.append(f'          <a class="btn" '
                            f'href="{CONTACTO_ANCLA.get(idioma, "#contacto")}">'
                            f'{PREGUNTA_BTN.get(idioma, PREGUNTA_BTN["es"])}</a>')
             out.append('        </div>')
