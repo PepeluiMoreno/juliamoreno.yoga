@@ -335,6 +335,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
           <label for="ag-titulo">Título</label>
           <input type="text" id="ag-titulo" placeholder="Ej. Hatha suave">
 
+          <label for="ag-actividad">Actividad</label>
+          <select id="ag-actividad">
+            <option value="">(sin asociar)</option>
+          </select>
+          <p style="font-size:.78rem;color:var(--gris);margin:.25rem 0 0">
+            Asóciala para que la clase tenga reservas y lista de alumnos.
+          </p>
+
           <label for="ag-tipo">Tipo</label>
           <select id="ag-tipo">
             <option value="recurrente">Clase que se repite (genera las de este mes)</option>
@@ -826,6 +834,23 @@ function actualizarLayoutAgenda(){
   setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 30);
 }
 
+let actsCache = null;
+
+async function opcionesActividad(seleccionada){
+  const sel = $("#ag-actividad");
+  if(!sel) return;
+  if(!actsCache){
+    try{
+      const r = await fetch(API, {credentials:"include"});
+      const d = await r.json();
+      actsCache = d.actividades || [];
+    }catch(err){ actsCache = []; }
+  }
+  sel.innerHTML = '<option value="">(sin asociar)</option>'
+    + actsCache.map(a=>`<option value="${a.id}">${a.titulo_es||a.id}</option>`).join("");
+  sel.value = seleccionada || "";
+}
+
 function abrirModalAgenda(e){
   e = e || {};
   $("#agEditorVacio").classList.add("oculto");
@@ -833,6 +858,7 @@ function abrirModalAgenda(e){
   $("#ag-id").value = e.Id || "";
   $("#agTitulo").textContent = e.Id ? "Editar entrada" : "Nueva entrada";
   $("#ag-titulo").value = e.titulo || "";
+  opcionesActividad(e.actividad_id);
   $("#ag-tipo").value = e.tipo || "recurrente";
   $("#ag-tipo").dispatchEvent(new Event("change"));
   const dias = new Set((e.dias_semana||"").split(",").map(x=>x.trim()));
@@ -1303,6 +1329,7 @@ $("#ag-guardar").addEventListener("click", async ()=>{
   const tipo = $("#ag-tipo").value;
   const datos = {
     titulo: $("#ag-titulo").value.trim(),
+    actividad_id: $("#ag-actividad").value,
     tipo: tipo,
     hora_inicio: $("#ag-hora-ini").value,
     duracion_min: parseInt($("#ag-duracion").value),
