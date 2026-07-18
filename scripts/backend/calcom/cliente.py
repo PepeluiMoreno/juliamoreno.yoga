@@ -154,3 +154,58 @@ def cancelar_reserva(uid, motivo="Cancelación de prueba"):
     return _post(f"/v2/bookings/{uid}/cancel", VERSIONES["bookings"], {
         "cancellationReason": motivo,
     })
+
+
+# --- Alta de clases en Cal.diy (horario + tipo de evento) -------------
+# Se usan al dar de alta las clases reales de Julia desde lo que ya hay
+# en NocoDB. La API v2 versiona por recurso, igual que en lectura.
+VERSIONES["schedules"] = "2024-06-11"
+
+DIAS_CAL = {"lun": "Monday", "mar": "Tuesday", "mie": "Wednesday",
+            "jue": "Thursday", "vie": "Friday", "sab": "Saturday",
+            "dom": "Sunday"}
+
+
+def crear_horario(nombre, dias, inicio, fin, zona="Europe/Madrid"):
+    """Crea un horario de disponibilidad con UNA franja semanal.
+
+    dias: lista de claves cortas ('lun', 'mie'...). inicio/fin en HH:MM.
+    Es lo que hace que la clase se repita cada semana: la recurrencia la
+    pone la disponibilidad, no la función 'recurring' de Cal.com (que es
+    excluyente con seats y significa otra cosa; ver docs).
+    """
+    return _post("/v2/schedules", VERSIONES["schedules"], {
+        "name": nombre,
+        "timeZone": zona,
+        "isDefault": False,
+        "availability": [{
+            "days": [DIAS_CAL[d] for d in dias],
+            "startTime": inicio,
+            "endTime": fin,
+        }],
+    })
+
+
+def crear_tipo_evento(titulo, slug, minutos, plazas, schedule_id,
+                      lugar=None, descripcion=None):
+    """Crea la clase como tipo de evento con aforo.
+
+    RGPD: showAttendeeInfo en False (los alumnos no se ven entre sí) y
+    showAvailableSeatsCount en True (el aforo sí es público).
+    """
+    cuerpo = {
+        "title": titulo,
+        "slug": slug,
+        "lengthInMinutes": minutos,
+        "description": descripcion or titulo,
+        "scheduleId": schedule_id,
+        "seats": {
+            "seatsPerTimeSlot": plazas,
+            "showAttendeeInfo": False,
+            "showAvailableSeatsCount": True,
+        },
+    }
+    if lugar:
+        cuerpo["locations"] = [{"type": "address", "address": lugar,
+                                "public": True}]
+    return _post("/v2/event-types", VERSIONES["event-types"], cuerpo)
