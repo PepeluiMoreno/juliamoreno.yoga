@@ -96,6 +96,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
 .agenda-acciones-sel{background:var(--cielo-claro);border:1px solid var(--linea);border-radius:10px;padding:1rem;margin-bottom:1rem}
 .fc-daygrid-day-number,.fc-col-header-cell[data-date]{cursor:pointer}
+.oculto-edicion{display:none}
 #menuContextual{position:fixed;z-index:2000;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 28px rgba(21,63,84,.18);padding:.35rem;min-width:210px;display:none}
 #menuContextual button{display:block;width:100%;text-align:left;background:none;border:none;padding:.55rem .7rem;border-radius:6px;font-family:inherit;font-size:.9rem;color:var(--tinta);cursor:pointer}
 #menuContextual button:hover{background:var(--cielo-claro)}
@@ -346,13 +347,13 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
             <p style="font-size:.8rem;color:var(--gris);margin:.3rem 0 0">Se generarán las clases de este mes en los días marcados.</p>
           </div>
 
-          <div id="ag-puntual-campos" class="oculto">
+          <div id="ag-puntual-campos" class="oculto ag-mover">
             <label for="ag-fecha">Fecha</label>
             <input type="date" id="ag-fecha">
           </div>
 
           <div class="fila">
-            <div><label for="ag-hora-ini">Hora inicio</label><input type="time" id="ag-hora-ini"></div>
+            <div id="ag-hora-fila"><label for="ag-hora-ini">Hora inicio</label><input type="time" id="ag-hora-ini"></div>
             <div><label for="ag-duracion">Duración</label>
               <select id="ag-duracion">
                 <option value="45">45 min</option>
@@ -364,8 +365,17 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
             </div>
           </div>
 
-          <label for="ag-lugar">Lugar</label>
-          <input type="text" id="ag-lugar" placeholder="Ej. Estudio Maro">
+          <div class="ag-mover">
+            <label for="ag-lugar">Lugar</label>
+            <input type="text" id="ag-lugar" placeholder="Ej. Estudio Maro">
+          </div>
+          <p id="ag-aviso-mover" class="oculto"
+             style="font-size:.8rem;color:var(--gris);background:#f4f1ec;
+                    border-radius:6px;padding:.55rem .7rem;margin:.9rem 0 0">
+            Para cambiar la fecha, la hora o el lugar de esta clase usa
+            <strong>Aplazar</strong> o <strong>Trasladar</strong> en su menú:
+            avisan a los alumnos y dicen cuántos hay inscritos.
+          </p>
 
           <label class="check" style="margin-top:.9rem"><input type="checkbox" id="ag-visible" checked> Mostrar en la web pública</label>
 
@@ -831,6 +841,16 @@ function abrirModalAgenda(e){
   $("#ag-lugar").value = e.lugar || "";
   $("#ag-visible").checked = e.visible_web!==false;
   $("#ag-borrar").classList.toggle("oculto", !e.Id);
+  // Al EDITAR se ocultan fecha, hora y lugar: cada uno tiene ya su acción
+  // (Aplazar / Trasladar), y esas sí avisan a los alumnos y advierten de
+  // cuántos hay inscritos. Cambiarlos aquí se saltaba ese paso y permitía
+  // mover una clase con gente apuntada sin enterarse. Al CREAR siguen
+  // visibles, que entonces no hay nadie a quien avisar.
+  const editando = !!e.Id;
+  document.querySelectorAll(".ag-mover").forEach(el=>
+    el.classList.toggle("oculto-edicion", editando));
+  $("#ag-hora-fila").classList.toggle("oculto-edicion", editando);
+  $("#ag-aviso-mover").classList.toggle("oculto", !editando);
   actualizarLayoutAgenda();
 }
 
@@ -1294,6 +1314,12 @@ $("#ag-guardar").addEventListener("click", async ()=>{
   }
   if(!datos.titulo){ await avisar("El título es obligatorio.", "Falta el título"); return; }
   const editId = $("#ag-id").value;
+  if(editId){
+    // Fecha, hora y lugar se cambian con Aplazar / Trasladar, que avisan a
+    // los alumnos. Aquí ni se envían: así no hay manera de pisarlos sin
+    // pasar por ese aviso.
+    delete datos.hora_inicio; delete datos.lugar; delete datos.fecha;
+  }
   const metodo = editId ? "PATCH" : "POST";
   if(editId) datos.Id = parseInt(editId);
   try{
