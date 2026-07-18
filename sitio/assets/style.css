@@ -107,7 +107,8 @@ nav{display:flex;align-items:center;justify-content:space-between;
 .clase-foto{border-radius:10px;margin-bottom:.8rem;width:100%;height:180px;object-fit:cover;display:block}
 .clase-fecha{color:var(--mar);font-weight:700;margin-bottom:.4rem}
 .clase-precio{font-weight:700;margin-bottom:.6rem}
-.badge-lleno{background:#8d6e63;color:#fff;margin-left:.4rem}
+.badge-lleno{background:#8d6e63;color:#fff}
+.badge-ultimas{background:#c77b30;color:#fff}
 .clase-form,.clase-form-hueco{margin-top:1rem}
 /* Salida secundaria de cada tarjeta: discreta, no compite con el CTA. */
 .clase-pregunta{margin-top:.6rem;font-size:.85rem}

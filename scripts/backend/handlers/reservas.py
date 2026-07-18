@@ -92,15 +92,16 @@ def _ficha(fila):
 def _sin_plazas(cal_id, dias=30):
     """¿Sin plazas a ninguna hora del próximo mes? Ante cualquier duda
     (error, sin clase enlazada) se responde False: mejor no avisar que
-    avisar en falso."""
+    avisar en falso. Se mira el hueco con más sitio libre."""
     if not cal_id:
         return False
     try:
         hoy = datetime.date.today()
         fin = hoy + datetime.timedelta(days=dias)
         aforo = cliente.aforo_por_hueco(cal_id, hoy.isoformat(), fin.isoformat())
-        return bool(aforo) and all((v.get("libres") or 0) <= 0
-                                   for v in aforo.values())
+        if not aforo:
+            return False
+        return max((v.get("libres") or 0) for v in aforo.values()) <= 0
     except Exception:
         return False
 

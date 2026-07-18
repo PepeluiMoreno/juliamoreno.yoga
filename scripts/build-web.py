@@ -70,8 +70,23 @@ ESTADO_ETQ = {
     "en_curso": {"es": "En curso", "en": "Running",
                  "fr": "En cours", "de": "Laufend"},
 }
-COMPLETA_ETQ = {"es": "No quedan plazas", "en": "Fully booked",
-                "fr": "Complet", "de": "Ausgebucht"}
+ESTADO_ETQ["finalizada"] = {"es": "Finalizada", "en": "Finished",
+                            "fr": "Terminée", "de": "Beendet"}
+# Disponibilidad: se calcula del aforo real, no la mantiene nadie a mano.
+# Un badge que hay que actualizar a mano acaba mintiendo; este no puede.
+AFORO_ETQ = {
+    "abierta": {"es": "Admitiendo alumnos", "en": "Open for enrolment",
+                "fr": "Inscriptions ouvertes", "de": "Anmeldung offen"},
+    "ultimas": {"es": "Últimas plazas", "en": "Last places",
+                "fr": "Dernières places", "de": "Letzte Plätze"},
+    "completa": {"es": "No quedan plazas", "en": "Fully booked",
+                 "fr": "Complet", "de": "Ausgebucht"},
+}
+AFORO_CLASE = {"abierta": "badge-conf", "ultimas": "badge-ultimas",
+               "completa": "badge-lleno"}
+# A partir de cuántas plazas libres se avisa de que quedan pocas. Solo se
+# muestra si es cierto: la urgencia inventada se nota y quema la confianza.
+UMBRAL_ULTIMAS = 3
 # Salida secundaria: en yoga la objeción no suele ser el precio sino "¿es
 # para mí?". Un enlace discreto a contacto recoge esa duda en vez de
 # perderla en un abandono silencioso.
@@ -83,17 +98,21 @@ CONTACTO_ANCLA = {"es": "#contacto", "en": "#contact",
                   "fr": "#contact", "de": "#kontakt"}
 
 
-def _sin_plazas(cal_id, dias=30):
-    """¿La clase está llena a TODAS las horas del próximo mes?
+def _aforo(cal_id, dias=30):
+    """Estado de ocupación de una clase en el próximo mes.
 
-    Se consulta el aforo real de Cal.diy (calculado cruzando huecos y
-    reservas; el seatsRemaining del endpoint de slots no se actualiza).
-    Si no se puede consultar —sin credenciales, Cal.diy caído— se
-    devuelve False a propósito: es preferible no poner el aviso que
-    ponerlo por error y espantar a quien sí tenía plaza.
+    Devuelve "abierta", "ultimas" o "completa" mirando el hueco con MÁS
+    plazas libres (si en alguna hora hay sitio de sobra, la clase no está
+    en las últimas). Se usa el aforo real de Cal.diy, calculado cruzando
+    huecos y reservas: el seatsRemaining del endpoint de slots no se
+    actualiza al reservar.
+
+    Devuelve None si no hay clase enlazada o no se puede consultar —sin
+    credenciales, Cal.diy caído—: preferimos no decir nada del aforo a
+    decirlo mal y espantar a quien sí tenía plaza.
     """
     if not cal_id:
-        return False
+        return None
     try:
         import datetime
         sys.path.insert(0, str(RAIZ / "scripts"))
@@ -103,10 +122,13 @@ def _sin_plazas(cal_id, dias=30):
         aforo = cliente.aforo_por_hueco(int(cal_id), hoy.isoformat(),
                                         fin.isoformat())
         if not aforo:
-            return False
-        return all((v.get("libres") or 0) <= 0 for v in aforo.values())
+            return None
+        mejor = max((v.get("libres") or 0) for v in aforo.values())
+        if mejor <= 0:
+            return "completa"
+        return "ultimas" if mejor <= UMBRAL_ULTIMAS else "abierta"
     except Exception:
-        return False
+        return None
 
 
 def seccion_actividades(data, idioma):
@@ -143,20 +165,23 @@ def seccion_actividades(data, idioma):
 
         out.append('      <article class="clase">')
         out.append('        <div class="clase-cab">')
+        # UN solo badge, el más informativo. Si la clase ya es reservable,
+        # lo que le importa al visitante es si queda sitio, no en qué punto
+        # del ciclo está; si no lo es, se muestra el ciclo de vida.
+        aforo = ln.get("aforo")
         clases_badge = {"propuesta": "badge-tent", "programada": "badge-prog",
-                        "en_curso": "badge-conf"}
-        if estado in clases_badge:
+                        "en_curso": "badge-conf", "finalizada": "badge-hueco"}
+        if aforo:
+            out.append(f'          <p class="badge {AFORO_CLASE[aforo]}">'
+                       f'{AFORO_ETQ[aforo].get(idioma, AFORO_ETQ[aforo]["es"])}'
+                       f'</p>')
+        elif estado in clases_badge:
             etq_est = (t(estado) or ESTADO_ETQ[estado].get(idioma)
                        or ESTADO_ETQ[estado]["es"])
             out.append(f'          <p class="badge {clases_badge[estado]}">'
                        f'{etq_est}</p>')
         else:
             out.append('          <p class="badge badge-hueco">&nbsp;</p>')
-        # Sin plazas a ninguna hora: se avisa junto al nombre, para que
-        # nadie entre a reservar y se lleve el chasco.
-        if ln.get("completa"):
-            out.append(f'          <p class="badge badge-lleno">'
-                       f'{COMPLETA_ETQ.get(idioma, COMPLETA_ETQ["es"])}</p>')
         out.append('        </div>')
         out.append('        <div class="clase-cuerpo">')
         if ln.get("foto"):
@@ -205,7 +230,7 @@ def seccion_actividades(data, idioma):
             # la clase existe, la miran con interés y no hay dónde pulsar.
             cal_id = int(ln.get("cal_event_type_id", 0) or 0)
             out.append('        <div class="clase-form">')
-            if cal_id and not ln.get("completa"):
+            if cal_id and ln.get("aforo") != "completa":
                 out.append(f'          <a class="btn" href="/reservar.html?clase={cal_id}">'
                            f'{t("interesa")}</a>')
             else:
@@ -392,7 +417,7 @@ def desde_nocodb(data):
             "franjas_elegibles": bool(fila.get("franjas_elegibles")),
             "cal_event_type_id": fila.get("cal_event_type_id") or 0,
             "nivel": fila.get("nivel") or "",
-            "completa": _sin_plazas(fila.get("cal_event_type_id")),
+            "aforo": _aforo(fila.get("cal_event_type_id")),
             "visible": bool(fila.get("visible")),
             "titulo": idi("titulo"), "texto": idi("texto"), "franjas": franjas,
         })
