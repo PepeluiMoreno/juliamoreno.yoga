@@ -55,6 +55,12 @@ def fecha_legible(iso, idioma):
         return iso
 
 
+# Etiqueta del botón de reserva por idioma, por si no está en las
+# etiquetas de interfaz de contenido.json.
+RESERVAR_ETQ = {"es": "Reservar plaza", "en": "Book a place",
+                "fr": "Réserver une place", "de": "Platz buchen"}
+
+
 def seccion_actividades(data, idioma):
     import json as _json
     a = data.get("actividades")
@@ -133,7 +139,17 @@ def seccion_actividades(data, idioma):
             out.append(f'          <p class="ok" hidden>{t("form_ok")}</p>')
             out.append('        </form>')
         else:
-            out.append('        <div class="clase-form-hueco"></div>')
+            # Actividad ya programada o en curso: si está enlazada con una
+            # clase de Cal.diy (cal_event_type_id), se ofrece reservar plaza.
+            # El enlace lleva ?clase=<id> para que el alumno vea ESA clase.
+            cal_id = int(ln.get("cal_event_type_id", 0) or 0)
+            if cal_id:
+                etq = t("reservar") or RESERVAR_ETQ.get(idioma, "Reservar")
+                out.append('        <div class="clase-form">')
+                out.append(f'          <a class="btn" href="/reservar.html?clase={cal_id}">{etq}</a>')
+                out.append('        </div>')
+            else:
+                out.append('        <div class="clase-form-hueco"></div>')
         out.append('      </article>')
     out.append('    </div>')
     out.append('    <div class="modal-franjas" id="modalFranjas" hidden>')
@@ -356,6 +372,7 @@ def desde_nocodb(data):
             "lugar": fila.get("lugar") or "",
             "mostrar_contador": bool(fila.get("mostrar_contador")),
             "franjas_elegibles": bool(fila.get("franjas_elegibles")),
+            "cal_event_type_id": fila.get("cal_event_type_id") or 0,
             "visible": bool(fila.get("visible")),
             "titulo": idi("titulo"), "texto": idi("texto"), "franjas": franjas,
         })
