@@ -250,6 +250,10 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
         <input type="text" id="lugar" placeholder="Ej. Estudio Maro" maxlength="120">
       </div>
       <div>
+        <label for="hasta">Vigente hasta</label>
+        <input type="date" id="hasta">
+      </div>
+      <div>
         <label for="nivel">Nivel</label>
         <select id="nivel">
           <option value="">Sin especificar (no se mostrará)</option>
@@ -455,7 +459,7 @@ function resetForm(){
   $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value="";
   mostrarFoto(""); $("#foto-estado").textContent="";
   $("#estado").value="propuesta"; $("#umbral").value=""; $("#plazas").value="";
-  $("#precio").value=""; $("#duracion").value=""; $("#lugar").value=""; $("#nivel").value="";
+  $("#precio").value=""; $("#duracion").value=""; $("#lugar").value=""; $("#nivel").value=""; $("#hasta").value="";
   $("#visible").checked=true; $("#mostrar_contador").checked=true;
   $("#franjas_elegibles").checked=false; $("#franjas-wrap").classList.add("oculto");
   marcarFranjas("");
@@ -487,7 +491,7 @@ function editar(a){
   $("#edit-id").value=a.Id; $("#titulo_es").value=a.titulo_es||"";
   $("#texto_es").value=a.texto_es||""; mostrarFoto(a.foto||""); $("#foto-estado").textContent=""; $("#estado").value=a.estado||"propuesta";
   $("#umbral").value=a.umbral??""; $("#plazas").value=a.plazas??"";
-  $("#precio").value=a.precio||""; $("#duracion").value=a.duracion||""; $("#lugar").value=a.lugar||""; $("#nivel").value=a.nivel||"";
+  $("#precio").value=a.precio||""; $("#duracion").value=a.duracion||""; $("#lugar").value=a.lugar||""; $("#nivel").value=a.nivel||""; $("#hasta").value=(a.hasta||"").slice(0,10);
   $("#visible").checked=!!a.visible; $("#mostrar_contador").checked=!!a.mostrar_contador;
   $("#franjas_elegibles").checked=!!a.franjas_elegibles;
   $("#franjas-wrap").classList.toggle("oculto", !a.franjas_elegibles);
@@ -511,7 +515,7 @@ $("#btn-guardar").onclick = async ()=>{
     franjas: elegible ? franjasSeleccionadas().join(",") : "",
     franjas_elegibles: elegible,
     visible:$("#visible").checked, mostrar_contador:$("#mostrar_contador").checked,
-    precio:$("#precio").value.trim(), duracion:$("#duracion").value.trim(), lugar:$("#lugar").value.trim(), nivel:$("#nivel").value,
+    precio:$("#precio").value.trim(), duracion:$("#duracion").value.trim(), lugar:$("#lugar").value.trim(), nivel:$("#nivel").value, hasta:$("#hasta").value,
   };
   const um=$("#umbral").value, pl=$("#plazas").value;
   if(um!=="") datos.umbral=parseInt(um); if(pl!=="") datos.plazas=parseInt(pl);

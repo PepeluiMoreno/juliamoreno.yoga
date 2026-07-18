@@ -115,6 +115,17 @@ function gracias() {
   </div>`;
 }
 
+function repetir() {
+  // Actividad concluida: no se puede reservar, pero el interés vale para
+  // decidir si merece la pena repetirla. Esa lista es justo el argumento.
+  return `<div class="gracias">
+    <p><strong>Esta actividad ya se realizó.</strong></p>
+    <p>Si te hubiera gustado participar, déjame tus datos: cuando haya
+    suficientes personas interesadas, programo una nueva edición y te aviso
+    la primera.</p>
+  </div>`;
+}
+
 function formulario(a) {
   // Las franjas solo se preguntan si la actividad las tiene marcadas como
   // elegibles: así se sabe qué horario le vendría bien a cada persona.
@@ -134,7 +145,7 @@ function formulario(a) {
     <input type="text" id="contacto" maxlength="120">
     ${bloque}
     <div class="aviso" id="aviso"></div>
-    <button class="btn" id="enviar">${a.completa
+    <button class="btn" id="enviar">${(a.completa || a.archivada)
       ? "Avísame de la próxima" : "Me interesa"}</button>
     <p class="consent">Al enviar aceptas que Julia Moreno guarde tu nombre y
     contacto para avisarte sobre esta actividad.</p>`;
@@ -153,7 +164,7 @@ async function cargar() {
     if (!data.ok) throw new Error();
     const a = data.actividad;
     // Si ya es reservable, esta vista no pinta nada: se va a reservar.
-    if (a.cal_event_type_id) {
+    if (a.cal_event_type_id && !a.archivada && !a.completa) {
       location.replace(`/reservar.html?clase=${a.cal_event_type_id}`);
       return;
     }
@@ -161,11 +172,14 @@ async function cargar() {
     // propuesta se monta si hay grupo; una en curso sin horario fijo
     // (p. ej. ciclo lunar) se avisa cuando haya próxima sesión.
     document.getElementById("lema").textContent =
-      a.completa ? "Esta edición está completa."
+      a.archivada ? "Esta actividad ya se hizo."
+      : a.completa ? "Esta edición está completa."
       : a.estado === "propuesta"
         ? "Dime que te interesa y te aviso cuando se monte."
         : "Déjame tus datos y te aviso de la próxima sesión.";
-    cont.innerHTML = ficha(a) + (a.completa ? gracias() : "") + formulario(a);
+    cont.innerHTML = ficha(a)
+      + (a.archivada ? repetir() : a.completa ? gracias() : "")
+      + formulario(a);
     document.getElementById("enviar").addEventListener("click", () => enviar(a));
   } catch (e) {
     cont.innerHTML = '<p class="vacio">No se pudo cargar la actividad. ' +

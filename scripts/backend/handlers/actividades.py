@@ -26,6 +26,7 @@ def _lista():
             "foto": r.get("foto"),
             "precio": r.get("precio"), "duracion": r.get("duracion"), "lugar": r.get("lugar"),
             "nivel": r.get("nivel"),
+            "hasta": r.get("hasta"),
             "interesados": r.get("interesados"),
         })
     return out
@@ -73,6 +74,9 @@ def handle(req):
         # Nivel de dificultad. En blanco = no se muestra nunca (no hay
         # valor por defecto: si Julia no lo especifica, no se inventa).
         fila["nivel"] = limpio(body.get("nivel"), 40)
+        # Vigencia: pasada esta fecha la actividad se archiva sola y
+        # deja el grid principal (sigue visible en /pasadas.html).
+        fila["hasta"] = limpio(body.get("hasta"), 10)
         try:
             datos.guarda("Actividades", fila)
             dispara_rebuild()
@@ -86,7 +90,7 @@ def handle(req):
             return 422, {"error": "falta Id"}
         fila = {"Id": body["Id"]}
         for c in ("titulo_es", "texto_es", "estado", "franjas", "foto",
-                  "precio", "duracion", "lugar", "nivel"):
+                  "precio", "duracion", "lugar", "nivel", "hasta"):
             if c in body:
                 fila[c] = limpio(body[c], 2000)
         for c in ("umbral", "plazas"):

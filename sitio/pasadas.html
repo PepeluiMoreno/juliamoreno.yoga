@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Actividades anteriores · Julia Moreno · Yoga</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mar: #1d5975; --tinta: #153f54; --crema: #fcfbf8; --linea: #e5e0d8;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--crema); color: var(--tinta);
+    font-family: 'Mulish', sans-serif; padding: 2rem 1rem 4rem;
+  }
+  .marco { max-width: 1100px; margin: 0 auto; }
+  h1 {
+    font-family: 'Marcellus', serif; font-weight: 400;
+    color: var(--mar); font-size: 1.9rem; margin-bottom: .25rem;
+  }
+  .lema { opacity: .7; margin-bottom: 1rem; }
+  .volver { display: inline-block; margin-bottom: 1.6rem; font-size: .88rem;
+            color: var(--mar); opacity: .8; }
+  .grid { display: grid; gap: 1.2rem;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .tarjeta {
+    background: #fff; border: 1px solid var(--linea); border-radius: 12px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .tarjeta img { width: 100%; height: 150px; object-fit: cover;
+                 display: block; filter: grayscale(.35); }
+  .cuerpo { padding: 1rem 1.2rem 1.2rem; display: flex;
+            flex-direction: column; flex: 1; }
+  .tarjeta h2 {
+    font-family: 'Marcellus', serif; font-weight: 400; color: var(--mar);
+    font-size: 1.2rem; margin: 0 0 .5rem;
+  }
+  .tarjeta p { margin: 0 0 .6rem; font-size: .95rem; }
+  .meta { display: flex; flex-wrap: wrap; gap: .3rem .8rem;
+          font-size: .85rem; opacity: .75; margin-bottom: .8rem; }
+  .cuando { font-size: .82rem; opacity: .6; }
+  .btn {
+    display: inline-block; background: var(--mar); color: #fff;
+    padding: .55rem 1.1rem; border-radius: 8px; text-decoration: none;
+    font-size: .95rem; margin-top: auto; align-self: flex-start;
+  }
+  .vacio { opacity: .6; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="marco">
+  <a class="volver" href="/#actividades">&#8592; Actividades actuales</a>
+  <h1>Actividades anteriores</h1>
+  <p class="lema">Talleres y ciclos que ya se hicieron. Si te interesa alguno,
+  dímelo y lo tendré en cuenta para programar una nueva edición.</p>
+  <div id="contenido"><p class="vacio">Cargando…</p></div>
+</div>
+
+<script>
+const API = "https://api.juliamoreno.yoga";
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio",
+  "agosto","septiembre","octubre","noviembre","diciembre"];
+
+function escapar(s) {
+  return String(s || "").replace(/[&<>"']/g,
+    c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+function cuando(hasta) {
+  if (!hasta) return "";
+  const d = new Date(hasta + "T00:00:00");
+  if (isNaN(d)) return "";
+  return `Se hizo hasta ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+}
+
+function tarjeta(a) {
+  const partes = [];
+  if (a.duracion) partes.push(`&#9201; ${escapar(a.duracion)}`);
+  if (a.lugar) partes.push(`&#128205; ${escapar(a.lugar)}`);
+  if (a.nivel) partes.push(`&#9679; ${escapar(a.nivel)}`);
+  const fin = cuando(a.hasta);
+  return `<article class="tarjeta">
+    ${a.foto ? `<img src="${escapar(a.foto)}" alt="${escapar(a.titulo)}">` : ""}
+    <div class="cuerpo">
+      <h2>${escapar(a.titulo)}</h2>
+      ${a.texto ? `<p>${escapar(a.texto)}</p>` : ""}
+      ${partes.length ? `<p class="meta">${partes.map(x => `<span>${x}</span>`).join("")}</p>` : ""}
+      ${fin ? `<p class="cuando">${fin}</p>` : ""}
+      <a class="btn" href="/interes.html?actividad=${encodeURIComponent(a.id)}">Me interesa</a>
+    </div>
+  </article>`;
+}
+
+async function cargar() {
+  const cont = document.getElementById("contenido");
+  try {
+    const r = await fetch(`${API}/actividades-pasadas`);
+    const data = await r.json();
+    if (!data.ok) throw new Error();
+    if (!data.actividades.length) {
+      cont.innerHTML = '<p class="vacio">Todavía no hay actividades ' +
+        'anteriores que mostrar.</p>';
+      return;
+    }
+    cont.innerHTML = `<div class="grid">${data.actividades.map(tarjeta).join("")}</div>`;
+  } catch (e) {
+    cont.innerHTML = '<p class="vacio">No se pudo cargar el listado. ' +
+      'Inténtalo más tarde.</p>';
+  }
+}
+
+cargar();
+</script>
+</body>
+</html>

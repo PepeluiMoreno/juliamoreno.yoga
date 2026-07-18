@@ -31,6 +31,7 @@ from ..util import limpio, valido_texto
 RUTA_DISPONIBILIDAD = "/disponibilidad"
 RUTA_RESERVAR = "/reservar"
 RUTA_ACTIVIDAD = "/actividad"
+RUTA_PASADAS = "/actividades-pasadas"
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -71,6 +72,20 @@ def _actividad_de(cal_id):
     return None
 
 
+def _archivada(fila):
+    """Actividad ya concluida: marcada como finalizada o con la fecha de
+    vigencia ('hasta') pasada."""
+    if (fila.get("estado") or "") == "finalizada":
+        return True
+    hasta = str(fila.get("hasta") or "")[:10]
+    if not hasta:
+        return False
+    try:
+        return datetime.date.fromisoformat(hasta) < datetime.date.today()
+    except Exception:
+        return False
+
+
 def _ficha(fila):
     return {
         "id": fila.get("id"),
@@ -86,6 +101,8 @@ def _ficha(fila):
         "franjas_elegibles": bool(fila.get("franjas_elegibles")),
         "cal_event_type_id": int(fila.get("cal_event_type_id") or 0),
         "completa": _sin_plazas(int(fila.get("cal_event_type_id") or 0)),
+        "archivada": _archivada(fila),
+        "hasta": str(fila.get("hasta") or "")[:10],
     }
 
 
@@ -104,6 +121,19 @@ def _sin_plazas(cal_id, dias=30):
         return max((v.get("libres") or 0) for v in aforo.values()) <= 0
     except Exception:
         return False
+
+
+def _pasadas():
+    """Actividades ya concluidas, para la vista de anteriores. Sirven para
+    que quien llegue tarde pueda pedir que se repitan."""
+    try:
+        out = []
+        for fila in datos.lee("Actividades"):
+            if fila.get("visible", True) and _archivada(fila):
+                out.append(_ficha(fila))
+        return 200, {"ok": True, "actividades": out}
+    except Exception as e:
+        return 502, {"error": f"no se pudieron leer: {e}"}
 
 
 def _actividad(aid):
@@ -252,6 +282,8 @@ def handle(req):
                 except ValueError:
                     return 422, {"error": "clase no válida"}
         return _disponibilidad(dias, clase)
+    if req.metodo == "GET" and ruta == RUTA_PASADAS:
+        return _pasadas()
     if req.metodo == "GET" and ruta == RUTA_ACTIVIDAD:
         aid = None
         for par in query.split("&"):

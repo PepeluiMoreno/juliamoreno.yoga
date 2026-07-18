@@ -82,6 +82,10 @@ AFORO_ETQ = {
     "completa": {"es": "No quedan plazas", "en": "Fully booked",
                  "fr": "Complet", "de": "Ausgebucht"},
 }
+PASADAS_ETQ = {"es": "Ver actividades anteriores",
+               "en": "See past activities",
+               "fr": "Voir les activités passées",
+               "de": "Frühere Aktivitäten ansehen"}
 AFORO_CLASE = {"abierta": "badge-conf", "ultimas": "badge-ultimas",
                "completa": "badge-lleno"}
 # A partir de cuántas plazas libres se avisa de que quedan pocas. Solo se
@@ -96,6 +100,22 @@ PREGUNTA_ETQ = {"es": "¿Te encaja? Pregúntanos",
                 "de": "Unsicher? Frag uns"}
 CONTACTO_ANCLA = {"es": "#contacto", "en": "#contact",
                   "fr": "#contact", "de": "#kontakt"}
+
+
+def _archivada(ln):
+    """¿La actividad ya pasó? Dos vías: que Julia la marque 'finalizada',
+    o que su fecha de vigencia (campo 'hasta') haya quedado atrás. La
+    segunda evita que nadie tenga que acordarse de archivar nada."""
+    if (ln.get("estado") or "") == "finalizada":
+        return True
+    hasta = (ln.get("hasta") or "").strip()
+    if not hasta:
+        return False
+    try:
+        import datetime
+        return datetime.date.fromisoformat(hasta[:10]) < datetime.date.today()
+    except Exception:
+        return False
 
 
 def _aforo(cal_id, dias=30):
@@ -136,7 +156,10 @@ def seccion_actividades(data, idioma):
     a = data.get("actividades")
     if not a:
         return ""
-    visibles = [ln for ln in a["lineas"] if ln.get("visible", False)]
+    # Las archivadas salen del grid principal y viven en su propia vista:
+    # que la sección enseñe lo que se puede hacer ahora, no un histórico.
+    visibles = [ln for ln in a["lineas"]
+                if ln.get("visible", False) and not _archivada(ln)]
     out = [f'    <p class="eyebrow">{a["titulo_seccion"][idioma]}</p>',
            f'    <h2>{a["titulo_seccion"][idioma]}</h2>']
     if not visibles:
@@ -243,6 +266,10 @@ def seccion_actividades(data, idioma):
             out.append('        </div>')
         out.append('      </article>')
     out.append('    </div>')
+    if any(ln.get("visible", False) and _archivada(ln) for ln in a["lineas"]):
+        out.append('    <p class="pasadas-enlace">'
+                   f'<a href="/pasadas.html">'
+                   f'{PASADAS_ETQ.get(idioma, PASADAS_ETQ["es"])}</a></p>')
     return "\n".join(out)
 
 
@@ -417,6 +444,7 @@ def desde_nocodb(data):
             "franjas_elegibles": bool(fila.get("franjas_elegibles")),
             "cal_event_type_id": fila.get("cal_event_type_id") or 0,
             "nivel": fila.get("nivel") or "",
+            "hasta": str(fila.get("hasta") or "")[:10],
             "aforo": _aforo(fila.get("cal_event_type_id")),
             "visible": bool(fila.get("visible")),
             "titulo": idi("titulo"), "texto": idi("texto"), "franjas": franjas,
