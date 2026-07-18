@@ -86,7 +86,7 @@ PASADAS_ETQ = {"es": "Ver actividades anteriores",
                "en": "See past activities",
                "fr": "Voir les activités passées",
                "de": "Frühere Aktivitäten ansehen"}
-AFORO_CLASE = {"abierta": "badge-conf", "ultimas": "badge-ultimas",
+AFORO_CLASE = {"abierta": "badge-abierta", "ultimas": "badge-ultimas",
                "completa": "badge-lleno"}
 # A partir de cuántas plazas libres se avisa de que quedan pocas. Solo se
 # muestra si es cierto: la urgencia inventada se nota y quema la confianza.
