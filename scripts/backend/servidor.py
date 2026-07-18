@@ -13,7 +13,7 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from .handlers import actividades, agenda, clases, resumen, foto, webhooks, reservas
+from .handlers import actividades, agenda, clases, resumen, foto, webhooks, reservas, listas
 
 PORT = int(os.environ.get("CAPTADOR_PORT", "8090"))
 ORIGIN = os.environ.get("CAPTADOR_ORIGIN", "https://juliamoreno.yoga")
@@ -27,6 +27,7 @@ _HANDLERS = [
     foto.handle,
     webhooks.handle,
     reservas.handle,
+    listas.handle,
 ]
 
 

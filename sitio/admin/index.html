@@ -139,6 +139,17 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .layout{display:flex;width:100%;min-height:calc(100vh - 60px)}
 .menu-lateral{width:200px;flex-shrink:0;background:#fff;border-right:1px solid var(--linea);padding:1.5rem 0}
 .menu-lateral nav{display:flex;flex-direction:column}
+.listas-barra{display:flex;gap:.6rem;align-items:center;margin-bottom:1.2rem}
+.sesion{border:1px solid #e5e0d8;border-radius:10px;padding:1rem 1.2rem;
+  margin-bottom:1.2rem;background:#fff}
+.sesion header{display:flex;flex-wrap:wrap;align-items:baseline;gap:.6rem 1rem}
+.sesion h2{font-size:1.1rem;margin:0}
+.sesion .cuando{margin:0;opacity:.75;font-size:.9rem}
+.sesion .acciones{margin-left:auto;display:flex;gap:.5rem}
+.tabla-alumnos{width:100%;border-collapse:collapse;margin-top:.8rem;font-size:.92rem}
+.tabla-alumnos th,.tabla-alumnos td{border-bottom:1px solid #eee7dd;
+  padding:.4rem .5rem;text-align:left}
+.tabla-alumnos th{opacity:.7;font-weight:600}
 .menu-item{display:block;padding:.7rem 1.5rem;color:var(--gris-hondo);text-decoration:none;font-weight:600;font-size:.95rem;border-left:3px solid transparent}
 .menu-item:hover{background:var(--cielo-claro)}
 .menu-item.activa{color:var(--mar);border-left-color:var(--mar);background:var(--cielo-claro)}
@@ -178,6 +189,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <a href="#" class="menu-item activa" data-vista="panel">Panel de control</a>
       <a href="#" class="menu-item" data-vista="agenda">Agenda</a>
       <a href="#" class="menu-item" data-vista="actividades">Actividades</a>
+      <a href="#" class="menu-item" data-vista="listas">Listas de clase</a>
       <a href="#" class="menu-item" data-vista="tarifas">Tarifas</a>
       <a href="#" class="menu-item" data-vista="estados">Estado</a>
     </nav>
@@ -288,6 +300,22 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   </div>
 
   <div class="pie">Panel de gestión · <a href="/">volver a la web</a></div>
+  </section>
+
+  <section class="vista oculto" id="vista-listas">
+    <h1>Listas de clase</h1>
+    <p class="sub">Quién viene a cada sesión. Para pasar lista, recoger
+    firmas o imprimir consentimientos.</p>
+    <div class="listas-barra no-print">
+      <label for="lst-dias">Próximos</label>
+      <select id="lst-dias">
+        <option value="7">7 días</option>
+        <option value="15" selected>15 días</option>
+        <option value="30">30 días</option>
+      </select>
+      <button class="btn-sec" id="lst-recargar">Actualizar</button>
+    </div>
+    <div id="lst-contenido"><p class="vacio">Cargando…</p></div>
   </section>
 
   <section class="vista oculto" id="vista-tarifas">
@@ -1210,6 +1238,128 @@ $("#ag-borrar").addEventListener("click", async ()=>{
 });
 
 
+// --- Listas de clase: quién viene a cada sesión ---
+const API_LISTAS = "https://api.juliamoreno.yoga/admin/api/listas";
+const DIAS_SEM = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const MESES_L = ["enero","febrero","marzo","abril","mayo","junio","julio",
+  "agosto","septiembre","octubre","noviembre","diciembre"];
+
+function _fechaSesion(iso){
+  const d = new Date(iso);
+  const hora = d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",
+    timeZone:"Europe/Madrid"});
+  return `${DIAS_SEM[d.getDay()]} ${d.getDate()} de ${MESES_L[d.getMonth()]} · ${hora}`;
+}
+function _esc(x){
+  return String(x||"").replace(/[&<>"']/g,
+    c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+async function cargarListas(){
+  const cont = document.getElementById("lst-contenido");
+  const dias = document.getElementById("lst-dias").value;
+  cont.innerHTML = '<p class="vacio">Cargando…</p>';
+  try{
+    const r = await fetch(`${API_LISTAS}?dias=${dias}`, {credentials:"include"});
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.error||"");
+    if(!d.sesiones.length){
+      cont.innerHTML = '<p class="vacio">No hay nadie apuntado en este periodo.</p>';
+      return;
+    }
+    cont.innerHTML = d.sesiones.map(_tarjetaSesion).join("");
+    cont.querySelectorAll("[data-imprimir]").forEach(b=>
+      b.addEventListener("click", ()=> imprimirLista(d.sesiones[+b.dataset.imprimir])));
+    cont.querySelectorAll("[data-consent]").forEach(b=>
+      b.addEventListener("click", ()=> imprimirConsentimientos(d.sesiones[+b.dataset.consent])));
+  }catch(e){
+    cont.innerHTML = '<p class="vacio">No se pudieron cargar las listas.</p>';
+  }
+}
+
+function _tarjetaSesion(s, i){
+  const filas = s.alumnos.map((a,n)=>`<tr><td>${n+1}</td><td>${_esc(a.nombre)}</td>`
+    + `<td>${_esc(a.telefono)||"—"}</td><td>${_esc(a.email)}</td></tr>`).join("");
+  return `<article class="sesion">
+    <header>
+      <h2>${_esc(s.titulo)}</h2>
+      <p class="cuando">${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
+      <div class="acciones no-print">
+        <button class="btn-sec" data-imprimir="${i}">Imprimir lista</button>
+        <button class="btn-sec" data-consent="${i}">Consentimientos</button>
+      </div>
+    </header>
+    <table class="tabla-alumnos">
+      <thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th><th>Correo</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+  </article>`;
+}
+
+function _ventana(titulo, cuerpo){
+  const w = window.open("", "_blank");
+  w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+    <title>${_esc(titulo)}</title><style>
+    body{font-family:system-ui,sans-serif;color:#153f54;margin:2cm 1.6cm;}
+    h1{font-size:1.3rem;margin:0 0 .2rem}
+    .cuando{margin:0 0 1.2rem;opacity:.75;font-size:.95rem}
+    table{width:100%;border-collapse:collapse;font-size:.95rem}
+    th,td{border:1px solid #cfc9bf;padding:.45rem .6rem;text-align:left}
+    th{background:#f2efe9}
+    .firma{width:32%}
+    .hoja{page-break-after:always}
+    .hoja:last-child{page-break-after:auto}
+    .legal{font-size:.85rem;line-height:1.5;margin:1rem 0}
+    .linea-firma{margin-top:2.4rem;border-top:1px solid #153f54;width:60%;
+      padding-top:.3rem;font-size:.85rem}
+    @media print{@page{margin:1.5cm}}
+    </style></head><body>${cuerpo}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(), 300);
+}
+
+function imprimirLista(s){
+  const filas = s.alumnos.map((a,n)=>`<tr><td>${n+1}</td><td>${_esc(a.nombre)}</td>`
+    + `<td>${_esc(a.telefono)||""}</td><td class="firma"></td></tr>`).join("");
+  _ventana(`Lista · ${s.titulo}`, `
+    <h1>${_esc(s.titulo)}</h1>
+    <p class="cuando">${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
+    <table><thead><tr><th>#</th><th>Nombre</th><th>Teléfono</th>
+    <th class="firma">Firma</th></tr></thead><tbody>${filas}</tbody></table>`);
+}
+
+function imprimirConsentimientos(s){
+  // Una hoja por alumno. El texto es una PLANTILLA de partida: conviene
+  // que lo revise un profesional antes de usarlo en serio.
+  const hojas = s.alumnos.map(a=>`<div class="hoja">
+    <h1>Declaración de aptitud y consentimiento</h1>
+    <p class="cuando">${_esc(s.titulo)} · ${_fechaSesion(s.inicio)}</p>
+    <p class="legal"><strong>Alumno/a:</strong> ${_esc(a.nombre)}</p>
+    <p class="legal">Declaro que participo de forma libre y voluntaria en esta
+    sesión de yoga; que me encuentro en condiciones físicas adecuadas para
+    realizarla y que no padezco, hasta donde conozco, lesión, dolencia ni
+    condición médica que lo desaconseje. Me comprometo a informar a la
+    profesora de cualquier limitación, lesión, embarazo o tratamiento que
+    pueda afectar a la práctica, así como a interrumpir cualquier ejercicio
+    que me cause dolor o malestar.</p>
+    <p class="legal">Entiendo que la práctica de yoga conlleva esfuerzo físico
+    y que debo adaptar los ejercicios a mis posibilidades, respetando las
+    indicaciones recibidas. Asumo la responsabilidad de las consecuencias
+    derivadas de ocultar información sobre mi estado de salud o de no seguir
+    dichas indicaciones.</p>
+    <p class="legal">Autorizo el tratamiento de mis datos personales (nombre y
+    contacto) con la única finalidad de gestionar la reserva y avisarme sobre
+    las clases. Puedo ejercer mis derechos de acceso, rectificación y
+    supresión escribiendo a Julia Moreno.</p>
+    <div class="linea-firma">Firma del alumno/a — Fecha</div>
+  </div>`).join("");
+  _ventana(`Consentimientos · ${s.titulo}`, hojas);
+}
+
+document.getElementById("lst-recargar").addEventListener("click", cargarListas);
+document.getElementById("lst-dias").addEventListener("change", cargarListas);
+
 // --- Navegación entre vistas del menú lateral ---
 document.querySelectorAll(".menu-item").forEach(item=>{
   item.addEventListener("click", e=>{
@@ -1221,6 +1371,7 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     document.getElementById("vista-"+vista).classList.remove("oculto");
     if(vista==="panel") cargarDash();
     if(vista==="actividades") cargar();
+    if(vista==="listas") cargarListas();
     if(vista==="agenda"){ cargarAgenda(); setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 50); }
   });
 });

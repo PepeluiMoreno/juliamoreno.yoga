@@ -102,6 +102,7 @@
            font-size: .9rem; display: none; }
   .aviso.error { display: block; background: #fbeceb; color: #a3352c; }
   .aviso.exito { display: block; background: #e9f5ee; color: var(--ok); }
+  .opcional { opacity: .6; font-weight: 400; }
   .dudas { margin-top: 2rem; font-size: .9rem; }
   .dudas a { color: var(--mar); opacity: .8; text-decoration: underline; }
   .dudas a:hover { opacity: 1; }
@@ -125,6 +126,8 @@
     <input id="nombre" type="text" maxlength="80" autocomplete="name">
     <label for="email">Correo electrónico</label>
     <input id="email" type="email" maxlength="120" autocomplete="email">
+    <label for="telefono">Teléfono <span class="opcional">(opcional)</span></label>
+    <input id="telefono" type="tel" maxlength="30" autocomplete="tel">
     <div class="aviso" id="aviso"></div>
     <div class="acciones">
       <button class="secundario" id="cancelar">Cancelar</button>
@@ -264,6 +267,7 @@ function cerrar() {
 async function confirmar() {
   const nombre = document.getElementById("nombre").value.trim();
   const email = document.getElementById("email").value.trim();
+  const telefono = document.getElementById("telefono").value.trim();
   const aviso = document.getElementById("aviso");
   const boton = document.getElementById("confirmar");
   if (!nombre || !email) {
@@ -274,7 +278,7 @@ async function confirmar() {
   try {
     const r = await fetch(`${API}/reservar`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...seleccion, nombre, email }),
+      body: JSON.stringify({ ...seleccion, nombre, email, telefono }),
     });
     const data = await r.json();
     if (data.ok) {

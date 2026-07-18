@@ -202,6 +202,7 @@ def _reservar(body):
     nombre = limpio(body.get("nombre"), 80)
     email = limpio(body.get("email"), 120)
     inicio = limpio(body.get("inicio"), 40)
+    telefono = limpio(body.get("telefono"), 30)
     event_type_id = body.get("event_type_id")
 
     if not valido_texto(nombre):
@@ -248,6 +249,7 @@ def _reservar(body):
             "inicio": inicio,
             "nombre": nombre,
             "email": email,
+            "telefono": telefono,
             "estado": data.get("status"),
             "fecha": _ahora_iso(),
         })
