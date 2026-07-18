@@ -413,10 +413,10 @@
         "de": "Interessiert mich"
       },
       "faltan": {
-        "es": "Faltan {n} personas para que se monte",
-        "en": "{n} more people needed to run it",
-        "fr": "Encore {n} personnes pour lancer l'activité",
-        "de": "Noch {n} Personen, damit es stattfindet"
+        "es": "Con {n} personas más formamos el grupo",
+        "en": "{n} more people and the group is on",
+        "fr": "Encore {n} personnes et le groupe se forme",
+        "de": "Mit {n} weiteren Personen kommt die Gruppe zustande"
       },
       "confirmada": {
         "es": "¡Grupo confirmado! Plazas limitadas",
@@ -495,6 +495,12 @@
         "en": "Confirm",
         "fr": "Confirmer",
         "de": "Bestätigen"
+      },
+      "faltan_1": {
+        "es": "Con una persona más formamos el grupo",
+        "en": "One more person and the group is on",
+        "fr": "Encore une personne et le groupe se forme",
+        "de": "Mit einer weiteren Person kommt die Gruppe zustande"
       }
     },
     "_esquema_linea": "id, estado(tentativa|confirmada|completada), umbral(int), interesados(int, contado de Interesados), plazas(int opc), foto(url opc), mostrar_contador(bool), visible(bool), titulo_{es,en,fr,de}, texto_{es,en,fr,de}, franjas: lista de {id, tipo(generica|fecha), etiqueta_{es,en,fr,de}}. Para tipo=fecha la etiqueta suele ser la misma en los 4 idiomas (fecha/hora); para generica se traduce."

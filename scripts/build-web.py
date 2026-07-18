@@ -270,7 +270,12 @@ def seccion_actividades(data, idioma):
             out.append(badge)
         if estado == "propuesta" and ln.get("mostrar_contador") and umbral > 0 and interes >= umbral * 0.5 and interes < umbral:
             faltan = umbral - interes
-            out.append(f'          <p class="contador">{t("faltan").replace("{n}", str(faltan))}</p>')
+            # En positivo: lo que se consigue, no lo que falta. Y singular
+            # aparte, que "Con 1 personas más" canta (misma convención _1
+            # que ya usa franja_n_1).
+            plantilla = t("faltan_1") if faltan == 1 else t("faltan")
+            out.append(f'          <p class="contador">'
+                       f'{plantilla.replace("{n}", str(faltan))}</p>')
         out.append('        </div>')
         if estado == "propuesta":
             # Los datos (nombre y contacto) se piden en su propia vista,
