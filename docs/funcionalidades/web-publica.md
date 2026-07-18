@@ -12,8 +12,7 @@ visitante a alumno).
 - Estructura: `sitio/index.html` (ES) y `sitio/{en,fr,de}/index.html`.
 - Estilos compartidos en `sitio/assets/`.
 - SEO listo: `robots.txt`, `sitemap.xml`, JSON-LD en el `<head>`.
-- Marca: "Julia Moreno · Yoga"; lema "Yoga con ciencia, frente al
-  Mediterráneo."
+- Marca: "Julia Moreno · Yoga"; lema "Yoga frente al Mediterráneo"
 - Tres ubicaciones: Nerja (principal), Maro, Almuñécar (Centro
   Profesional de Danza Juan Pablo García).
 
