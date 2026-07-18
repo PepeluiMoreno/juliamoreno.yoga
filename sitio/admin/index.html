@@ -142,6 +142,13 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .tabla-alumnos{width:100%;border-collapse:collapse;font-size:.85rem}
 .tabla-alumnos td{border-bottom:1px solid #eee7dd;padding:.3rem .35rem;text-align:left}
 .tabla-alumnos td:first-child{width:1.6rem;color:var(--gris)}
+.modal-lista .dlg-caja{max-width:640px}
+.lst-cab{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;margin-bottom:.2rem}
+.lst-sub{color:var(--gris);font-size:.9rem;margin:0 0 1rem}
+.lst-alcance{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem}
+.lst-cuerpo{max-height:min(52vh,420px);overflow:auto;margin-bottom:1.2rem}
+.lst-sesion{font-size:.82rem;font-weight:600;margin:.9rem 0 .3rem}
+.lst-sesion:first-child{margin-top:0}
 .lst-alc{opacity:.65}
 .lst-alc.activa{opacity:1;background:var(--mar);color:#fff;border-color:var(--mar)}
 .menu-item{display:block;padding:.7rem 1.5rem;color:var(--gris-hondo);text-decoration:none;font-weight:600;font-size:.95rem;border-left:3px solid transparent}
@@ -376,6 +383,22 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <button data-accion="cancelar" id="mcCancelar">Cancelar clase…</button>
     <button data-accion="reactivar" id="mcReactivar">Reactivar clase</button>
     <button data-accion="borrar" id="mcBorrar" class="peligro">Eliminar</button>
+  </div>
+
+  <!-- Lista de alumnos de una clase (se abre desde la agenda) -->
+  <div id="lstFondo" class="dlg-fondo modal-lista" hidden>
+    <div class="dlg-caja" role="dialog" aria-modal="true" aria-labelledby="lstTitulo">
+      <div class="lst-cab"><h3 id="lstTitulo" style="margin:0">Lista de alumnos</h3></div>
+      <p class="lst-sub" id="lstSub"></p>
+      <div class="lst-alcance" id="lstAlcance"></div>
+      <div class="lst-cuerpo" id="lstCuerpo"></div>
+      <div class="modal-botones">
+        <button class="btn-sec" id="lstCerrar">Cerrar</button>
+        <button class="btn-sec" id="lstConsent">Consentimientos</button>
+        <button class="btn-sec" id="lstGuardar">Guardar (CSV)</button>
+        <button class="btn" id="lstImprimir">Imprimir</button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal genérico de diálogo (confirmaciones y avisos) -->
@@ -1035,7 +1058,7 @@ $("#menuContextual").addEventListener("click", async (ev)=>{
       if(d.ok){ cargarAgenda(); } else await avisar(d.error||"No se pudo cambiar.", "Error");
     }catch(err){ await avisar("Error de conexión.", "Error"); }
   }else if(accion==="lista"){
-    mostrarListaEnSidebar(e);
+    abrirModalLista(e);
   }else if(accion==="cancelar"){
     mostrarCancelacionEnSidebar(e);
   }else if(accion==="reactivar"){
@@ -1254,37 +1277,47 @@ function _rango(alcance, fechaISO){
   return [ini.toISOString().slice(0,10), fin.toISOString().slice(0,10)];
 }
 
-function mostrarListaEnSidebar(e){
+function abrirModalLista(e){
+  // Modal y no panel lateral: sacar la lista es una tarea autocontenida
+  // que acaba en imprimir, así que conviene enfocarla. Y cuelga del menú
+  // contextual, no de "Editar": consultar no es modificar, y meterla en
+  // el formulario obligaría a entrar en modo edición para solo mirar.
   lstClase = e;
-  $("#agEditorVacio").classList.add("oculto");
-  $("#agEditorForm").classList.add("oculto");
-  $("#agEditorDia").classList.remove("oculto");
-  $("#agDiaTitulo").textContent = "Lista de alumnos";
   const recurrente = e.tipo === "recurrente";
-  const opciones = recurrente
+  $("#lstTitulo").textContent = "Lista de alumnos · " + (e.titulo || "Clase");
+  $("#lstSub").textContent = _cuandoClase(e)
+    + (recurrente ? " · clase que se repite" : " · clase puntual");
+  // Una clase puntual solo puede listarse a sí misma: no hay serie que
+  // agrupar, así que ni se ofrecen los otros alcances.
+  $("#lstAlcance").innerHTML = recurrente
     ? `<button class="btn-mini lst-alc activa" data-alc="dia">Solo esta clase</button>
        <button class="btn-mini lst-alc" data-alc="semana">Esta semana</button>
        <button class="btn-mini lst-alc" data-alc="mes">Este mes</button>`
-    : `<button class="btn-mini lst-alc activa" data-alc="dia">Solo esta clase</button>`;
-  $("#agDiaLista").innerHTML = `
-    <div class="dia-clase dia-clase-activa">
-      <div class="dia-clase-cab"><span class="dia-clase-tit">${_escL(e.titulo||"Clase")}</span></div>
-      <p style="font-size:.82rem;color:var(--gris);margin:.2rem 0 .7rem">
-        ${_escL(e.fecha||"")} · ${_escL(e.hora_inicio||"")}${recurrente?" · clase que se repite":" · clase puntual"}</p>
-      <div class="lst-alcance" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.8rem">${opciones}</div>
-      <div id="lst-salida"><p style="font-size:.85rem;color:var(--gris)">Cargando…</p></div>
-    </div>`;
-  $("#agDiaLista").querySelectorAll(".lst-alc").forEach(b=>
+    : "";
+  $("#lstAlcance").querySelectorAll(".lst-alc").forEach(b=>
     b.addEventListener("click", ()=>{
-      $("#agDiaLista").querySelectorAll(".lst-alc").forEach(x=>x.classList.remove("activa"));
+      $("#lstAlcance").querySelectorAll(".lst-alc").forEach(x=>x.classList.remove("activa"));
       b.classList.add("activa");
       cargarLista(b.dataset.alc);
     }));
+  $("#lstFondo").hidden = false;
   cargarLista("dia");
 }
 
+function _cuandoClase(e){
+  const f = (e.fecha||"").slice(0,10);
+  if(!f) return e.hora_inicio || "";
+  const d = new Date(f + "T12:00:00");
+  return `${DIAS_SEM[d.getDay()]} ${d.getDate()} de ${MESES_L[d.getMonth()]}`
+       + (e.hora_inicio ? ", " + e.hora_inicio.slice(0,5) : "");
+}
+
+function cerrarModalLista(){ $("#lstFondo").hidden = true; lstSesiones = []; }
+
+async function cargarListalet lstSesiones = [];
+
 async function cargarLista(alcance){
-  const e = lstClase, salida = $("#lst-salida");
+  const e = lstClase, salida = $("#lstCuerpo");
   if(!e) return;
   const fecha = (e.fecha||"").slice(0,10);
   const [desde, hasta] = _rango(alcance, fecha);
@@ -1301,23 +1334,49 @@ async function cargarLista(alcance){
       salida.innerHTML = '<p style="font-size:.85rem;color:var(--gris)">Nadie apuntado todavía.</p>';
       return;
     }
-    salida.innerHTML = d.sesiones.map(_bloqueSesion).join("")
-      + `<div class="dia-clase-acciones" style="margin-top:.9rem">
-           <button class="btn-mini" id="lst-imprimir">Imprimir lista</button>
-           <button class="btn-mini" id="lst-consent">Consentimientos</button>
-         </div>`;
-    $("#lst-imprimir").addEventListener("click", ()=> imprimirLista(d.sesiones));
-    $("#lst-consent").addEventListener("click", ()=> imprimirConsentimientos(d.sesiones));
+    lstSesiones = d.sesiones;
+    salida.innerHTML = d.sesiones.map(_bloqueSesion).join("");
   }catch(err){
     salida.innerHTML = '<p style="font-size:.85rem;color:#8a2b26">No se pudo cargar la lista.</p>';
   }
 }
 
+$("#lstCerrar").addEventListener("click", cerrarModalLista);
+$("#lstFondo").addEventListener("click", ev=>{ if(ev.target.id==="lstFondo") cerrarModalLista(); });
+document.addEventListener("keydown", ev=>{
+  if(ev.key==="Escape" && !$("#lstFondo").hidden) cerrarModalLista();
+});
+$("#lstImprimir").addEventListener("click", ()=>{
+  if(lstSesiones.length) imprimirLista(lstSesiones);
+});
+$("#lstGuardar").addEventListener("click", ()=>{
+  if(lstSesiones.length) guardarCSV(lstSesiones);
+});
+$("#lstConsent").addEventListener("click", ()=>{
+  if(lstSesiones.length) imprimirConsentimientos(lstSesiones);
+});
+
+function guardarCSV(sesiones){
+  // CSV y no PDF: el PDF ya sale del diálogo de impresión ("Guardar como
+  // PDF"), mientras que esto se abre en una hoja de cálculo y sirve para
+  // pasar lista, cobrar bonos o cruzar datos.
+  const filas = [["Clase","Fecha y hora","Nombre","Teléfono","Correo"]];
+  sesiones.forEach(s=> s.alumnos.forEach(a=>
+    filas.push([s.titulo, _fechaSesion(s.inicio), a.nombre, a.telefono, a.email])));
+  const csv = "\uFEFF" + filas.map(f=>
+    f.map(c=>`"${String(c==null?"":c).replace(/"/g,'""')}"`).join(";")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8;"}));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `alumnos-${(lstClase.titulo||"clase").toLowerCase().replace(/[^a-z0-9]+/g,"-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function _bloqueSesion(s){
   const filas = s.alumnos.map((a,n)=>
     `<tr><td>${n+1}</td><td>${_escL(a.nombre)}</td><td>${_escL(a.telefono)||"—"}</td></tr>`).join("");
-  return `<p style="font-size:.8rem;font-weight:600;margin:.7rem 0 .25rem">
-      ${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
+  return `<p class="lst-sesion">${_fechaSesion(s.inicio)} · ${s.total} alumno(s)</p>
     <table class="tabla-alumnos"><tbody>${filas}</tbody></table>`;
 }
 
