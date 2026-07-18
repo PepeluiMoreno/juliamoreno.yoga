@@ -44,6 +44,23 @@
   .franja.llena:hover { background: none; }
   .plazas { opacity: .75; font-size: .85em; }
   .vacio { opacity: .6; font-style: italic; }
+  /* Cabecera de la actividad: qué está reservando el alumno. */
+  .ficha {
+    background: #fff; border: 1px solid var(--linea); border-radius: 12px;
+    overflow: hidden; margin-bottom: 2rem;
+  }
+  .ficha img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+  .ficha-cuerpo { padding: 1.1rem 1.3rem 1.3rem; }
+  .ficha h2 {
+    font-family: 'Marcellus', serif; font-weight: 400; color: var(--mar);
+    font-size: 1.45rem; border: none; padding: 0; margin: 0 0 .5rem;
+  }
+  .ficha p { margin: 0 0 .6rem; }
+  .ficha-meta { display: flex; flex-wrap: wrap; gap: .4rem .9rem;
+                font-size: .88rem; opacity: .8; }
+  .ficha-precio { font-weight: 700; color: var(--mar); margin-top: .5rem; }
+  .volver { display: inline-block; margin-bottom: 1.2rem; font-size: .88rem;
+            color: var(--mar); opacity: .8; }
   .capa {
     position: fixed; inset: 0; background: rgba(21,63,84,.45);
     display: none; align-items: center; justify-content: center; padding: 1rem;
@@ -141,13 +158,34 @@ async function cargar() {
       document.querySelector(".lema").textContent =
         "Elige el día y la hora que mejor te venga.";
     }
-    cont.innerHTML = data.clases.map(renderClase).join("");
+    cont.innerHTML = (CLASE ? renderFicha(data.clases[0]) : "") +
+                     data.clases.map(renderClase).join("");
     cont.querySelectorAll(".franja:not(.llena)").forEach(b =>
       b.addEventListener("click", () => abrir(b.dataset)));
   } catch (e) {
     cont.innerHTML = '<p class="vacio">No se pudo cargar la disponibilidad. ' +
       'Inténtalo más tarde o <a href="/reservar.html">mira todas las clases</a>.</p>';
   }
+}
+
+function renderFicha(c) {
+  const a = c.actividad;
+  // Si la actividad no está en NocoDB (o falló la lectura), al menos el
+  // título y la duración que sí da Cal.diy.
+  const titulo = escapar((a && a.titulo) || c.titulo || "Clase");
+  const partes = [];
+  if (a && a.duracion) partes.push(`&#9201; ${escapar(a.duracion)}`);
+  if (a && a.lugar) partes.push(`&#128205; ${escapar(a.lugar)}`);
+  const meta = partes.length
+    ? `<p class="ficha-meta">${partes.map(x => `<span>${x}</span>`).join("")}</p>` : "";
+  const texto = a && a.texto ? `<p>${escapar(a.texto)}</p>` : "";
+  const precio = a && a.precio ? `<p class="ficha-precio">${escapar(a.precio)}</p>` : "";
+  const foto = a && a.foto
+    ? `<img src="${escapar(a.foto)}" alt="${titulo}">` : "";
+  return `<a class="volver" href="/#actividades">&#8592; Todas las actividades</a>
+    <section class="ficha">${foto}
+      <div class="ficha-cuerpo"><h2>${titulo}</h2>${texto}${meta}${precio}</div>
+    </section>`;
 }
 
 function renderClase(c) {
@@ -161,7 +199,9 @@ function renderClase(c) {
     return `<div class="dia"><span class="fecha">${fechaLarga(dia)}</span>` +
            `<span class="franjas">${chips}</span></div>`;
   }).join("");
-  return `<h2>${escapar(c.titulo || "Clase")}</h2>` +
+  const encabezado = CLASE ? '<h2>Elige tu día y hora</h2>'
+                           : `<h2>${escapar(c.titulo || "Clase")}</h2>`;
+  return encabezado +
          (filas || '<p class="vacio">Sin huecos en este periodo.</p>');
 }
 

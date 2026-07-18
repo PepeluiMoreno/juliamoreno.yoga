@@ -41,6 +41,33 @@ def _ahora_iso():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
+def _actividad_de(cal_id):
+    """Ficha de la actividad de NocoDB enlazada con esa clase de Cal.diy.
+
+    El alumno que llega desde una actividad tiene que ver QUÉ está
+    reservando (texto, duración, lugar, precio, foto), no solo horas
+    sueltas. Cal.diy solo guarda título y duración; lo demás vive en
+    NocoDB, y el cruce lo hace cal_event_type_id.
+    Si algo falla, se devuelve None: la cabecera es un extra, nunca debe
+    tumbar la disponibilidad.
+    """
+    try:
+        for fila in datos.lee("Actividades"):
+            if int(fila.get("cal_event_type_id") or 0) != int(cal_id):
+                continue
+            return {
+                "titulo": fila.get("titulo_es"),
+                "texto": fila.get("texto_es"),
+                "duracion": fila.get("duracion"),
+                "lugar": fila.get("lugar"),
+                "precio": fila.get("precio"),
+                "foto": fila.get("foto"),
+            }
+    except Exception:
+        pass
+    return None
+
+
 def _disponibilidad(body_dias, solo_clase=None):
     """Aforo por hueco de las clases para los próximos N días. Pensado
     para que la web pinte la disponibilidad con su estilo.
@@ -70,11 +97,15 @@ def _disponibilidad(body_dias, solo_clase=None):
                  "libres": a["libres"], "ocupadas": a["ocupadas"]}
                 for ini, a in sorted(aforo.items())
             ]
-            salida.append({
+            entrada = {
                 "event_type_id": t["id"],
                 "titulo": t.get("title"),
                 "huecos": huecos,
-            })
+            }
+            # Solo al pedir una clase concreta: la ficha para la cabecera.
+            if solo_clase is not None:
+                entrada["actividad"] = _actividad_de(t["id"])
+            salida.append(entrada)
         return 200, {"ok": True, "clases": salida}
     except Exception as e:
         return 502, {"error": f"no se pudo leer disponibilidad: {e}"}
