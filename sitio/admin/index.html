@@ -249,6 +249,16 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
         <label for="lugar">Lugar</label>
         <input type="text" id="lugar" placeholder="Ej. Estudio Maro" maxlength="120">
       </div>
+      <div>
+        <label for="nivel">Nivel</label>
+        <select id="nivel">
+          <option value="">Sin especificar (no se mostrará)</option>
+          <option value="Iniciación">Iniciación</option>
+          <option value="Todos los niveles">Todos los niveles</option>
+          <option value="Intermedio">Intermedio</option>
+          <option value="Avanzado">Avanzado</option>
+        </select>
+      </div>
     </div>
 
     <label class="check" style="margin-top:1.1rem"><input type="checkbox" id="franjas_elegibles"> Esta actividad tiene franjas horarias a elegir</label>
@@ -445,7 +455,7 @@ function resetForm(){
   $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value="";
   mostrarFoto(""); $("#foto-estado").textContent="";
   $("#estado").value="propuesta"; $("#umbral").value=""; $("#plazas").value="";
-  $("#precio").value=""; $("#duracion").value=""; $("#lugar").value="";
+  $("#precio").value=""; $("#duracion").value=""; $("#lugar").value=""; $("#nivel").value="";
   $("#visible").checked=true; $("#mostrar_contador").checked=true;
   $("#franjas_elegibles").checked=false; $("#franjas-wrap").classList.add("oculto");
   marcarFranjas("");
@@ -477,7 +487,7 @@ function editar(a){
   $("#edit-id").value=a.Id; $("#titulo_es").value=a.titulo_es||"";
   $("#texto_es").value=a.texto_es||""; mostrarFoto(a.foto||""); $("#foto-estado").textContent=""; $("#estado").value=a.estado||"propuesta";
   $("#umbral").value=a.umbral??""; $("#plazas").value=a.plazas??"";
-  $("#precio").value=a.precio||""; $("#duracion").value=a.duracion||""; $("#lugar").value=a.lugar||"";
+  $("#precio").value=a.precio||""; $("#duracion").value=a.duracion||""; $("#lugar").value=a.lugar||""; $("#nivel").value=a.nivel||"";
   $("#visible").checked=!!a.visible; $("#mostrar_contador").checked=!!a.mostrar_contador;
   $("#franjas_elegibles").checked=!!a.franjas_elegibles;
   $("#franjas-wrap").classList.toggle("oculto", !a.franjas_elegibles);
@@ -501,7 +511,7 @@ $("#btn-guardar").onclick = async ()=>{
     franjas: elegible ? franjasSeleccionadas().join(",") : "",
     franjas_elegibles: elegible,
     visible:$("#visible").checked, mostrar_contador:$("#mostrar_contador").checked,
-    precio:$("#precio").value.trim(), duracion:$("#duracion").value.trim(), lugar:$("#lugar").value.trim(),
+    precio:$("#precio").value.trim(), duracion:$("#duracion").value.trim(), lugar:$("#lugar").value.trim(), nivel:$("#nivel").value,
   };
   const um=$("#umbral").value, pl=$("#plazas").value;
   if(um!=="") datos.umbral=parseInt(um); if(pl!=="") datos.plazas=parseInt(pl);
@@ -540,7 +550,7 @@ async function cargarDash(){
     // Actividades ofertadas (en curso)
     const of = d.ofertadas || [];
     $("#dashOfertadas").innerHTML = of.length ? of.map(o=>{
-      const meta = [o.duracion, o.lugar].filter(Boolean).join(" · ");
+      const meta = [o.duracion, o.lugar, o.nivel].filter(Boolean).join(" · ");
       return `<div class="dash-prep-card">
         <div class="dash-prep-tit">${o.titulo}</div>
         <div class="dash-prep-n">${meta||"&nbsp;"}</div>

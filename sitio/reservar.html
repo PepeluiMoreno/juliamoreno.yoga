@@ -176,6 +176,8 @@ function renderFicha(c) {
   const partes = [];
   if (a && a.duracion) partes.push(`&#9201; ${escapar(a.duracion)}`);
   if (a && a.lugar) partes.push(`&#128205; ${escapar(a.lugar)}`);
+  // En blanco = no se muestra (sin valor por defecto).
+  if (a && a.nivel) partes.push(`&#9679; ${escapar(a.nivel)}`);
   const meta = partes.length
     ? `<p class="ficha-meta">${partes.map(x => `<span>${x}</span>`).join("")}</p>` : "";
   const texto = a && a.texto ? `<p>${escapar(a.texto)}</p>` : "";

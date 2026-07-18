@@ -60,6 +60,7 @@ def _actividad_de(cal_id):
                 "texto": fila.get("texto_es"),
                 "duracion": fila.get("duracion"),
                 "lugar": fila.get("lugar"),
+                "nivel": fila.get("nivel"),
                 "precio": fila.get("precio"),
                 "foto": fila.get("foto"),
             }

@@ -128,6 +128,11 @@ def seccion_actividades(data, idioma):
             metas.append(f'<span class="clase-meta-it">&#9201; {duracion}</span>')
         if lugar:
             metas.append(f'<span class="clase-meta-it">&#128205; {lugar}</span>')
+        # Nivel: si se dejó en blanco al proponer la actividad, no se
+        # muestra nunca (nada de "todos los niveles" por defecto).
+        nivel = (ln.get("nivel") or "").strip()
+        if nivel:
+            metas.append(f'<span class="clase-meta-it">&#9679; {nivel}</span>')
         if metas:
             out.append(f'          <p class="clase-meta">{" ".join(metas)}</p>')
         precio = (ln.get("precio") or "").strip()
@@ -389,6 +394,7 @@ def desde_nocodb(data):
             "mostrar_contador": bool(fila.get("mostrar_contador")),
             "franjas_elegibles": bool(fila.get("franjas_elegibles")),
             "cal_event_type_id": fila.get("cal_event_type_id") or 0,
+            "nivel": fila.get("nivel") or "",
             "visible": bool(fila.get("visible")),
             "titulo": idi("titulo"), "texto": idi("texto"), "franjas": franjas,
         })
