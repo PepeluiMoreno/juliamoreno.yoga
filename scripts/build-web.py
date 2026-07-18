@@ -68,6 +68,10 @@ PREGUNTA_ETQ = {"es": "¿Te encaja? Pregúntanos",
                 "de": "Unsicher? Frag uns"}
 CONTACTO_ANCLA = {"es": "#contacto", "en": "#contact",
                   "fr": "#contact", "de": "#kontakt"}
+# Botón para las clases en curso que aún no son reservables por Cal.diy:
+# antes quedaban con un enlace de texto y parecían tarjetas sin acción.
+PREGUNTA_BTN = {"es": "Pregúntanos", "en": "Ask us",
+                "fr": "Écris-nous", "de": "Frag uns"}
 
 
 def seccion_actividades(data, idioma):
@@ -146,16 +150,14 @@ def seccion_actividades(data, idioma):
                     f'<a href="{CONTACTO_ANCLA.get(idioma, "#contacto")}">'
                     f'{PREGUNTA_ETQ.get(idioma, PREGUNTA_ETQ["es"])}</a></p>')
         if estado == "propuesta":
-            fr_json = _json.dumps(franjas_data, ensure_ascii=False).replace('"', "&quot;")
-            el = "1" if elegible else "0"
-            out.append(f'        <form class="interes clase-form" data-actividad="{aid}" data-elegible="{el}" data-franjas="{fr_json}" onsubmit="enviarInteres(this); return false;">')
-            out.append(f'          <input type="text" name="nombre" placeholder="{t("form_nombre")}" required>')
-            out.append(f'          <input type="text" name="contacto" placeholder="{t("form_contacto")}" required>')
-            out.append(f'          <button type="submit" class="btn">{t("interesa")}</button>')
-            out.append(f'          <p class="consent">{t("form_consent")}</p>')
-            out.append(f'          <p class="ok" hidden>{t("form_ok")}</p>')
-            out.append('        </form>')
+            # Los datos (nombre y contacto) se piden en su propia vista,
+            # no dentro de la tarjeta: el grid queda limpio, todas las
+            # tarjetas miden lo mismo y cada una tiene UN botón claro.
+            out.append('        <div class="clase-form">')
+            out.append(f'          <a class="btn" href="/interes.html?actividad={aid}">'
+                       f'{t("interesa")}</a>')
             out.append(pregunta)
+            out.append('        </div>')
         else:
             # Actividad ya programada o en curso: si está enlazada con una
             # clase de Cal.diy (cal_event_type_id), se ofrece reservar plaza.
@@ -169,61 +171,19 @@ def seccion_actividades(data, idioma):
             if cal_id:
                 etq = t("reservar") or RESERVAR_ETQ.get(idioma, RESERVAR_ETQ["es"])
                 out.append(f'          <a class="btn" href="/reservar.html?clase={cal_id}">{etq}</a>')
-            out.append(pregunta)
+                out.append(pregunta)
+            else:
+                # Aún no reservable: el CTA es preguntar, y va como BOTÓN
+                # (un enlace de texto se leía como tarjeta sin acción).
+                out.append(f'          <a class="btn btn-sec" '
+                           f'href="{CONTACTO_ANCLA.get(idioma, "#contacto")}">'
+                           f'{PREGUNTA_BTN.get(idioma, PREGUNTA_BTN["es"])}</a>')
             out.append('        </div>')
         out.append('      </article>')
     out.append('    </div>')
-    out.append('    <div class="modal-franjas" id="modalFranjas" hidden>')
-    out.append('      <div class="modal-caja">')
-    out.append(f'        <h3>{t("elige_franja")}</h3>')
-    out.append('        <div class="modal-franjas-lista" id="modalLista"></div>')
-    out.append('        <div class="modal-botones">')
-    out.append(f'          <button type="button" class="btn btn-sec" id="modalCancelar">{t("modal_cancelar")}</button>')
-    out.append(f'          <button type="button" class="btn" id="modalConfirmar">{t("modal_confirmar")}</button>')
-    out.append('        </div>')
-    out.append('      </div>')
-    out.append('    </div>')
-    out.append(JS_INTERES)
     return "\n".join(out)
 
 
-JS_INTERES = """    <script>
-    (function(){
-      const modal=document.getElementById('modalFranjas');
-      const lista=document.getElementById('modalLista');
-      let formActivo=null;
-      window.enviarInteres=function(f){
-        const elegible=f.dataset.elegible==='1';
-        if(elegible){
-          formActivo=f;
-          let fr=[];
-          try{fr=JSON.parse(f.dataset.franjas.replace(/&quot;/g,'"'));}catch(e){}
-          lista.innerHTML=fr.map(function(x){return '<label class="modal-franja"><input type="checkbox" value="'+x.id+'"> '+x.etiqueta+'</label>';}).join('');
-          modal.hidden=false;
-        }else{
-          enviar(f,[]);
-        }
-        return false;
-      };
-      async function enviar(f,franjas){
-        const d={actividad:f.dataset.actividad,nombre:f.nombre.value,contacto:f.contacto.value,franjas:franjas,idioma:document.documentElement.lang};
-        try{
-          await fetch('https://api.juliamoreno.yoga/webhook/interes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-          f.querySelector('.ok').hidden=false;
-          f.nombre.disabled=f.contacto.disabled=f.querySelector('button').disabled=true;
-        }catch(e){alert('No se pudo enviar, int\u00e9ntalo m\u00e1s tarde.');}
-      }
-      const bc=document.getElementById('modalConfirmar');
-      if(bc)bc.onclick=function(){
-        const fr=[].slice.call(lista.querySelectorAll('input:checked')).map(function(x){return x.value;});
-        modal.hidden=true;
-        if(formActivo){enviar(formActivo,fr);formActivo=null;}
-      };
-      const bx=document.getElementById('modalCancelar');
-      if(bx)bx.onclick=function(){modal.hidden=true;formActivo=null;};
-      if(modal)modal.addEventListener('click',function(e){if(e.target===modal){modal.hidden=true;formActivo=null;}});
-    })();
-    </script>"""
 
 
 def esc(t):

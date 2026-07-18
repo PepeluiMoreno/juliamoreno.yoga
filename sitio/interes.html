@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Me interesa · Julia Moreno · Yoga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --mar: #1d5975; --tinta: #153f54; --crema: #fcfbf8;
+    --linea: #e5e0d8; --ok: #2f8f5b;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--crema); color: var(--tinta);
+    font-family: 'Mulish', sans-serif; padding: 2rem 1rem 4rem;
+  }
+  .marco { max-width: 620px; margin: 0 auto; }
+  h1 {
+    font-family: 'Marcellus', serif; font-weight: 400;
+    color: var(--mar); font-size: 1.9rem; margin-bottom: .25rem;
+  }
+  .lema { opacity: .7; margin-bottom: 2rem; }
+  .volver { display: inline-block; margin-bottom: 1.2rem; font-size: .88rem;
+            color: var(--mar); opacity: .8; }
+  .ficha {
+    background: #fff; border: 1px solid var(--linea); border-radius: 12px;
+    overflow: hidden; margin-bottom: 1.6rem;
+  }
+  .ficha img { width: 100%; max-height: 220px; object-fit: cover; display: block; }
+  .ficha-cuerpo { padding: 1.1rem 1.3rem 1.3rem; }
+  .ficha h2 {
+    font-family: 'Marcellus', serif; font-weight: 400; color: var(--mar);
+    font-size: 1.45rem; margin: 0 0 .5rem;
+  }
+  .ficha p { margin: 0 0 .6rem; }
+  .ficha-meta { display: flex; flex-wrap: wrap; gap: .4rem .9rem;
+                font-size: .88rem; opacity: .8; }
+  .ficha-precio { font-weight: 700; color: var(--mar); margin-top: .5rem; }
+  label { display: block; font-size: .85rem; margin: .9rem 0 .25rem; }
+  input[type=text] {
+    width: 100%; padding: .6rem .75rem; font: inherit;
+    border: 1px solid var(--linea); border-radius: 8px; background: #fff;
+  }
+  fieldset { border: 1px solid var(--linea); border-radius: 8px;
+             padding: .8rem 1rem 1rem; margin-top: 1.1rem; background: #fff; }
+  legend { font-size: .85rem; padding: 0 .4rem; }
+  .franja-op { display: block; padding: .3rem 0; font-size: .95rem; }
+  .btn {
+    display: inline-block; background: var(--mar); color: #fff; border: none;
+    padding: .7rem 1.4rem; border-radius: 8px; font: inherit; cursor: pointer;
+    margin-top: 1.4rem; text-decoration: none;
+  }
+  .btn[disabled] { opacity: .5; cursor: default; }
+  .consent { font-size: .78rem; opacity: .6; margin-top: .9rem; }
+  .aviso { margin-top: 1rem; padding: .7rem .9rem; border-radius: 8px;
+           font-size: .92rem; display: none; }
+  .aviso.error { display: block; background: #fbeceb; color: #a3352c; }
+  .aviso.exito { display: block; background: #e9f5ee; color: var(--ok); }
+  .vacio { opacity: .6; font-style: italic; }
+</style>
+</head>
+<body>
+<div class="marco">
+  <h1>Julia Moreno · Yoga</h1>
+  <p class="lema">Dime que te interesa y te aviso cuando se monte.</p>
+  <div id="contenido"><p class="vacio">Cargando…</p></div>
+</div>
+
+<script>
+const API = "https://api.juliamoreno.yoga";
+const ID = new URLSearchParams(location.search).get("actividad");
+
+function escapar(s) {
+  return String(s || "").replace(/[&<>"']/g,
+    c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+function ficha(a) {
+  const partes = [];
+  if (a.duracion) partes.push(`&#9201; ${escapar(a.duracion)}`);
+  if (a.lugar) partes.push(`&#128205; ${escapar(a.lugar)}`);
+  if (a.nivel) partes.push(`&#9679; ${escapar(a.nivel)}`);
+  return `<a class="volver" href="/#actividades">&#8592; Todas las actividades</a>
+    <section class="ficha">
+      ${a.foto ? `<img src="${escapar(a.foto)}" alt="${escapar(a.titulo)}">` : ""}
+      <div class="ficha-cuerpo">
+        <h2>${escapar(a.titulo)}</h2>
+        ${a.texto ? `<p>${escapar(a.texto)}</p>` : ""}
+        ${partes.length ? `<p class="ficha-meta">${partes.map(x => `<span>${x}</span>`).join("")}</p>` : ""}
+        ${a.precio ? `<p class="ficha-precio">${escapar(a.precio)}</p>` : ""}
+      </div>
+    </section>`;
+}
+
+function formulario(a) {
+  // Las franjas solo se preguntan si la actividad las tiene marcadas como
+  // elegibles: así se sabe qué horario le vendría bien a cada persona.
+  let franjas = [];
+  try { franjas = JSON.parse(a.franjas || "[]"); } catch (e) { franjas = []; }
+  const bloque = (a.franjas_elegibles && franjas.length)
+    ? `<fieldset><legend>¿Qué horarios te vendrían bien?</legend>
+        ${franjas.map(f => `<label class="franja-op">
+          <input type="checkbox" value="${escapar(f.id)}"> ${escapar(f.etiqueta)}
+        </label>`).join("")}
+       </fieldset>`
+    : "";
+  return `
+    <label for="nombre">Tu nombre</label>
+    <input type="text" id="nombre" maxlength="80" autocomplete="name">
+    <label for="contacto">WhatsApp o email</label>
+    <input type="text" id="contacto" maxlength="120">
+    ${bloque}
+    <div class="aviso" id="aviso"></div>
+    <button class="btn" id="enviar">Me interesa</button>
+    <p class="consent">Al enviar aceptas que Julia Moreno guarde tu nombre y
+    contacto para avisarte sobre esta actividad.</p>`;
+}
+
+async function cargar() {
+  const cont = document.getElementById("contenido");
+  if (!ID) {
+    cont.innerHTML = '<p class="vacio">Falta la actividad. ' +
+      '<a href="/#actividades">Vuelve a la lista</a>.</p>';
+    return;
+  }
+  try {
+    const r = await fetch(`${API}/actividad?id=${encodeURIComponent(ID)}`);
+    const data = await r.json();
+    if (!data.ok) throw new Error();
+    const a = data.actividad;
+    // Si ya es reservable, esta vista no pinta nada: se va a reservar.
+    if (a.cal_event_type_id) {
+      location.replace(`/reservar.html?clase=${a.cal_event_type_id}`);
+      return;
+    }
+    cont.innerHTML = ficha(a) + formulario(a);
+    document.getElementById("enviar").addEventListener("click", () => enviar(a));
+  } catch (e) {
+    cont.innerHTML = '<p class="vacio">No se pudo cargar la actividad. ' +
+      '<a href="/#actividades">Vuelve a la lista</a>.</p>';
+  }
+}
+
+async function enviar(a) {
+  const nombre = document.getElementById("nombre").value.trim();
+  const contacto = document.getElementById("contacto").value.trim();
+  const aviso = document.getElementById("aviso");
+  const boton = document.getElementById("enviar");
+  if (!nombre || !contacto) {
+    aviso.className = "aviso error";
+    aviso.textContent = "Rellena tu nombre y un contacto.";
+    return;
+  }
+  const franjas = [].slice.call(
+    document.querySelectorAll('.franja-op input:checked')).map(x => x.value);
+  boton.disabled = true; boton.textContent = "Enviando…";
+  try {
+    await fetch(`${API}/webhook/interes`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actividad: a.id, nombre: nombre,
+                             contacto: contacto, franjas: franjas,
+                             idioma: document.documentElement.lang }),
+    });
+    aviso.className = "aviso exito";
+    aviso.textContent = "¡Anotado! Julia te avisará en cuanto se monte.";
+    boton.textContent = "Enviado";
+    document.getElementById("nombre").disabled = true;
+    document.getElementById("contacto").disabled = true;
+  } catch (e) {
+    aviso.className = "aviso error";
+    aviso.textContent = "No se pudo enviar. Inténtalo más tarde.";
+    boton.disabled = false; boton.textContent = "Me interesa";
+  }
+}
+
+cargar();
+</script>
+</body>
+</html>

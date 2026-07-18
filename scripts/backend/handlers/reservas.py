@@ -22,6 +22,7 @@ el cliente web.
 """
 import datetime
 import re
+import urllib.parse
 
 from .. import datos
 from ..calcom import cliente
@@ -29,6 +30,7 @@ from ..util import limpio, valido_texto
 
 RUTA_DISPONIBILIDAD = "/disponibilidad"
 RUTA_RESERVAR = "/reservar"
+RUTA_ACTIVIDAD = "/actividad"
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -67,6 +69,42 @@ def _actividad_de(cal_id):
     except Exception:
         pass
     return None
+
+
+def _ficha(fila):
+    return {
+        "id": fila.get("id"),
+        "titulo": fila.get("titulo_es"),
+        "texto": fila.get("texto_es"),
+        "duracion": fila.get("duracion"),
+        "lugar": fila.get("lugar"),
+        "nivel": fila.get("nivel"),
+        "precio": fila.get("precio"),
+        "foto": fila.get("foto"),
+        "estado": fila.get("estado"),
+        "franjas": fila.get("franjas"),
+        "franjas_elegibles": bool(fila.get("franjas_elegibles")),
+        "cal_event_type_id": int(fila.get("cal_event_type_id") or 0),
+    }
+
+
+def _actividad(aid):
+    """Ficha de una actividad por su id, para la vista de interés.
+
+    Pública: la usa interes.html para pintar la cabecera de qué está
+    apuntándose el visitante antes de dejar sus datos.
+    """
+    if not aid:
+        return 422, {"error": "falta el id de actividad"}
+    try:
+        for fila in datos.lee("Actividades"):
+            if fila.get("id") == aid:
+                if not fila.get("visible", True):
+                    return 404, {"error": "actividad no disponible"}
+                return 200, {"ok": True, "actividad": _ficha(fila)}
+        return 404, {"error": "actividad no encontrada"}
+    except Exception as e:
+        return 502, {"error": f"no se pudo leer la actividad: {e}"}
 
 
 def _disponibilidad(body_dias, solo_clase=None):
@@ -188,6 +226,12 @@ def handle(req):
                 except ValueError:
                     return 422, {"error": "clase no válida"}
         return _disponibilidad(dias, clase)
+    if req.metodo == "GET" and ruta == RUTA_ACTIVIDAD:
+        aid = None
+        for par in query.split("&"):
+            if par.startswith("id="):
+                aid = limpio(urllib.parse.unquote(par[3:]), 80)
+        return _actividad(aid)
     if req.metodo == "POST" and ruta == RUTA_RESERVAR:
         return _reservar(req.body)
     return None
