@@ -101,6 +101,20 @@ nav{display:flex;align-items:center;justify-content:space-between;
   0%,100%{transform:scale(.88);opacity:.85}
   50%{transform:scale(1.06);opacity:1}
 }
+/* Botón de WhatsApp: el número no debe partirse ni caer a otra línea.
+   En móvil se aprieta el padding y la tipografía en vez de dejar que
+   rompa: un teléfono partido en dos líneas se lee mal y se copia peor. */
+.btn-wa{white-space:nowrap}
+.wa-num{white-space:nowrap;font-variant-numeric:tabular-nums}
+@media (max-width:600px){
+  .btn-wa{padding:.8rem 1.1rem;font-size:.9rem;letter-spacing:0}
+  .btn-wa svg:first-of-type{width:18px;height:18px;margin-right:.35rem}
+  .btn-wa svg:last-of-type{margin:0 .25rem 0 .35rem}
+}
+@media (max-width:360px){
+  .btn-wa{padding:.75rem .8rem;font-size:.82rem}
+}
+
 @media (prefers-reduced-motion:reduce){
   .hero-mar::before{animation:none}
   html{scroll-behavior:auto}
