@@ -44,6 +44,16 @@
   .franja.llena:hover { background: none; }
   .plazas { opacity: .75; font-size: .85em; }
   .vacio { opacity: .6; font-style: italic; }
+  /* Filtro por clase: solo en la vista general, cuando hay varias. */
+  .filtros { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1.6rem; }
+  .filtro {
+    border: 1px solid var(--linea); background: #fff; color: var(--tinta);
+    border-radius: 999px; padding: .3rem .9rem; font: inherit;
+    font-size: .9rem; cursor: pointer;
+  }
+  .filtro:hover { border-color: var(--mar); }
+  .filtro.activo { background: var(--mar); border-color: var(--mar); color: #fff; }
+  .clase-nom { font-weight: 600; }
   /* Cabecera de la actividad: qué está reservando el alumno. */
   .ficha {
     background: #fff; border: 1px solid var(--linea); border-radius: 12px;
@@ -162,10 +172,12 @@ async function cargar() {
       document.querySelector(".lema").textContent =
         "Elige el día y la hora que mejor te venga.";
     }
-    cont.innerHTML = (CLASE ? renderFicha(data.clases[0]) : "") +
-                     data.clases.map(renderClase).join("");
-    cont.querySelectorAll(".franja:not(.llena)").forEach(b =>
-      b.addEventListener("click", () => abrir(b.dataset)));
+    CLASES = data.clases;
+    cont.innerHTML = (CLASE ? renderFicha(data.clases[0]) : "")
+      + filtros(data.clases)
+      + (CLASE ? '<h2>Elige tu día y hora</h2>' : "")
+      + `<div id="agenda">${renderAgenda(data.clases)}</div>`;
+    engancha();
   } catch (e) {
     cont.innerHTML = '<p class="vacio">No se pudo cargar la disponibilidad. ' +
       'Inténtalo más tarde o <a href="/reservar.html">mira todas las clases</a>.</p>';
@@ -194,31 +206,48 @@ function renderFicha(c) {
     </section>`;
 }
 
-function renderClase(c) {
+// Vista por DÍA, mezclando clases: el alumno no piensa "quiero Yin Yoga",
+// piensa "¿qué hay el lunes por la mañana?". Listar clase por clase, una
+// debajo de otra, obliga a recorrer la página entera para responderse eso.
+function renderAgenda(clases) {
   const porDia = {};
-  c.huecos.forEach(h => {
-    const clave = h.inicio.slice(0, 10);
-    (porDia[clave] = porDia[clave] || []).push(h);
-  });
-  const filas = Object.keys(porDia).sort().map(dia => {
-    const chips = porDia[dia].map(h => chip(c, h)).join("");
+  clases.forEach(c => (c.huecos || []).forEach(h => {
+    const dia = h.inicio.slice(0, 10);
+    (porDia[dia] = porDia[dia] || []).push({ h: h, c: c });
+  }));
+  const dias = Object.keys(porDia).sort();
+  if (!dias.length) return '<p class="vacio">Sin huecos en este periodo.</p>';
+  return dias.map(dia => {
+    const chips = porDia[dia]
+      .sort((a, b) => a.h.inicio.localeCompare(b.h.inicio))
+      .map(x => chip(x.c, x.h, !CLASE)).join("");
     return `<div class="dia"><span class="fecha">${fechaLarga(dia)}</span>` +
            `<span class="franjas">${chips}</span></div>`;
   }).join("");
-  const encabezado = CLASE ? '<h2>Elige tu día y hora</h2>'
-                           : `<h2>${escapar(c.titulo || "Clase")}</h2>`;
-  return encabezado +
-         (filas || '<p class="vacio">Sin huecos en este periodo.</p>');
 }
 
-function chip(c, h) {
+function chip(c, h, conNombre) {
   const hora = horaLocal(h.inicio);
-  if (h.libres === null) return `<span class="franja llena">${hora}</span>`;
+  // En la vista general el nombre de la clase va en la propia franja: sin
+  // él, un "10:00" suelto no dice a qué te estás apuntando.
+  const nombre = conNombre
+    ? ` <span class="clase-nom">${escapar(c.titulo)}</span>` : "";
+  if (h.libres === null) return `<span class="franja llena">${hora}${nombre}</span>`;
   if (h.libres <= 0)
-    return `<span class="franja llena">${hora} <span class="plazas">completo</span></span>`;
+    return `<span class="franja llena">${hora}${nombre} <span class="plazas">completo</span></span>`;
   return `<button class="franja" data-eid="${c.event_type_id}" ` +
     `data-inicio="${h.inicio}" data-etq="${escapar(c.titulo)} · ${fechaLarga(h.inicio)} ${hora}">` +
-    `${hora} <span class="plazas">${h.libres} de ${h.total} plazas</span></button>`;
+    `${hora}${nombre} <span class="plazas">${h.libres} de ${h.total}</span></button>`;
+}
+
+function filtros(clases) {
+  if (CLASE || clases.length < 2) return "";
+  const uno = c => `<button class="filtro" data-eid="${c.event_type_id}">`
+                 + `${escapar(c.titulo)}</button>`;
+  return `<div class="filtros">
+    <button class="filtro activo" data-eid="">Todas</button>
+    ${clases.map(uno).join("")}
+  </div>`;
 }
 
 function abrir(ds) {
@@ -262,6 +291,25 @@ async function confirmar() {
   } finally {
     boton.disabled = false; boton.textContent = "Confirmar reserva";
   }
+}
+
+let CLASES = [];
+
+function engancha() {
+  const cont = document.getElementById("contenido");
+  cont.querySelectorAll(".franja:not(.llena)").forEach(b =>
+    b.addEventListener("click", () => abrir(b.dataset)));
+  cont.querySelectorAll(".filtro").forEach(b =>
+    b.addEventListener("click", () => {
+      cont.querySelectorAll(".filtro").forEach(x => x.classList.remove("activo"));
+      b.classList.add("activo");
+      const eid = b.dataset.eid;
+      const sel = eid ? CLASES.filter(c => String(c.event_type_id) === eid)
+                      : CLASES;
+      document.getElementById("agenda").innerHTML = renderAgenda(sel);
+      // Los botones repintados necesitan volver a escuchar.
+      engancha();
+    }));
 }
 
 function escapar(s) {
