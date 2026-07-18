@@ -113,6 +113,10 @@ const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio",
 
 let seleccion = null; // {event_type_id, inicio, etiqueta}
 
+// Si se llega desde una actividad concreta ("Reservar" en su ficha), la
+// URL trae ?clase=<event_type_id> y solo se muestra esa clase.
+const CLASE = new URLSearchParams(location.search).get("clase");
+
 function horaLocal(iso) {
   return new Date(iso).toLocaleTimeString("es-ES",
     { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" });
@@ -125,19 +129,24 @@ function fechaLarga(iso) {
 async function cargar() {
   const cont = document.getElementById("contenido");
   try {
-    const r = await fetch(`${API}/disponibilidad?dias=21`);
+    const url = `${API}/disponibilidad?dias=21` + (CLASE ? `&clase=${encodeURIComponent(CLASE)}` : "");
+    const r = await fetch(url);
     const data = await r.json();
     if (!data.ok) throw new Error(data.error || "error");
     if (!data.clases.length) {
-      cont.innerHTML = '<p class="vacio">No hay clases configuradas.</p>';
+      cont.innerHTML = '<p class="vacio">No hay clases disponibles ahora mismo.</p>';
       return;
+    }
+    if (CLASE) {
+      document.querySelector(".lema").textContent =
+        "Elige el día y la hora que mejor te venga.";
     }
     cont.innerHTML = data.clases.map(renderClase).join("");
     cont.querySelectorAll(".franja:not(.llena)").forEach(b =>
       b.addEventListener("click", () => abrir(b.dataset)));
   } catch (e) {
     cont.innerHTML = '<p class="vacio">No se pudo cargar la disponibilidad. ' +
-      'Inténtalo más tarde.</p>';
+      'Inténtalo más tarde o <a href="/reservar.html">mira todas las clases</a>.</p>';
   }
 }
 

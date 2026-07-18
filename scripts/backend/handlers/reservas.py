@@ -8,7 +8,8 @@ fuera del motor), no directamente en NocoDB. Tras reservar, deja una
 copia ligera en NocoDB para la lista de alumnos por clase y los avisos.
 
 Dos rutas:
-  GET  /disponibilidad?dias=N  → aforo por hueco (para pintar la web)
+  GET  /disponibilidad?dias=N[&clase=ID]  → aforo por hueco; con clase,
+       solo esa (enlace 'Reservar' de una actividad concreta)
   POST /reservar                  → {event_type_id, inicio, nombre, email}
 
 El aforo se calcula por cruce (cliente.aforo_por_hueco): el endpoint de
@@ -40,9 +41,13 @@ def _ahora_iso():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 
-def _disponibilidad(body_dias):
-    """Aforo por hueco de todas las clases para los próximos N días.
-    Pensado para que la web pinte la disponibilidad con su estilo."""
+def _disponibilidad(body_dias, solo_clase=None):
+    """Aforo por hueco de las clases para los próximos N días. Pensado
+    para que la web pinte la disponibilidad con su estilo.
+
+    solo_clase: si viene un event_type_id, devuelve solo esa clase (es
+    lo que usa el enlace "Reservar" de cada actividad, para que el
+    alumno vea la clase que eligió y no el listado entero)."""
     try:
         dias = int(body_dias) if body_dias else 14
     except (TypeError, ValueError):
@@ -52,6 +57,10 @@ def _disponibilidad(body_dias):
     fin = hoy + datetime.timedelta(days=dias)
     try:
         tipos = cliente.event_types().get("data", [])
+        if solo_clase is not None:
+            tipos = [t for t in tipos if t.get("id") == solo_clase]
+            if not tipos:
+                return 404, {"error": "clase no encontrada"}
         salida = []
         for t in tipos:
             aforo = cliente.aforo_por_hueco(
@@ -137,10 +146,16 @@ def handle(req):
     ruta, _, query = req.path.partition("?")
     if req.metodo == "GET" and ruta == RUTA_DISPONIBILIDAD:
         dias = None
+        clase = None
         for par in query.split("&"):
             if par.startswith("dias="):
                 dias = par[5:]
-        return _disponibilidad(dias)
+            elif par.startswith("clase="):
+                try:
+                    clase = int(par[6:])
+                except ValueError:
+                    return 422, {"error": "clase no válida"}
+        return _disponibilidad(dias, clase)
     if req.metodo == "POST" and ruta == RUTA_RESERVAR:
         return _reservar(req.body)
     return None
