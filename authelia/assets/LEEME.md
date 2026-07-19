@@ -1,31 +1,45 @@
-# Personalización de la pantalla de acceso (Authelia)
+# Textos de la pantalla de acceso (Authelia)
 
-Authelia solo admite **oficialmente** tres cosas: el logotipo, el favicon
-y los textos. No admite CSS propio.
+Aquí solo hay **textos**. Authelia admite oficialmente logotipo, favicon
+y traducciones; de esas tres, aquí se usa la última.
 
-La vía que circula por internet para cambiar colores y tipografías
-consiste en inyectar una hoja de estilos desde el proxy inverso, y para
-que el navegador la acepte hay que **debilitar la Content Security
-Policy** de la pantalla de acceso — precisamente la que protege el resto.
-No compensa por unos colores, así que aquí no se hace.
+## Por qué no hay logotipo
 
-## Qué hay en esta carpeta
+Julia **no tiene logotipo**. Se llegó a generar uno (el sol del hero
+convertido en marca) y se retiró: inventar una identidad visual no es
+una decisión técnica, y un logotipo puesto por descarte acaba
+apareciendo en sitios donde nadie lo ha aprobado.
 
-    logo.png               marca, se muestra sobre el formulario
-    favicon.ico            icono de la pestaña
-    locales/es/portal.json textos en castellano, adaptados
+Si algún día lo hay, basta dejar `logo.png` y `favicon.ico` en esta
+carpeta.
 
-Los textos son un *override*: solo hay que poner las claves que se
-quieran cambiar; el resto los pone Authelia. La clave es el texto en
-inglés original. Ojo al actualizar Authelia: las claves pueden cambiar
-entre versiones y entonces el texto vuelve al de serie (no rompe nada,
-solo deja de aplicarse).
+## Por qué no hay colores ni tipografía
+
+Authelia no lo permite. Lo único que ofrece es el tema (`light`, `dark`,
+`grey`, `auto`) con la clave `theme` de la configuración.
+
+Cambiarlos de verdad exigiría un plugin de reescritura en Traefik que
+inyecte una hoja de estilos, servirla desde el propio dominio, y
+**debilitar la Content Security Policy** de la pantalla de acceso. Es la
+página que protege todo lo demás, así que no se hace.
+
+Además, esta instancia de Authelia es **infraestructura compartida**
+(vive en `/opt/docker/infra`, no en este proyecto): cualquier cosa que se
+le ponga sale también en el acceso al resto de servicios del servidor.
+Ese es el motivo de fondo para dejarla neutra.
+
+## Qué hay
+
+    locales/es/portal.json   textos en castellano, adaptados
+
+Es un *override* parcial: solo las claves que se quieren cambiar, el
+resto los pone Authelia. La clave es el texto en inglés original. Al
+actualizar Authelia conviene revisarlo: si una clave cambia de nombre, ese
+texto vuelve al de serie (no rompe nada, solo deja de aplicarse).
 
 ## Cómo se activa
 
-1. Montar esta carpeta dentro del contenedor, en `/config/assets`.
-2. En `configuration.yml`, bajo `server:`, dejar `asset_path: /config/assets`.
-3. Reiniciar Authelia.
-
-El tema claro u oscuro se elige aparte, con la clave `theme` de la
-configuración (`light`, `dark`, `grey` o `auto`).
+1. Montar esta carpeta en `/config/assets` del contenedor de Authelia.
+2. En su `configuration.yml`, bajo `server:`, `asset_path: '/config/assets'`.
+3. Recrear el contenedor (`docker compose up -d authelia`), no solo
+   reiniciarlo: hay un montaje nuevo.

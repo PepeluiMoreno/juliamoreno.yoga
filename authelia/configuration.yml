@@ -2,9 +2,9 @@ theme: light
 
 server:
   address: 'tcp://:9091'
-  # Logotipo, favicon y textos propios (ver authelia/assets/LEEME.md).
-  # Authelia no admite CSS propio: esto es todo lo que permite sin tocar
-  # la Content Security Policy de la pantalla de acceso.
+  # Textos en castellano (ver authelia/assets/LEEME.md). Sin logotipo:
+  # Julia no tiene. Sin colores ni tipografía: Authelia no lo admite sin
+  # debilitar la Content Security Policy de la pantalla de acceso.
   asset_path: '/config/assets'
 
 log:
