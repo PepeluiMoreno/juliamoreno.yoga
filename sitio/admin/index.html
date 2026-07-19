@@ -1097,8 +1097,7 @@ function engancharAccionesClase(e){
 
 function abrirModalAgenda(e){
   e = e || {};
-  $("#agEditorVacio").classList.add("oculto");
-  $("#agEditorForm").classList.remove("oculto");
+  _panelAgenda("form");
   $("#ag-id").value = e.Id || "";
   // El título dice QUÉ clase es y cuándo, en vez de "Editar entrada":
   // así el panel se explica solo y sobra la jerga.
@@ -1130,17 +1129,24 @@ function abrirModalAgenda(e){
   actualizarLayoutAgenda();
 }
 
+// Los tres paneles de la columna derecha son EXCLUYENTES, y hasta ahora
+// cada flujo decidía por su cuenta cuáles ocultar: abrir una clase desde
+// la lista del día dejaba las dos cosas apiladas. Con una sola función
+// que los gobierna, eso no puede volver a pasar.
+function _panelAgenda(cual){
+  $("#agEditorVacio").classList.toggle("oculto", cual !== "vacio");
+  $("#agEditorDia").classList.toggle("oculto", cual !== "dia");
+  $("#agEditorForm").classList.toggle("oculto", cual !== "form");
+}
+
 function limpiarPanelAgenda(){
-  $("#agEditorForm").classList.add("oculto");
-  $("#agEditorDia").classList.add("oculto");
-  $("#agEditorVacio").classList.remove("oculto");
+  _panelAgenda("vacio");
   cerrarMenuContextual();
   actualizarLayoutAgenda();
 }
 
 function cerrarEditorAgenda(){
-  $("#agEditorForm").classList.add("oculto");
-  $("#agEditorVacio").classList.remove("oculto");
+  _panelAgenda("vacio");
   actualizarLayoutAgenda();
 }
 
@@ -1158,9 +1164,7 @@ function mostrarClasesDelDia(fechaStr, resaltarId){
   const clases = agendaCache
     .filter(e => (e.fecha||"").slice(0,10) === fechaStr)
     .sort((a,b) => (a.hora_inicio||"").localeCompare(b.hora_inicio||""));
-  $("#agEditorVacio").classList.add("oculto");
-  $("#agEditorForm").classList.add("oculto");
-  $("#agEditorDia").classList.remove("oculto");
+  _panelAgenda("dia");
   $("#agDiaTitulo").textContent = _fmtDia(fechaStr);
   const cont = $("#agDiaLista");
   if(!clases.length){
@@ -1553,9 +1557,7 @@ const MOTIVOS_CANC = [
   ["fuerza mayor","Fuerza mayor"], ["otro","Otro (especificar)"],
 ];
 function mostrarCancelacionEnSidebar(e){
-  $("#agEditorVacio").classList.add("oculto");
-  $("#agEditorForm").classList.add("oculto");
-  $("#agEditorDia").classList.remove("oculto");
+  _panelAgenda("dia");
   $("#agDiaTitulo").textContent = "Cancelar clase";
   const cont = $("#agDiaLista");
   cont.innerHTML = `
@@ -1982,9 +1984,7 @@ function docConsentimientos(sesiones){
 // la tarea en el menú se usa mejor que nombrar el formulario.
 // Comparten panel porque el flujo es el mismo (qué cambia + avisar).
 async function mostrarMoverEnSidebar(e, que){
-  $("#agEditorVacio").classList.add("oculto");
-  $("#agEditorForm").classList.add("oculto");
-  $("#agEditorDia").classList.remove("oculto");
+  _panelAgenda("dia");
   const aplazar = que === "fecha";
   $("#agDiaTitulo").textContent = aplazar ? "Aplazar o reprogramar" : "Trasladar clase";
   const hoy = new Date().toISOString().slice(0,10);
