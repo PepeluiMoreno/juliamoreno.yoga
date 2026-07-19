@@ -120,6 +120,12 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   min-width:1.5rem;text-align:center;padding:.1rem .35rem;font-weight:700}
 .fc .fc-col-header-cell.fc-day-today{background:#e2edf2}
 .fc-daygrid-day-number,.fc-col-header-cell[data-date]{cursor:pointer}
+.ag-acciones{margin-top:1.3rem;padding-top:1rem;border-top:1px solid var(--linea)}
+.ag-acciones-tit{font-size:.74rem;color:var(--gris);font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em;margin:0 0 .55rem}
+.ag-acciones-bot{display:flex;flex-wrap:wrap;gap:.4rem}
+.ag-acciones-bot .peligro{color:#8a2b26;border-color:#e0c4c1}
+.ag-acciones-bot .peligro:hover{background:#fdeceb}
 .oculto-edicion{display:none}
 .marca-etq{font-weight:400;opacity:.72}
 #menuContextual{position:fixed;z-index:2000;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 28px rgba(21,63,84,.18);padding:.35rem;min-width:210px;display:none}
@@ -471,14 +477,24 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
           <p id="ag-aviso-mover" class="oculto"
              style="font-size:.8rem;color:var(--gris);background:#f4f1ec;
                     border-radius:6px;padding:.55rem .7rem;margin:.9rem 0 0">
-            Aquí solo se cambian la denominación y el tipo. Para la fecha,
-            la hora o la duración usa <strong>Aplazar</strong>; para el sitio,
-            <strong>Trasladar</strong>; para la visibilidad,
-            <strong>Ocultar de la web</strong>. Esas acciones avisan a los
-            alumnos y dicen cuántos hay inscritos.
+            La fecha, la hora, la duración y el sitio no se tocan aquí:
+            se cambian con las acciones de abajo, que avisan a los alumnos
+            y dicen cuántos hay inscritos.
           </p>
 
           <label class="check ag-al-crear" style="margin-top:.9rem"><input type="checkbox" id="ag-visible" checked> Mostrar en la web pública</label>
+
+          <div id="ag-acciones" class="ag-acciones oculto">
+            <p class="ag-acciones-tit">Acciones sobre esta clase</p>
+            <div class="ag-acciones-bot">
+              <button type="button" class="btn-mini" id="ag-acc-aplazar">Aplazar…</button>
+              <button type="button" class="btn-mini" id="ag-acc-trasladar">Trasladar…</button>
+              <button type="button" class="btn-mini" id="ag-acc-visible">Ocultar de la web</button>
+              <button type="button" class="btn-mini" id="ag-acc-alumnos">Ver alumnos…</button>
+              <button type="button" class="btn-mini peligro" id="ag-acc-cancelar">Cancelar clase…</button>
+              <button type="button" class="btn-mini peligro oculto" id="ag-acc-reactivar">Reactivar</button>
+            </div>
+          </div>
 
           <div class="modal-botones" style="margin-top:1.2rem">
             <button type="button" class="btn btn-peligro oculto" id="ag-borrar">Borrar</button>
@@ -494,7 +510,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <div id="menuContextual">
     <div class="mc-tit" id="mcTitulo"></div>
     <button data-accion="nueva" id="mcNueva">+ Nueva clase este día</button>
-    <button data-accion="editar" id="mcEditar">Editar</button>
+    <button data-accion="editar" id="mcEditar">Modificar…</button>
     <button data-accion="lista" id="mcLista">Sacar lista de alumnos…</button>
     <button data-accion="visibilidad" id="mcVisibilidad">Ocultar de la web</button>
     <div class="mc-sep" id="mcSep"></div>
@@ -963,12 +979,77 @@ async function opcionesActividad(seleccionada){
   sel.value = seleccionada || "";
 }
 
+
+function _tituloClase(e){
+  const t = e.titulo || "Clase";
+  if(e.tipo === "recurrente"){
+    const nombres = {L:"lunes",M:"martes",X:"miércoles",J:"jueves",
+                     V:"viernes",S:"sábados",D:"domingos"};
+    const ds = (e.dias_semana||"").split(",").map(x=>x.trim()).filter(Boolean)
+                 .map(x=> nombres[x] || x);
+    const cuando = ds.length
+      ? "los " + (ds.length > 1
+          ? ds.slice(0,-1).join(", ") + " y " + ds[ds.length-1]
+          : ds[0])
+      : "sin días fijados";
+    return `${t}, ${cuando}${e.hora_inicio ? " a las " + e.hora_inicio.slice(0,5) : ""}`;
+  }
+  const f = (e.fecha||"").slice(0,10);
+  if(!f) return t;
+  const d = new Date(f + "T12:00:00");
+  return `${t}, ${DIAS_SEM[d.getDay()]} ${d.getDate()} de ${MESES_L[d.getMonth()]}`
+       + (e.hora_inicio ? " a las " + e.hora_inicio.slice(0,5) : "");
+}
+
+function engancharAccionesClase(e){
+  const cancelada = e.estado === "cancelada";
+  const anunciada = e.visible_web !== false;
+  $("#ag-acc-visible").textContent = anunciada ? "Ocultar de la web" : "Mostrar en la web";
+  $("#ag-acc-cancelar").classList.toggle("oculto", cancelada);
+  $("#ag-acc-reactivar").classList.toggle("oculto", !cancelada);
+  ["aplazar","trasladar"].forEach(k=>
+    $("#ag-acc-"+k).classList.toggle("oculto", cancelada));
+
+  const nuevo = (id, fn)=>{
+    const b = $("#"+id);
+    const clon = b.cloneNode(true);   // sin acumular manejadores al reabrir
+    b.replaceWith(clon);
+    clon.addEventListener("click", fn);
+  };
+  nuevo("ag-acc-aplazar",   ()=> mostrarMoverEnSidebar(e, "fecha"));
+  nuevo("ag-acc-trasladar", ()=> mostrarMoverEnSidebar(e, "lugar"));
+  nuevo("ag-acc-cancelar",  ()=> mostrarCancelacionEnSidebar(e));
+  nuevo("ag-acc-alumnos",   ()=> abrirModalLista(e));
+  nuevo("ag-acc-reactivar", async ()=>{
+    try{
+      const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({Id:e.Id, estado:"programada", motivo:"", motivo_texto:""})});
+      const d = await r.json();
+      if(d.ok){ await cargarAgenda(); cerrarEditorAgenda(); }
+      else await avisar(d.error||"No se pudo reactivar.", "Error");
+    }catch(err){ await avisar("Error de conexión.", "Error"); }
+  });
+  nuevo("ag-acc-visible", async ()=>{
+    try{
+      const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({Id:e.Id, visible_web: !anunciada})});
+      const d = await r.json();
+      if(d.ok){ await cargarAgenda(); e.visible_web = !anunciada; engancharAccionesClase(e); }
+      else await avisar(d.error||"No se pudo cambiar.", "Error");
+    }catch(err){ await avisar("Error de conexión.", "Error"); }
+  });
+}
+
 function abrirModalAgenda(e){
   e = e || {};
   $("#agEditorVacio").classList.add("oculto");
   $("#agEditorForm").classList.remove("oculto");
   $("#ag-id").value = e.Id || "";
-  $("#agTitulo").textContent = e.Id ? "Editar entrada" : "Nueva entrada";
+  // El título dice QUÉ clase es y cuándo, en vez de "Editar entrada":
+  // así el panel se explica solo y sobra la jerga.
+  $("#agTitulo").textContent = e.Id ? _tituloClase(e) : "Nueva clase";
   $("#ag-titulo").value = e.titulo || "";
   opcionesActividad(e.actividad_id);
   $("#ag-tipo").value = e.tipo || "recurrente";
@@ -991,6 +1072,9 @@ function abrirModalAgenda(e){
     el.classList.toggle("oculto-edicion", editando));
   $("#ag-hora-fila").classList.toggle("oculto-edicion", editando);
   $("#ag-aviso-mover").classList.toggle("oculto", !editando);
+  // Las acciones solo tienen sentido sobre una clase que ya existe.
+  $("#ag-acciones").classList.toggle("oculto", !editando);
+  if(editando) engancharAccionesClase(e);
   actualizarLayoutAgenda();
 }
 
@@ -1245,16 +1329,15 @@ function abrirMenuContextual(ev, ctx){
   const anunciada = e.visible_web!==false;
   const puedeEliminar = esClase && (e.tipo==="puntual") && !anunciada && !enCurso;
 
+  // Sobre una clase, el menú solo la identifica y ofrece UNA puerta.
+  // Antes desplegaba seis verbos y obligaba a decidir antes de ver los
+  // datos; ahora se decide dentro, con la clase delante.
   $("#mcEditar").style.display = esClase ? "block" : "none";
-  $("#mcLista").style.display = esClase ? "block" : "none";
-  $("#mcVisibilidad").style.display = esClase ? "block" : "none";
+  $("#mcLista").style.display = "none";
+  $("#mcVisibilidad").style.display = "none";
   $("#mcVisibilidad").textContent = (e.visible_web!==false) ? "Ocultar de la web" : "Mostrar en la web";
-  $("#mcAplazar").style.display = (esClase && !cancelada) ? "block" : "none";
-  $("#mcTrasladar").style.display = (esClase && !cancelada) ? "block" : "none";
-  $("#mcCancelar").style.display = (esClase && !cancelada) ? "block" : "none";
-  $("#mcReactivar").style.display = (esClase && cancelada) ? "block" : "none";
-  $("#mcBorrar").style.display = puedeEliminar ? "block" : "none";
-  $("#mcSep").style.display = esClase ? "block" : "none";
+  ["mcAplazar","mcTrasladar","mcCancelar","mcReactivar","mcBorrar","mcSep"]
+    .forEach(id=> $("#"+id).style.display = "none");
 
   menu.style.display = "block";
   const mw = menu.offsetWidth, mh = menu.offsetHeight;
