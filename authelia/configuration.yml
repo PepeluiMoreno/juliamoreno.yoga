@@ -2,6 +2,10 @@ theme: light
 
 server:
   address: 'tcp://:9091'
+  # Logotipo, favicon y textos propios (ver authelia/assets/LEEME.md).
+  # Authelia no admite CSS propio: esto es todo lo que permite sin tocar
+  # la Content Security Policy de la pantalla de acceso.
+  asset_path: '/config/assets'
 
 log:
   level: info

@@ -1,0 +1,9 @@
+{
+  "Login - {{authelia}}": "Acceso · Julia Moreno Yoga",
+  "Sign in": "Entrar",
+  "Username": "Usuario",
+  "Password": "Contraseña",
+  "Remember me": "No cerrar sesión en este equipo",
+  "Reset password?": "¿Has olvidado la contraseña?",
+  "Incorrect username or password": "El usuario o la contraseña no son correctos"
+}
