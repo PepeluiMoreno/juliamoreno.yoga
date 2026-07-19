@@ -15,8 +15,8 @@
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:'Mulish',system-ui,sans-serif;background:var(--crema);color:var(--gris-hondo);line-height:1.5}
-header{background:var(--mar);color:#fff;padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center}
-header .marca{font-family:'Marcellus',serif;font-size:1.3rem;color:#fff;text-decoration:none;letter-spacing:.02em}
+header{background:var(--mar);color:#fff;padding:.5rem 1.5rem;display:flex;justify-content:space-between;align-items:center}
+header .marca{font-family:'Marcellus',serif;font-size:1.1rem;color:#fff;text-decoration:none;letter-spacing:.02em}
 header .usuario{font-size:.85rem;opacity:.9}
 main{margin:0 auto}
 h1,h2{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);line-height:1.15}
@@ -159,7 +159,11 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .fc .fc-button-primary{background:var(--mar);border-color:var(--mar)}
 .fc .fc-button-primary:hover{background:var(--mar-hondo);border-color:var(--mar-hondo)}
 .fc .fc-button-primary:not(:disabled).fc-button-active{background:var(--mar-hondo);border-color:var(--mar-hondo)}
-.fc .fc-toolbar-title{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);font-size:1.2rem}
+.fc .fc-toolbar-title{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);font-size:1.05rem}
+.fc .fc-toolbar.fc-header-toolbar{margin-bottom:.55em}
+.fc .fc-button{padding:.28em .62em;font-size:.86em}
+.fc .fc-col-header-cell-cushion{padding:.25rem .3rem;font-size:.78rem}
+.fc .fc-daygrid-day-number{padding:.15rem .3rem}
 .fc-event{cursor:pointer}
 .fc-daygrid-event{white-space:normal}
 .fc-daygrid-event .fc-event-title{overflow:hidden;text-overflow:ellipsis}
@@ -169,7 +173,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .btn-mini:hover{background:var(--cielo-claro);border-color:var(--mar)}
 .oculto{display:none}
 
-.layout{display:flex;width:100%;min-height:calc(100vh - 60px)}
+.layout{display:flex;width:100%;min-height:calc(100vh - 42px)}
 .menu-lateral{width:200px;flex-shrink:0;background:#fff;border-right:1px solid var(--linea);padding:1.5rem 0}
 .menu-lateral nav{display:flex;flex-direction:column}
 .tabla-alumnos{width:100%;border-collapse:collapse;font-size:.85rem}
@@ -236,7 +240,13 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .menu-item{display:block;padding:.7rem 1.5rem;color:var(--gris-hondo);text-decoration:none;font-weight:600;font-size:.95rem;border-left:3px solid transparent}
 .menu-item:hover{background:var(--cielo-claro)}
 .menu-item.activa{color:var(--mar);border-left-color:var(--mar);background:var(--cielo-claro)}
+/* La agenda vive de la altura: cuanto más alta la celda, más clases
+   caben sin recortar. Todo lo que va encima se aprieta, y el espacio
+   ganado se le devuelve al calendario. El resto de vistas conservan su
+   aire, que ahí no hace falta pelear por píxeles. */
 .layout main{flex:1;padding:1.5rem 2rem;min-width:0}
+.layout main:has(#vista-agenda:not(.oculto)){padding-top:.8rem}
+#vista-agenda h1{font-size:1.25rem;margin:0 0 .5rem}
 .vista.oculto{display:none}
 .dash-contadores{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.8rem}
 .dash-card{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:.9rem 1rem;text-align:center}
@@ -883,7 +893,7 @@ async function cargarAgenda(){
         domingo.setDate(lunes.getDate()+6);
         return (d >= lunes && d <= domingo) ? ["fc-semana-actual"] : [];
       },
-      height: "calc(100vh - 170px)",
+      height: "calc(100vh - 112px)",
       editable: true,
       eventStartEditable: true,
       eventDurationEditable: false,
