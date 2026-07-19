@@ -129,6 +129,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .oculto-edicion{display:none}
 .marca-etq{font-weight:400;opacity:.72}
 #menuContextual{position:fixed;z-index:2000;background:#fff;border:1px solid var(--linea);border-radius:10px;box-shadow:0 8px 28px rgba(21,63,84,.18);padding:.35rem;min-width:210px;display:none}
+.mc-ficha{padding:.15rem .7rem .5rem;border-bottom:1px solid var(--linea);
+  margin-bottom:.3rem}
+.mc-ficha .mc-cuando{font-size:.82rem;color:var(--tinta);margin:0 0 .5rem;line-height:1.35}
+.mc-ficha dl{display:grid;grid-template-columns:auto 1fr;gap:.18rem .7rem;margin:0}
+.mc-ficha dt{font-size:.72rem;color:var(--gris);font-weight:600;white-space:nowrap}
+.mc-ficha dd{font-size:.78rem;color:var(--tinta);margin:0}
+.mc-ficha .mc-alerta{color:#8a2b26}
+#menuContextual{min-width:250px}
 #menuContextual button{display:block;width:100%;text-align:left;background:none;border:none;padding:.55rem .7rem;border-radius:6px;font-family:inherit;font-size:.9rem;color:var(--tinta);cursor:pointer}
 #menuContextual button:hover{background:var(--cielo-claro)}
 #menuContextual button.peligro{color:#8a2b26}
@@ -519,6 +527,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <!-- Menú contextual del calendario (clic derecho sobre una clase) -->
   <div id="menuContextual">
     <div class="mc-tit" id="mcTitulo"></div>
+    <div class="mc-ficha oculto" id="mcFicha"></div>
     <button data-accion="nueva" id="mcNueva">+ Nueva clase este día</button>
     <button data-accion="editar" id="mcEditar">Modificar…</button>
     <button data-accion="lista" id="mcLista">Sacar lista de alumnos…</button>
@@ -1334,6 +1343,50 @@ function programarHoverMenu(ev, ctx, el){
 }
 function cancelarHoverMenu(){ if(hoverTimer){ clearTimeout(hoverTimer); hoverTimer = null; } }
 
+
+function _nombreActividad(id){
+  if(!id) return null;
+  const a = (actsCache || []).find(x=> x.id === id);
+  return a ? (a.titulo_es || a.id) : id;
+}
+
+function _cuandoLargo(e){
+  if(e.tipo === "recurrente"){
+    const n = {L:"lunes",M:"martes",X:"miércoles",J:"jueves",
+               V:"viernes",S:"sábados",D:"domingos"};
+    const ds = (e.dias_semana||"").split(",").map(x=>x.trim()).filter(Boolean).map(x=>n[x]||x);
+    const cuando = ds.length
+      ? "Los " + (ds.length>1 ? ds.slice(0,-1).join(", ") + " y " + ds[ds.length-1] : ds[0])
+      : "Sin días fijados";
+    return cuando + (e.hora_inicio ? " a las " + e.hora_inicio.slice(0,5) : "");
+  }
+  const f = (e.fecha||"").slice(0,10);
+  if(!f) return "Sin fecha";
+  const d = new Date(f + "T12:00:00");
+  return `${DIAS_SEM[d.getDay()].replace(/^./,c=>c.toUpperCase())} `
+       + `${d.getDate()} de ${MESES_L[d.getMonth()]}`
+       + (e.hora_inicio ? " a las " + e.hora_inicio.slice(0,5) : "");
+}
+
+function _fichaClase(e){
+  const filas = [];
+  const act = _nombreActividad(e.actividad_id);
+  filas.push(["Tipo", e.tipo === "recurrente" ? "Clase que se repite" : "Clase puntual"]);
+  if(e.duracion_min) filas.push(["Duración", e.duracion_min + " min"]);
+  if(e.lugar) filas.push(["Lugar", e.lugar]);
+  filas.push(["Actividad", act || "sin asignar"]);
+  filas.push(["En la web", e.visible_web !== false ? "Visible" : "Oculta"]);
+  if(e.estado === "cancelada"){
+    const m = (MOTIVOS_CANC.find(([v])=> v === e.motivo) || [])[1] || e.motivo || "";
+    filas.push(["Estado", `<span class="mc-alerta">Cancelada${
+      m ? " · " + _escL(e.motivo === "otro" ? (e.motivo_texto||m) : m) : ""}</span>`]);
+  }
+  return `<p class="mc-cuando">${_escL(_cuandoLargo(e))}</p><dl>`
+       + filas.map(([k,v])=>`<dt>${k}</dt><dd>${
+           k === "Estado" ? v : _escL(v)}</dd>`).join("")
+       + "</dl>";
+}
+
 function abrirMenuContextual(ev, ctx){
   cancelarHoverMenu();
   mcCtx = ctx;
@@ -1342,9 +1395,13 @@ function abrirMenuContextual(ev, ctx){
   const e = ctx.clase || {};
 
   // Título del menú
-  $("#mcTitulo").textContent = esClase
-    ? (e.titulo || "Clase") + (e.hora_inicio ? " · " + e.hora_inicio.slice(0,5) : "")
-    : _tituloDia(ctx.fecha, ctx.hora);
+  $("#mcTitulo").textContent = esClase ? (e.titulo || "Clase")
+                                       : _tituloDia(ctx.fecha, ctx.hora);
+  // Ficha completa en solo lectura: casi siempre se abre el menú para
+  // CONSULTAR (a qué hora es, dónde, si está publicada), no para cambiar
+  // nada. Enseñarlo aquí ahorra entrar a modificar para mirar.
+  $("#mcFicha").classList.toggle("oculto", !esClase);
+  if(esClase) $("#mcFicha").innerHTML = _fichaClase(e);
 
   // Entrada de creación: siempre disponible. Refleja la hora si el contexto
   // la trae (vistas Semana/Día); si no, solo el día.
@@ -2253,7 +2310,10 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     if(vista==="panel") cargarDash();
     if(vista==="sesiones") cargarSesiones();
     if(vista==="actividades") cargar();
-    if(vista==="agenda"){ cargarAgenda(); setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 50); }
+    if(vista==="agenda"){
+      // Precargar los nombres de actividad: la ficha del menú los muestra
+      // y no puede esperar a una petición mientras se abre.
+      if(!actsCache) opcionesActividad(null); cargarAgenda(); setTimeout(()=>{ if(calendario) calendario.updateSize(); }, 50); }
   });
 });
 
