@@ -808,6 +808,9 @@ const API_AGENDA = "https://api.juliamoreno.yoga/admin/api/agenda";
 const DIAS = [["lun","L"],["mar","M"],["mie","X"],["jue","J"],["vie","V"],["sab","S"],["dom","D"]];
 const DIA_NUM = {dom:0,lun:1,mar:2,mie:3,jue:4,vie:5,sab:6};
 let calendario = null;
+// datesSet dispara también en el primer render: entonces no hay nada
+// que limpiar y la variable evita tocar el panel al arrancar.
+let agDatesSetInicial = true;
 
 // pintar checkboxes de días
 $("#ag-dias").innerHTML = DIAS.map(([k,v])=>
@@ -906,6 +909,13 @@ async function cargarAgenda(){
       editable: true,
       eventStartEditable: true,
       eventDurationEditable: false,
+      datesSet: function(){
+        // Al cambiar de mes, de semana o de vista, la columna derecha se
+        // queda hablando de un día que ya no está en pantalla —o peor,
+        // con el formulario de una clase que no se ve—. Se limpia.
+        if(agDatesSetInicial){ agDatesSetInicial = false; return; }
+        limpiarPanelAgenda();
+      },
       dateClick: function(info){
         // El número del día y la cabecera abren el menú de acciones, no el
         // listado: si no, un mismo clic haría dos cosas a la vez.
@@ -1117,6 +1127,14 @@ function abrirModalAgenda(e){
   // Las acciones solo tienen sentido sobre una clase que ya existe.
   $("#ag-acciones").classList.toggle("oculto", !editando);
   if(editando) engancharAccionesClase(e);
+  actualizarLayoutAgenda();
+}
+
+function limpiarPanelAgenda(){
+  $("#agEditorForm").classList.add("oculto");
+  $("#agEditorDia").classList.add("oculto");
+  $("#agEditorVacio").classList.remove("oculto");
+  cerrarMenuContextual();
   actualizarLayoutAgenda();
 }
 
