@@ -21,23 +21,25 @@ def handle(req):
     try:
         acts = datos.lee("Actividades")
         inter = datos.lee("Interesados")
-        # interesados reales por actividad
-        por_act = {}
+        servicios = datos.servicios_por_uuid()
+        # interesados reales por servicio (el interés es por servicio)
+        por_serv = {}
         for r in inter:
-            a = (r.get("actividad") or "").strip()
+            a = (r.get("actividad") or "").strip()  # ahora lleva servicio_uuid
             if a:
-                por_act[a] = por_act.get(a, 0) + 1
+                por_serv[a] = por_serv.get(a, 0) + 1
         estados = {}
         ofertadas = []
         propuestas = []
         for a in acts:
             est = (a.get("estado") or "propuesta").strip()
             estados[est] = estados.get(est, 0) + 1
-            aid = (a.get("id") or "").strip()
+            s_uuid = (a.get("servicio_uuid") or "").strip()
+            serv = servicios.get(s_uuid, {})
             tarjeta = {
-                "id": aid,
-                "titulo": a.get("titulo_es") or "(sin título)",
-                "interesados": por_act.get(aid, 0),
+                "id": s_uuid,
+                "titulo": serv.get("titulo_es") or "(sin título)",
+                "interesados": por_serv.get(s_uuid, 0),
                 "umbral": int(a.get("umbral") or 0),
                 "lugar": a.get("lugar") or "",
                 "duracion": a.get("duracion") or "",

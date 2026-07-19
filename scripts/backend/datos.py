@@ -72,3 +72,14 @@ def borra_varios(tabla, ids):
     url, tok, _ = nc.cfg()
     nc.api(url, tok, "DELETE", f"/api/v2/tables/{_tid(tabla)}/records",
            [{"Id": i} for i in ids])
+
+
+def servicios_por_uuid():
+    """Índice {uuid: fila} de Servicios. Los datos de identidad (título,
+    texto, foto, nivel) viven en el Servicio; una Actividad/temporada solo
+    guarda su servicio_uuid. Este índice evita releer Servicios en cada
+    handler que necesita la identidad detrás de una temporada."""
+    try:
+        return {(s.get("uuid") or ""): s for s in lee("Servicios")}
+    except Exception:
+        return {}

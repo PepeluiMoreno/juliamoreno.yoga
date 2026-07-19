@@ -45,38 +45,39 @@ def _ahora_iso():
 
 
 def _actividad_id_de(cal_id):
-    """id de la actividad enlazada con ese tipo de evento, o "" si ninguna."""
+    """uuid del servicio cuya temporada está enlazada con ese tipo de evento,
+    o "" si ninguna. El interés/identidad público es por servicio, así que se
+    devuelve su uuid (no el de la temporada)."""
     try:
         for fila in datos.lee("Actividades"):
             if int(fila.get("cal_event_type_id") or 0) == int(cal_id):
-                return fila.get("id") or ""
+                return fila.get("servicio_uuid") or ""
     except Exception:
         pass
     return ""
 
 
 def _actividad_de(cal_id):
-    """Ficha de la actividad de NocoDB enlazada con esa clase de Cal.diy.
-
-    El alumno que llega desde una actividad tiene que ver QUÉ está
-    reservando (texto, duración, lugar, precio, foto), no solo horas
-    sueltas. Cal.diy solo guarda título y duración; lo demás vive en
-    NocoDB, y el cruce lo hace cal_event_type_id.
-    Si algo falla, se devuelve None: la cabecera es un extra, nunca debe
-    tumbar la disponibilidad.
+    """Ficha de lo que el alumno está reservando, enlazada con esa clase de
+    Cal.diy. Combina la TEMPORADA (duración, lugar, precio, vía
+    cal_event_type_id) con la IDENTIDAD del SERVICIO (título, texto, nivel,
+    foto). Si algo falla, None: la cabecera es un extra, nunca debe tumbar la
+    disponibilidad.
     """
     try:
+        servicios = datos.servicios_por_uuid()
         for fila in datos.lee("Actividades"):
             if int(fila.get("cal_event_type_id") or 0) != int(cal_id):
                 continue
+            serv = servicios.get(fila.get("servicio_uuid") or "", {})
             return {
-                "titulo": fila.get("titulo_es"),
-                "texto": fila.get("texto_es"),
+                "titulo": serv.get("titulo_es"),
+                "texto": serv.get("texto_es"),
                 "duracion": fila.get("duracion"),
                 "lugar": fila.get("lugar"),
-                "nivel": fila.get("nivel"),
+                "nivel": serv.get("nivel"),
                 "precio": fila.get("precio"),
-                "foto": fila.get("foto"),
+                "foto": serv.get("foto"),
             }
     except Exception:
         pass
@@ -97,16 +98,20 @@ def _archivada(fila):
         return False
 
 
-def _ficha(fila):
+def _ficha(fila, serv=None):
+    """Ficha pública que combina la TEMPORADA (`fila`, programación) con la
+    IDENTIDAD del SERVICIO (`serv`, título/texto/nivel/foto). El `id` público
+    es el uuid del servicio, que es lo estable a lo que se apunta el visitante."""
+    serv = serv or {}
     return {
-        "id": fila.get("id"),
-        "titulo": fila.get("titulo_es"),
-        "texto": fila.get("texto_es"),
+        "id": fila.get("servicio_uuid"),
+        "titulo": serv.get("titulo_es"),
+        "texto": serv.get("texto_es"),
         "duracion": fila.get("duracion"),
         "lugar": fila.get("lugar"),
-        "nivel": fila.get("nivel"),
+        "nivel": serv.get("nivel"),
         "precio": fila.get("precio"),
-        "foto": fila.get("foto"),
+        "foto": serv.get("foto"),
         "estado": fila.get("estado"),
         "franjas": fila.get("franjas"),
         "franjas_elegibles": bool(fila.get("franjas_elegibles")),
@@ -135,33 +140,39 @@ def _sin_plazas(cal_id, dias=30):
 
 
 def _pasadas():
-    """Actividades ya concluidas, para la vista de anteriores. Sirven para
+    """Temporadas ya concluidas, para la vista de anteriores. Sirven para
     que quien llegue tarde pueda pedir que se repitan."""
     try:
+        servicios = datos.servicios_por_uuid()
         out = []
         for fila in datos.lee("Actividades"):
             if fila.get("visible", True) and _archivada(fila):
-                out.append(_ficha(fila))
+                out.append(_ficha(fila, servicios.get(fila.get("servicio_uuid") or "")))
         return 200, {"ok": True, "actividades": out}
     except Exception as e:
         return 502, {"error": f"no se pudieron leer: {e}"}
 
 
 def _actividad(aid):
-    """Ficha de una actividad por su id, para la vista de interés.
-
-    Pública: la usa interes.html para pintar la cabecera de qué está
-    apuntándose el visitante antes de dejar sus datos.
-    """
+    """Ficha de un servicio por su uuid, para la vista de interés. Pública:
+    la usa interes.html para pintar la cabecera de qué está apuntándose el
+    visitante. Se muestra la temporada vigente del servicio (la visible no
+    archivada de `hasta` más lejana)."""
     if not aid:
-        return 422, {"error": "falta el id de actividad"}
+        return 422, {"error": "falta el id de servicio"}
     try:
-        for fila in datos.lee("Actividades"):
-            if fila.get("id") == aid:
-                if not fila.get("visible", True):
-                    return 404, {"error": "actividad no disponible"}
-                return 200, {"ok": True, "actividad": _ficha(fila)}
-        return 404, {"error": "actividad no encontrada"}
+        servicios = datos.servicios_por_uuid()
+        serv = servicios.get(aid)
+        if not serv:
+            return 404, {"error": "servicio no encontrado"}
+        # Temporada vigente: visible, no archivada, `hasta` más lejana.
+        candidatas = [f for f in datos.lee("Actividades")
+                      if (f.get("servicio_uuid") or "") == aid
+                      and f.get("visible", True) and not _archivada(f)]
+        if not candidatas:
+            return 404, {"error": "actividad no disponible"}
+        vigente = max(candidatas, key=lambda f: str(f.get("hasta") or ""))
+        return 200, {"ok": True, "actividad": _ficha(vigente, serv)}
     except Exception as e:
         return 502, {"error": f"no se pudo leer la actividad: {e}"}
 

@@ -98,8 +98,12 @@ def proyecta_matriz(mes_ym):
     y, m = map(int, mes_ym.split("-"))
     celdas = datos.lee("Clases")
     ndias = calendar.monthrange(y, m)[1]
+    # Título de cada temporada: vive en su Servicio. acts mapea el uuid de la
+    # temporada (lo que Clases.actividad_id referencia) al título del servicio.
     try:
-        acts = {a.get("id"): a.get("titulo_es") for a in datos.lee("Actividades")}
+        servicios = {s.get("uuid"): s.get("titulo_es") for s in datos.lee("Servicios")}
+        acts = {a.get("uuid"): servicios.get(a.get("servicio_uuid"))
+                for a in datos.lee("Actividades")}
     except Exception:
         acts = {}
     nuevas = []

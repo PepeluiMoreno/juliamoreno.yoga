@@ -358,14 +358,15 @@ def aplica(idioma, ruta, data):
 
 
 
-def traduce_actividades_pendientes(nc, url, tok, ids):
-    """Traduce con DeepL las actividades cuyo texto ES cambió (sello es_hash).
-    Convivencia: respeta idiomas en 'revisado'. Sin bucles: solo actúa si el
-    hash del ES difiere del es_hash guardado. Best-effort: si DeepL falla,
-    deja la actividad como está y sigue."""
+def traduce_servicios_pendientes(nc, url, tok, ids):
+    """Traduce con DeepL los SERVICIOS cuyo texto ES cambió (sello es_hash).
+    La identidad textual (título/texto) vive ahora en Servicios, no en la
+    temporada. Convivencia: respeta idiomas en 'revisado'. Sin bucles: solo
+    actúa si el hash del ES difiere del es_hash guardado. Best-effort: si
+    DeepL falla, deja el servicio como está y sigue."""
     import hashlib, urllib.request, os
     deepl = os.environ.get("DEEPL_API_KEY")
-    if not deepl or "Actividades" not in ids:
+    if not deepl or "Servicios" not in ids:
         return
     LANGS = {"en": "EN-GB", "fr": "FR", "de": "DE"}
     def dl(texto, target):
@@ -379,7 +380,7 @@ def traduce_actividades_pendientes(nc, url, tok, ids):
                      "Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=20) as r:
             return json.load(r)["translations"][0]["text"]
-    for fila in nc.records(url, tok, ids["Actividades"]):
+    for fila in nc.records(url, tok, ids["Servicios"]):
         tit = (fila.get("titulo_es") or "").strip()
         txt = (fila.get("texto_es") or "").strip()
         if not tit and not txt:
@@ -398,10 +399,10 @@ def traduce_actividades_pendientes(nc, url, tok, ids):
                 if txt:
                     parche[f"texto_{idi}"] = dl(txt, tgt)
             nc.api(url, tok, "PATCH",
-                   f"/api/v2/tables/{ids['Actividades']}/records", [parche])
-            print(f"  traducida actividad {fila.get('id') or fila['Id']}")
+                   f"/api/v2/tables/{ids['Servicios']}/records", [parche])
+            print(f"  traducido servicio {fila.get('uuid') or fila['Id']}")
         except Exception as e:
-            print(f"  AVISO: no se pudo traducir {fila.get('id')}: {e}")
+            print(f"  AVISO: no se pudo traducir {fila.get('uuid')}: {e}")
 
 
 def desde_nocodb(data):
@@ -415,11 +416,11 @@ def desde_nocodb(data):
     if not bid:
         raise RuntimeError(f"la base '{base}' no existe en NocoDB")
     ids = nc.tablas(url, tok, bid)
-    for t in ("Precios", "Horarios", "Actividades"):
+    for t in ("Precios", "Horarios", "Servicios", "Actividades"):
         if t not in ids:
             raise RuntimeError(f"falta la tabla '{t}' (ejecute provision-nocodb.py)")
     # Traducir (DeepL) lo que haya cambiado, antes de leer para generar
-    traduce_actividades_pendientes(nc, url, tok, ids)
+    traduce_servicios_pendientes(nc, url, tok, ids)
     # Precios
     for fila in nc.records(url, tok, ids["Precios"]):
         for ln in data["precios"]["lineas"]:
@@ -431,15 +432,19 @@ def desde_nocodb(data):
         for ln in data["horarios"]["lineas"]:
             if ln["id"] == fila.get("id"):
                 ln["visible"] = bool(fila.get("visible"))
-    # Actividades: la lista entera viene de NocoDB.
-    # INTEGRIDAD: el nº de interesados NO se lee del campo almacenado en
-    # Actividades (redundante y desincronizable); se CUENTA de las filas
-    # reales de la tabla Interesados por actividad.
+    # Modelo Servicio -> temporada: la web pinta UNA línea por SERVICIO que se
+    # sigue ofertando, combinando su identidad (título/texto/foto/nivel) con la
+    # TEMPORADA VIGENTE (programación: estado, aforo, franjas, precio, lugar).
+    # Así no salen tarjetas duplicadas cuando un servicio tiene varias
+    # temporadas. El `id` de cada línea es el uuid del servicio.
+    #
+    # INTEGRIDAD: el nº de interesados NO se lee de un campo almacenado; se
+    # CUENTA de las filas reales de Interesados, cruzando por servicio.
     conteo = {}
     conteo_franjas = {}
     if "Interesados" in ids:
         for fila in nc.records(url, tok, ids["Interesados"], limit=1000):
-            a = (fila.get("actividad") or "").strip()
+            a = (fila.get("actividad") or "").strip()  # ahora lleva servicio_uuid
             if a:
                 conteo[a] = conteo.get(a, 0) + 1
                 for fid in (fila.get("franjas") or "").split(","):
@@ -447,29 +452,54 @@ def desde_nocodb(data):
                     if fid:
                         conteo_franjas.setdefault(a, {})
                         conteo_franjas[a][fid] = conteo_franjas[a].get(fid, 0) + 1
+
+    # Temporada vigente por servicio: entre las actividades de cada servicio,
+    # la que está visible, no archivada (por estado 'finalizada' o fecha
+    # 'hasta' pasada, vía _archivada) y (a igualdad) la de `hasta` más lejana.
+    temporadas = {}
+    for act in nc.records(url, tok, ids["Actividades"]):
+        s = (act.get("servicio_uuid") or "").strip()
+        if not s:
+            continue
+        temporadas.setdefault(s, []).append(act)
+
+    def _vigente(acts):
+        candidatas = [a for a in acts if bool(a.get("visible"))
+                      and not _archivada(a)]
+        if not candidatas:
+            return None
+        return max(candidatas, key=lambda a: str(a.get("hasta") or ""))
+
     nuevas = []
-    for fila in nc.records(url, tok, ids["Actividades"]):
+    for serv in nc.records(url, tok, ids["Servicios"]):
+        if not bool(serv.get("se_sigue_ofertando")):
+            continue
+        s_uuid = (serv.get("uuid") or "").strip()
+        act = _vigente(temporadas.get(s_uuid, []))
+        if not act:
+            continue  # servicio ofertado pero sin temporada vigente: no se pinta
         try:
-            franjas = json.loads(fila.get("franjas") or "[]")
+            franjas = json.loads(act.get("franjas") or "[]")
         except Exception:
             franjas = []
-        idi = lambda b: {i: (fila.get(f"{b}_{i}") or fila.get(f"{b}_es") or "")
+        # Identidad (título/texto) desde el SERVICIO; el resto desde la temporada.
+        idi = lambda b: {i: (serv.get(f"{b}_{i}") or serv.get(f"{b}_es") or "")
                          for i in ("es", "en", "fr", "de")}
         nuevas.append({
-            "id": fila.get("id"), "estado": fila.get("estado") or "propuesta",
-            "umbral": fila.get("umbral") or 0,
-            "interesados": conteo.get((fila.get("id") or "").strip(), 0),
-            "conteo_franjas": conteo_franjas.get((fila.get("id") or "").strip(), {}),
-            "plazas": fila.get("plazas") or 0, "foto": fila.get("foto") or "",
-            "precio": fila.get("precio") or "", "duracion": fila.get("duracion") or "",
-            "lugar": fila.get("lugar") or "",
-            "mostrar_contador": bool(fila.get("mostrar_contador")),
-            "franjas_elegibles": bool(fila.get("franjas_elegibles")),
-            "cal_event_type_id": fila.get("cal_event_type_id") or 0,
-            "nivel": fila.get("nivel") or "",
-            "hasta": str(fila.get("hasta") or "")[:10],
-            "aforo": _aforo(fila.get("cal_event_type_id")),
-            "visible": bool(fila.get("visible")),
+            "id": s_uuid, "estado": act.get("estado") or "propuesta",
+            "umbral": act.get("umbral") or 0,
+            "interesados": conteo.get(s_uuid, 0),
+            "conteo_franjas": conteo_franjas.get(s_uuid, {}),
+            "plazas": act.get("plazas") or 0, "foto": serv.get("foto") or "",
+            "precio": act.get("precio") or "", "duracion": act.get("duracion") or "",
+            "lugar": act.get("lugar") or "",
+            "mostrar_contador": bool(act.get("mostrar_contador")),
+            "franjas_elegibles": bool(act.get("franjas_elegibles")),
+            "cal_event_type_id": act.get("cal_event_type_id") or 0,
+            "nivel": serv.get("nivel") or "",
+            "hasta": str(act.get("hasta") or "")[:10],
+            "aforo": _aforo(act.get("cal_event_type_id")),
+            "visible": bool(act.get("visible")),
             "titulo": idi("titulo"), "texto": idi("texto"), "franjas": franjas,
         })
     data["actividades"]["lineas"] = nuevas

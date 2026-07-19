@@ -41,16 +41,20 @@ def _telefonos():
 
 
 def _clases():
-    """[(cal_event_type_id, actividad_id, titulo)] de las actividades
-    que tienen clase de reservas asociada."""
+    """[(cal_event_type_id, actividad_id, titulo)] de las temporadas que
+    tienen clase de reservas asociada. `actividad_id` es el uuid del servicio
+    (identidad estable) y `titulo` sale del Servicio."""
+    servicios = datos.servicios_por_uuid()
     salida = []
     for fila in datos.lee("Actividades"):
         cal_id = fila.get("cal_event_type_id")
         if not cal_id:
             continue
+        s_uuid = fila.get("servicio_uuid") or ""
+        serv = servicios.get(s_uuid, {})
         try:
-            salida.append((int(cal_id), fila.get("id"),
-                           fila.get("titulo_es") or fila.get("id")))
+            salida.append((int(cal_id), s_uuid,
+                           serv.get("titulo_es") or s_uuid))
         except (TypeError, ValueError):
             continue
     return salida

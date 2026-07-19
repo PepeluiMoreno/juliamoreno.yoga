@@ -61,12 +61,14 @@ def _listar():
     url, tok, base = nc.cfg()
     bid = nc.base_id(url, tok, base)
     ids = nc.tablas(url, tok, bid)
-    print("== Actividades en NocoDB ==")
+    print("== Actividades (temporadas) en NocoDB ==")
+    servicios = {s.get("uuid"): s for s in nc.records(url, tok, ids["Servicios"])}
     for fila in nc.records(url, tok, ids[TABLA]):
-        print(f"  id={fila.get('id'):<20} "
+        serv = servicios.get(fila.get("servicio_uuid"), {})
+        print(f"  uuid={str(fila.get('uuid'))[:12]:<12} "
               f"estado={str(fila.get('estado')):<12} "
               f"{COLUMNA}={fila.get(COLUMNA) or '-':<6} "
-              f"{fila.get('titulo_es') or ''}")
+              f"{serv.get('titulo_es') or ''}")
     print("\n== Clases (tipos de evento) en Cal.diy ==")
     try:
         from . import cliente

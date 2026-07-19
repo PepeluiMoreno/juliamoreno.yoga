@@ -20,9 +20,9 @@ RUTA = "/admin/api/agenda"
 
 def _lista():
     filas = datos.lee("Agenda")
-    # mapa actividad_id -> estado de la actividad (para reglas de borrado)
+    # mapa actividad_id (uuid de temporada) -> estado (para reglas de borrado)
     try:
-        act_estado = {a.get("id"): (a.get("estado") or "").strip()
+        act_estado = {a.get("uuid"): (a.get("estado") or "").strip()
                       for a in datos.lee("Actividades")}
     except Exception:
         act_estado = {}
@@ -232,7 +232,7 @@ def _eliminar(body):
         # Regla: solo se elimina una clase puntual, no visible en web y sin
         # actividad en curso detrás. El resto se cancela o aplaza, no se borra.
         agenda = {r.get("Id"): r for r in datos.lee("Agenda")}
-        act_estado = {a.get("id"): (a.get("estado") or "").strip()
+        act_estado = {a.get("uuid"): (a.get("estado") or "").strip()
                       for a in datos.lee("Actividades")}
         for i in ids:
             r = agenda.get(int(i))

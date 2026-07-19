@@ -91,6 +91,7 @@ def main():
     bid = nc.base_id(url, tok, base)
     ids = nc.tablas(url, tok, bid)
     actividades = nc.records(url, tok, ids["Actividades"])
+    servicios = {s.get("uuid"): s for s in nc.records(url, tok, ids["Servicios"])}
     horarios = _agrupa(nc.records(url, tok, ids["Clases"]))
 
     print("MODO: " + ("CREAR (se escribirá en Cal.diy y NocoDB)"
@@ -99,7 +100,7 @@ def main():
 
     sin_franjas, hechas = [], 0
     for act in actividades:
-        aid = act.get("id")
+        aid = act.get("uuid")  # uuid de la temporada; Clases.actividad_id casa con él
         if solo and aid != solo:
             continue
         if act.get("estado") not in ("en_curso", "programada"):
@@ -112,7 +113,9 @@ def main():
             sin_franjas.append(aid)
             continue
 
-        titulo = act.get("titulo_es") or aid
+        # El título de cara al alumno es el del SERVICIO al que pertenece.
+        serv = servicios.get(act.get("servicio_uuid"), {})
+        titulo = serv.get("titulo_es") or aid
         plazas = int(act.get("plazas") or 10)
         fin = _fin(h["inicio"], h["min"])
         aviso = "  (OJO: franjas con horas distintas, uso la primera)" \

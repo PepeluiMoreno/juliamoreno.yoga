@@ -46,13 +46,21 @@ def _telefonos():
 
 
 def _clase_de(actividad_id):
-    """(cal_event_type_id, titulo, existe). cal_event_type_id es 0 si la
-    actividad existe pero aún no tiene clase de reservas asociada."""
+    """(cal_event_type_id, titulo, existe). `actividad_id` es el uuid del
+    servicio (identidad estable); su título vive en Servicios y su enlace de
+    reservas en la temporada. cal_event_type_id es 0 si el servicio existe
+    pero su temporada aún no tiene clase de reservas asociada."""
+    servicios = datos.servicios_por_uuid()
+    serv = servicios.get(actividad_id)
+    if not serv:
+        return 0, actividad_id, False
+    titulo = serv.get("titulo_es") or actividad_id
     for fila in datos.lee("Actividades"):
-        if fila.get("id") == actividad_id:
-            return (int(fila.get("cal_event_type_id") or 0),
-                    fila.get("titulo_es") or actividad_id, True)
-    return 0, actividad_id, False
+        if (fila.get("servicio_uuid") or "") == actividad_id:
+            cal = int(fila.get("cal_event_type_id") or 0)
+            if cal:
+                return cal, titulo, True
+    return 0, titulo, True
 
 
 def _sesiones(cal_id, titulo, desde, hasta, hora=None):
