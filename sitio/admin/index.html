@@ -503,12 +503,12 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
               <button type="button" class="btn-mini" id="ag-acc-alumnos">Ver alumnos…</button>
               <button type="button" class="btn-mini peligro" id="ag-acc-cancelar">Cancelar clase…</button>
               <button type="button" class="btn-mini peligro oculto" id="ag-acc-reactivar">Reactivar</button>
+              <button type="button" class="btn-mini peligro oculto" id="ag-acc-borrar">Eliminar…</button>
             </div>
           </div>
 
           <div class="modal-botones" style="margin-top:1.2rem">
-            <button type="button" class="btn btn-peligro oculto" id="ag-borrar">Borrar</button>
-            <button type="button" class="btn btn-sec" id="ag-cancelar">Cancelar</button>
+            <button type="button" class="btn btn-sec" id="ag-cancelar">Cerrar</button>
             <button type="button" class="btn" id="ag-guardar">Guardar</button>
           </div>
         </div>
@@ -1036,6 +1036,12 @@ function engancharAccionesClase(e){
   $("#ag-acc-reactivar").classList.toggle("oculto", !cancelada);
   ["aplazar","trasladar"].forEach(k=>
     $("#ag-acc-"+k).classList.toggle("oculto", cancelada));
+  // Eliminar solo cuando de verdad sobra la entrada: puntual, nunca
+  // publicada y sin actividad en curso detrás. Lo demás se cancela, que
+  // conserva el rastro de que aquel día hubo clase y no la hubo.
+  const puedeEliminar = e.tipo === "puntual" && anunciada === false
+                        && e.actividad_estado !== "en_curso";
+  $("#ag-acc-borrar").classList.toggle("oculto", !puedeEliminar);
 
   const nuevo = (id, fn)=>{
     const b = $("#"+id);
@@ -1047,6 +1053,7 @@ function engancharAccionesClase(e){
   nuevo("ag-acc-trasladar", ()=> mostrarMoverEnSidebar(e, "lugar"));
   nuevo("ag-acc-cancelar",  ()=> mostrarCancelacionEnSidebar(e));
   nuevo("ag-acc-alumnos",   ()=> abrirModalLista(e));
+  nuevo("ag-acc-borrar", ()=> borrarClase(e));
   nuevo("ag-acc-reactivar", async ()=>{
     try{
       const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
@@ -1088,7 +1095,6 @@ function abrirModalAgenda(e){
   $("#ag-duracion").value = e.duracion_min ? String(e.duracion_min) : "60";
   $("#ag-lugar").value = e.lugar || "";
   $("#ag-visible").checked = e.visible_web!==false;
-  $("#ag-borrar").classList.toggle("oculto", !e.Id);
   // Al EDITAR se ocultan fecha, hora y lugar: cada uno tiene ya su acción
   // (Aplazar / Trasladar), y esas sí avisan a los alumnos y advierten de
   // cuántos hay inscritos. Cambiarlos aquí se saltaba ese paso y permitía
@@ -1596,18 +1602,6 @@ $("#ag-guardar").addEventListener("click", async ()=>{
   }catch(e){ await avisar("Error de conexión al guardar.", "Error"); }
 });
 
-$("#ag-borrar").addEventListener("click", async ()=>{
-  const editId = $("#ag-id").value;
-  if(!editId) return;
-  if(!(await confirmar("¿Borrar esta entrada de la agenda?", "Borrar entrada"))) return;
-  try{
-    const r = await fetch(API_AGENDA, {method:"DELETE", credentials:"include",
-      headers:{"Content-Type":"application/json"}, body:JSON.stringify({Id:parseInt(editId)})});
-    const d = await r.json();
-    if(d.ok){ cerrarEditorAgenda(); cargarAgenda(); }
-    else await avisar(d.error||"No se pudo borrar.", "Error");
-  }catch(e){ await avisar("Error de conexión al borrar.", "Error"); }
-});
 
 
 
