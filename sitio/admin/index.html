@@ -1683,9 +1683,18 @@ $("#ag-guardar").addEventListener("click", async ()=>{
     const r = await fetch(API_AGENDA, {method:metodo, credentials:"include",
       headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
     const d = await r.json();
-    if(d.ok){ cerrarEditorAgenda(); cargarAgenda(); }
-    else await avisar(d.error||"No se pudo guardar.",
-                      r.status === 409 ? "Choca con otra clase" : "Error");
+    if(d.ok){ cerrarEditorAgenda(); cargarAgenda(); return; }
+    // Si el backend propone un hueco (falta hora o choca con otra clase),
+    // ofrecemos aplicarlo en el propio input en lugar de un simple error.
+    if(d.sugerencia_hora){
+      const ok = await confirmar(
+        (d.error||"No se pudo guardar.") + "\n\n¿Colocarla a las " + d.sugerencia_hora + "?",
+        r.status === 409 ? "Choca con otra clase" : "Falta la hora");
+      if(ok) $("#ag-hora-ini").value = d.sugerencia_hora;
+      return;
+    }
+    await avisar(d.error||"No se pudo guardar.",
+                 r.status === 409 ? "Choca con otra clase" : "Error");
   }catch(e){ await avisar("Error de conexión al guardar.", "Error"); }
 });
 

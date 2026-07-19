@@ -109,6 +109,54 @@ def _valida_holgura(candidatas, id_excluido=None):
     return None
 
 
+# Hora por defecto cuando el día está vacío: una mañana razonable para
+# empezar. No es una regla de negocio, solo un punto de partida sensato
+# para que la agenda proponga algo en vez de dejar el campo en blanco.
+HORA_POR_DEFECTO = "09:00"
+
+
+def _primer_hueco(fecha, duracion_min=60):
+    """Primer inicio (HH:MM) del día `fecha` en el que caben `duracion_min`
+    minutos sin pisar otra clase ni pegarse a menos de HOLGURA_MIN. Si el
+    día está libre, devuelve HORA_POR_DEFECTO.
+
+    Recorre las clases ya ocupadas de ese día ordenadas por hora y prueba,
+    en orden: justo antes de la primera, en los huecos entre clases, y tras
+    la última. Devuelve el más temprano que quepa.
+    """
+    dur = int(duracion_min or 60)
+    try:
+        agenda = datos.lee("Agenda")
+    except Exception:
+        return HORA_POR_DEFECTO
+
+    f0 = (fecha or "")[:10]
+    ocupadas = []
+    for r in agenda:
+        if (r.get("estado") or "") == "cancelada":
+            continue
+        if (r.get("fecha") or "")[:10] != f0:
+            continue
+        ini = _minutos(r.get("hora_inicio"))
+        if ini is None:
+            continue
+        ocupadas.append((ini, ini + int(r.get("duracion_min") or 60)))
+    ocupadas.sort()
+
+    if not ocupadas:
+        return HORA_POR_DEFECTO
+
+    # Candidato inicial: HORA_POR_DEFECTO si cabe antes de la primera clase.
+    cand = _minutos(HORA_POR_DEFECTO)
+    for o_ini, o_fin in ocupadas:
+        # ¿Cabe [cand, cand+dur] antes de que empiece esta clase, con holgura?
+        if cand + dur + HOLGURA_MIN <= o_ini:
+            return _hhmm(cand)
+        # No cabe: el siguiente hueco posible es tras el fin de esta, con holgura.
+        cand = max(cand, o_fin + HOLGURA_MIN)
+    return _hhmm(cand)
+
+
 def _crear(body):
     fila = logica.fila_agenda(body, con_id=False)
     if not fila.get("titulo") and not fila.get("actividad_id"):
@@ -128,9 +176,19 @@ def _crear(body):
             return 200, {"ok": True, "generadas": len(ocurrencias)}
         if not fila.get("fecha"):
             return 422, {"error": "una sesión puntual necesita fecha"}
+        # Sin hora no se guarda: antes se colaba una fila con hora_inicio
+        # vacía que además se saltaba el control de solape (una candidata
+        # sin hora no se compara con nada). Se propone el primer hueco libre
+        # para que el panel lo ofrezca en vez de dejar el campo en blanco.
+        if not fila.get("hora_inicio"):
+            return 422, {"error": "una sesión puntual necesita hora de inicio",
+                         "sugerencia_hora": _primer_hueco(
+                             fila.get("fecha"), fila.get("duracion_min"))}
         choque = _valida_holgura([fila])
         if choque:
-            return 409, {"error": choque}
+            return 409, {"error": choque,
+                         "sugerencia_hora": _primer_hueco(
+                             fila.get("fecha"), fila.get("duracion_min"))}
         datos.guarda("Agenda", fila)
         dispara_rebuild()
         return 200, {"ok": True}
