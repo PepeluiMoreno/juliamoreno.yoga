@@ -191,6 +191,29 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .lst-cuerpo{max-height:min(52vh,420px);overflow:auto;margin-bottom:1.2rem}
 .lst-sesion{font-size:.89rem;font-weight:600;margin:.9rem 0 .3rem}
 .lst-sesion:first-child{margin-top:0}
+.tar-tabla{width:100%;border-collapse:collapse;background:#fff;
+  border:1px solid var(--linea);border-radius:10px;overflow:hidden}
+.tar-tabla th{text-align:left;font-size:.81rem;color:var(--gris);font-weight:600;
+  padding:.6rem .8rem;background:#faf8f4;border-bottom:1px solid var(--linea)}
+.tar-tabla td{padding:.55rem .8rem;border-bottom:1px solid #f0ece5;font-size:.95rem}
+.tar-tabla tr:last-child td{border-bottom:none}
+.tar-tabla tr.tar-oculta td{opacity:.5}
+.tar-concepto{font-weight:600}
+.tar-nota{display:block;font-size:.82rem;color:var(--gris);font-weight:400}
+.tar-imp{display:flex;align-items:center;gap:.35rem}
+.tar-imp input{width:6.5rem;padding:.35rem .5rem;border:1px solid var(--linea);
+  border-radius:6px;font-family:inherit;font-size:.95rem;text-align:right}
+.tar-imp input.tar-tocado{border-color:var(--mar);background:#f4f9fb}
+.tar-imp .eur{color:var(--gris);font-size:.9rem}
+.tar-tabla td.col-ver{width:7rem;text-align:center}
+.tar-tabla td.col-ver input{width:auto}
+.tar-pie{display:flex;align-items:center;gap:.6rem;margin-top:1.1rem;
+  padding-top:.9rem;border-top:1px solid var(--linea)}
+.tar-aviso{margin-right:auto;font-size:.88rem;color:var(--mar)}
+.tar-trial{margin-top:1rem;padding:.75rem .9rem;background:#faf8f4;
+  border:1px solid var(--linea);border-radius:10px;display:flex;
+  align-items:center;gap:.6rem;font-size:.92rem}
+.tar-trial input{width:auto}
 .ses-filtro{display:flex;flex-wrap:wrap;gap:.8rem 1rem;align-items:flex-end;
   background:#faf8f4;border:1px solid var(--linea);border-radius:10px;
   padding:.9rem 1rem;margin-bottom:1.1rem}
@@ -424,7 +447,18 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 
   <section class="vista oculto" id="vista-tarifas">
     <h1>Tarifas</h1>
-    <p style="color:var(--gris)">Sección en preparación.</p>
+    <p style="color:var(--gris);margin:-.4rem 0 1.2rem;font-size:.95rem">
+      Los importes que se publican en la web, en los cuatro idiomas.
+      Quita la marca de «Se publica» para dejar de ofrecer un concepto sin
+      borrarlo.</p>
+
+    <div id="tarLista"></div>
+
+    <div class="tar-pie" id="tarPie" style="display:none">
+      <span class="tar-aviso" id="tarAviso"></span>
+      <button class="btn btn-sec" id="tar-deshacer">Deshacer</button>
+      <button class="btn" id="tar-guardar">Guardar y publicar</button>
+    </div>
   </section>
 
   <section class="vista oculto" id="vista-agenda">
@@ -2293,6 +2327,131 @@ $("#ses-buscar").addEventListener("click", cargarSesiones);
 $("#ses-actividad").addEventListener("change", cargarSesiones);
 $("#ses-solo-con").addEventListener("change", pintarSesiones);
 
+
+// --- Tarifas -------------------------------------------------------------
+const API_PRECIOS = "https://api.juliamoreno.yoga/admin/api/precios";
+let tarCache = null;     // lo que hay publicado
+let tarBorrador = null;  // lo que se está editando
+
+async function cargarTarifas(){
+  const cont = $("#tarLista");
+  cont.innerHTML = '<p style="color:var(--gris)">Cargando…</p>';
+  $("#tarPie").style.display = "none";
+  try{
+    const r = await fetch(API_PRECIOS, {credentials:"include"});
+    if(r.status === 401){
+      cont.innerHTML = '<p style="color:#8a2b26">Sesión caducada: vuelve a entrar.</p>';
+      return;
+    }
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok){
+      cont.innerHTML = `<p style="color:#8a2b26">${_escL(d.error || "El servidor respondió " + r.status)}</p>`;
+      return;
+    }
+    tarCache = d;
+    tarBorrador = JSON.parse(JSON.stringify(d));
+    pintarTarifas();
+  }catch(err){
+    cont.innerHTML = '<p style="color:#8a2b26">Error de conexión.</p>';
+  }
+}
+
+function pintarTarifas(){
+  const b = tarBorrador;
+  const filas = b.lineas.map((ln,i)=>`
+    <tr class="${ln.visible?"":"tar-oculta"}">
+      <td><span class="tar-concepto">${_escL(ln.label)}</span>
+        ${ln.en_tabla ? "" : '<span class="tar-nota">aún no estaba en la tabla de precios; al guardar se creará</span>'}</td>
+      <td><div class="tar-imp">
+        <input type="text" inputmode="decimal" data-i="${i}" value="${_escL(ln.valor)}">
+        <span class="eur">€</span></div></td>
+      <td class="col-ver"><input type="checkbox" data-ver="${i}"${ln.visible?" checked":""}></td>
+    </tr>`).join("");
+
+  $("#tarLista").innerHTML = `
+    <table class="tar-tabla">
+      <thead><tr><th>Concepto</th><th>Importe</th><th class="col-ver">Se publica</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <label class="tar-trial">
+      <input type="checkbox" id="tar-trial"${b.trial.visible?" checked":""}>
+      <span>${_escL(b.trial.label || "Primera clase de prueba gratuita")}
+        <span class="tar-nota">No lleva importe: se anuncia o no se anuncia.</span></span>
+    </label>`;
+
+  $("#tarLista").querySelectorAll("input[data-i]").forEach(inp=>
+    inp.addEventListener("input", ()=>{
+      b.lineas[parseInt(inp.dataset.i)].valor = inp.value;
+      inp.classList.toggle("tar-tocado",
+        inp.value !== tarCache.lineas[parseInt(inp.dataset.i)].valor);
+      _tarPie();
+    }));
+  $("#tarLista").querySelectorAll("input[data-ver]").forEach(chk=>
+    chk.addEventListener("change", ()=>{
+      b.lineas[parseInt(chk.dataset.ver)].visible = chk.checked;
+      pintarTarifas();   // repintar para atenuar la fila
+    }));
+  $("#tar-trial").addEventListener("change", ev=>{
+    b.trial.visible = ev.target.checked;
+    _tarPie();
+  });
+  _tarPie();
+}
+
+function _tarCambios(){
+  const n = tarBorrador.lineas.filter((ln,i)=>
+    ln.valor !== tarCache.lineas[i].valor
+    || ln.visible !== tarCache.lineas[i].visible).length;
+  return n + (tarBorrador.trial.visible !== tarCache.trial.visible ? 1 : 0);
+}
+
+function _tarPie(){
+  const n = _tarCambios();
+  $("#tarPie").style.display = n ? "flex" : "none";
+  // Se avisa de que publicar rehace la web: no es un guardado silencioso,
+  // el cambio sale a los cuatro idiomas en cuanto se pulsa.
+  $("#tarAviso").textContent = n
+    ? `${n} cambio(s) sin publicar. Al guardar se actualiza la web.`
+    : "";
+}
+
+async function guardarTarifas(){
+  const malos = tarBorrador.lineas.filter(ln=>
+    ln.visible && !String(ln.valor).trim());
+  if(malos.length){
+    await avisar("Hay conceptos que se publican pero no tienen importe: "
+      + malos.map(m=>m.label).join(", ")
+      + ". Ponles precio o quita la marca de «Se publica».", "Falta el importe");
+    return;
+  }
+  const btn = $("#tar-guardar");
+  btn.disabled = true; btn.textContent = "Publicando…";
+  try{
+    const r = await fetch(API_PRECIOS, {method:"PATCH", credentials:"include",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({lineas: tarBorrador.lineas,
+                            trial: tarBorrador.trial.visible})});
+    const d = await r.json().catch(()=>({}));
+    if(r.ok && d.ok){
+      await cargarTarifas();
+      await avisar("Tarifas actualizadas. La web se está regenerando; "
+        + "el cambio aparece en unos segundos.", "Publicado");
+    }else{
+      await avisar(d.error || "No se pudieron guardar.", "Error");
+    }
+  }catch(err){
+    await avisar("Error de conexión.", "Error");
+  }finally{
+    btn.disabled = false; btn.textContent = "Guardar y publicar";
+  }
+}
+
+$("#tar-guardar").addEventListener("click", guardarTarifas);
+$("#tar-deshacer").addEventListener("click", ()=>{
+  tarBorrador = JSON.parse(JSON.stringify(tarCache));
+  pintarTarifas();
+});
+
 // --- Navegación entre vistas del menú lateral ---
 document.querySelectorAll(".menu-item").forEach(item=>{
   item.addEventListener("click", e=>{
@@ -2304,6 +2463,7 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     document.getElementById("vista-"+vista).classList.remove("oculto");
     if(vista==="panel") cargarDash();
     if(vista==="sesiones") cargarSesiones();
+    if(vista==="tarifas") cargarTarifas();
     if(vista==="actividades") cargar();
     if(vista==="agenda"){
       // Precargar los nombres de actividad: la ficha del menú los muestra
