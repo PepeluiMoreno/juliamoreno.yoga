@@ -44,6 +44,71 @@ def _lista():
     return out
 
 
+
+# Separación mínima entre dos clases del mismo día, en minutos. No es un
+# capricho de agenda: entre una clase y la siguiente hay que despedir a
+# unos, ventilar, recoger esterillas y recibir a los otros.
+HOLGURA_MIN = 30
+
+
+def _minutos(hhmm):
+    try:
+        h, _, m = (hhmm or "").partition(":")
+        return int(h) * 60 + int(m[:2])
+    except (TypeError, ValueError):
+        return None
+
+
+def _hhmm(mins):
+    return "%02d:%02d" % (mins // 60 % 24, mins % 60)
+
+
+def _valida_holgura(candidatas, id_excluido=None):
+    """Comprueba que ninguna candidata pise a otra clase del mismo día ni
+    se le pegue a menos de HOLGURA_MIN. Devuelve un mensaje o None.
+
+    `candidatas` son filas con fecha, hora_inicio y duracion_min: al crear
+    una recurrente son todas sus ocurrencias, no solo la primera.
+    """
+    try:
+        agenda = datos.lee("Agenda")
+    except Exception:
+        return None  # si no se puede leer, no se bloquea el guardado
+
+    por_fecha = {}
+    for r in agenda:
+        if (r.get("estado") or "") == "cancelada":
+            continue
+        if id_excluido and str(r.get("Id")) == str(id_excluido):
+            continue
+        f = (r.get("fecha") or "")[:10]
+        if f:
+            por_fecha.setdefault(f, []).append(r)
+
+    for c in candidatas:
+        f = (c.get("fecha") or "")[:10]
+        ini = _minutos(c.get("hora_inicio"))
+        if not f or ini is None:
+            continue
+        dur = int(c.get("duracion_min") or 60)
+        fin = ini + dur
+        for otra in por_fecha.get(f, []):
+            o_ini = _minutos(otra.get("hora_inicio"))
+            if o_ini is None:
+                continue
+            o_fin = o_ini + int(otra.get("duracion_min") or 60)
+            # Vale si una acaba y la otra empieza HOLGURA_MIN después.
+            if ini >= o_fin + HOLGURA_MIN or o_ini >= fin + HOLGURA_MIN:
+                continue
+            nombre = otra.get("titulo") or "otra clase"
+            return ("El %s choca con «%s» (%s-%s). Entre una clase y la "
+                    "siguiente deben pasar al menos %d minutos: la más "
+                    "temprana posible sería a las %s." % (
+                        f, nombre, _hhmm(o_ini), _hhmm(o_fin),
+                        HOLGURA_MIN, _hhmm(o_fin + HOLGURA_MIN)))
+    return None
+
+
 def _crear(body):
     fila = logica.fila_agenda(body, con_id=False)
     if not fila.get("titulo") and not fila.get("actividad_id"):
@@ -55,11 +120,17 @@ def _crear(body):
             ocurrencias = logica.materializa_mes(fila)
             if not ocurrencias:
                 return 422, {"error": "no hay días de ese tipo en lo que queda de mes"}
+            choque = _valida_holgura(ocurrencias)
+            if choque:
+                return 409, {"error": choque}
             datos.guarda_varios("Agenda", ocurrencias)
             dispara_rebuild()
             return 200, {"ok": True, "generadas": len(ocurrencias)}
         if not fila.get("fecha"):
             return 422, {"error": "una sesión puntual necesita fecha"}
+        choque = _valida_holgura([fila])
+        if choque:
+            return 409, {"error": choque}
         datos.guarda("Agenda", fila)
         dispara_rebuild()
         return 200, {"ok": True}
@@ -72,6 +143,20 @@ def _editar(body):
         return 422, {"error": "falta Id"}
     fila = logica.fila_agenda(body, con_id=True)
     try:
+        # Aplazar cambia fecha y hora, así que hay que revalidar. Se
+        # comprueba sobre la fila RESULTANTE: el cuerpo trae solo lo que
+        # cambia, y una hora nueva puede chocar usando la fecha vieja.
+        if any(k in fila for k in ("fecha", "hora_inicio", "duracion_min")):
+            actual = next((r for r in datos.lee("Agenda")
+                           if str(r.get("Id")) == str(fila["Id"])), {})
+            futura = {
+                "fecha": fila.get("fecha", actual.get("fecha")),
+                "hora_inicio": fila.get("hora_inicio", actual.get("hora_inicio")),
+                "duracion_min": fila.get("duracion_min", actual.get("duracion_min")),
+            }
+            choque = _valida_holgura([futura], id_excluido=fila["Id"])
+            if choque:
+                return 409, {"error": choque}
         datos.actualiza("Agenda", fila)
         dispara_rebuild()
         return 200, {"ok": True}

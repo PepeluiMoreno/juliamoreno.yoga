@@ -1673,7 +1673,8 @@ $("#ag-guardar").addEventListener("click", async ()=>{
       headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
     const d = await r.json();
     if(d.ok){ cerrarEditorAgenda(); cargarAgenda(); }
-    else await avisar(d.error||"No se pudo guardar.", "Error");
+    else await avisar(d.error||"No se pudo guardar.",
+                      r.status === 409 ? "Choca con otra clase" : "Error");
   }catch(e){ await avisar("Error de conexión al guardar.", "Error"); }
 });
 
@@ -2062,7 +2063,8 @@ async function mostrarMoverEnSidebar(e, que){
       if(d.ok){
         await cargarAgenda();
         mostrarClasesDelDia(cuerpo.fecha || (e.fecha||"").slice(0,10));
-      }else await avisar(d.error||"No se pudo guardar.", "Error");
+      }else await avisar(d.error||"No se pudo guardar.",
+                         r.status === 409 ? "Choca con otra clase" : "Error");
     }catch(err){ await avisar("Error de conexión.", "Error"); }
   });
 }
