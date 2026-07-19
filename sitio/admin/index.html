@@ -83,14 +83,11 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dia-clase-activa{border-color:var(--mar);box-shadow:0 0 0 2px var(--cielo-claro)}
 .dia-clase-canc{opacity:.6}
 .dia-clase-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem}
+.dia-clase-meta{font-size:.82rem;color:var(--gris);margin:.15rem 0 0}
 .dia-clase-tit{font-weight:700;color:var(--tinta);font-size:.92rem}
-.dia-clase-tit-input{width:100%;font-weight:700;color:var(--tinta);font-size:.92rem;border:1px solid transparent;border-radius:5px;padding:.25rem .3rem;font-family:inherit;background:transparent}
-.dia-clase-tit-input:hover,.dia-clase-tit-input:focus{border-color:var(--linea);background:#fff;outline:none}
 .dia-clase-badge{font-size:.72rem;background:#fdeceb;color:#8a2b26;padding:.1rem .4rem;border-radius:4px}
-.dia-clase-campos{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.4rem}
 .dia-clase label{display:block;font-size:.72rem;color:var(--gris);font-weight:600;margin:0}
 .dia-clase input,.dia-clase select{width:100%;padding:.4rem .5rem;border:1px solid var(--linea);border-radius:6px;font-size:.85rem;font-family:inherit;margin-top:.15rem;box-sizing:border-box}
-.dia-clase-lugar{display:block;margin-bottom:.5rem}
 .dia-clase-acciones{display:flex;gap:.4rem}
 .dia-clase-acciones .btn-mini{flex:1}
 .agenda-editor-vacio{color:var(--gris);font-size:.9rem;line-height:1.5}
@@ -1182,34 +1179,34 @@ function mostrarClasesDelDia(fechaStr, resaltarId){
 let _diaClases = {};
 
 function _tarjetaClaseEditable(e, resaltar){
-  const canc = e.estado==="cancelada";
+  // Resumen, no formulario. Antes estas tarjetas dejaban cambiar hora,
+  // duración, lugar y visibilidad con su propio Guardar, saltándose el
+  // aviso a los alumnos y el recuento de inscritos que llevan Aplazar y
+  // Trasladar. Ahora solo informan, y el único camino para tocar la clase
+  // es el mismo panel que abre el calendario.
+  const canc = e.estado === "cancelada";
   const dur = e.duracion_min || 60;
-  const tit = (e.titulo||"").replace(/"/g,'&quot;');
+  const meta = [
+    e.hora_inicio ? e.hora_inicio.slice(0,5) : null,
+    dur + " min",
+    e.lugar || null,
+  ].filter(Boolean).join(" · ");
   return `<div class="dia-clase${resaltar?' dia-clase-activa':''}${canc?' dia-clase-canc':''}" data-id="${e.Id}">
     <div class="dia-clase-cab">
-      <input type="text" class="dia-clase-tit-input" value="${tit}" data-campo="titulo" data-id="${e.Id}" placeholder="Título de la clase">
+      <span class="dia-clase-tit">${_escL(e.titulo || "(sin título)")}</span>
       ${canc?'<span class="dia-clase-badge">cancelada</span>':''}
     </div>
-    <div class="dia-clase-campos">
-      <label>Hora
-        <input type="time" value="${e.hora_inicio||""}" data-campo="hora_inicio" data-id="${e.Id}">
-      </label>
-      <label>Duración
-        <select data-campo="duracion_min" data-id="${e.Id}">
-          ${[45,60,75,90,120].map(m=>`<option value="${m}"${m==dur?' selected':''}>${m} min</option>`).join("")}
-        </select>
-      </label>
-    </div>
-    <label class="dia-clase-lugar">Lugar
-      <input type="text" value="${(e.lugar||"").replace(/"/g,'&quot;')}" data-campo="lugar" data-id="${e.Id}">
-    </label>
-    <label class="check" style="margin:.5rem 0 0;display:flex;align-items:center;gap:.5rem;font-size:.85rem">
-      <input type="checkbox" style="width:auto" data-campo="visible_web" data-id="${e.Id}"${e.visible_web!==false?' checked':''}> Visible en la web
-    </label>
-    <div class="dia-clase-acciones" style="margin-top:.7rem">
-      <button class="btn-mini" onclick='guardarClaseDia(${e.Id})'>Guardar</button>
+    <p class="dia-clase-meta">${_escL(meta)}</p>
+    <p class="dia-clase-meta">${e.visible_web!==false ? "Visible en la web" : "Oculta en la web"}</p>
+    <div class="dia-clase-acciones" style="margin-top:.6rem">
+      <button class="btn-mini" onclick='verMasClaseDia(${e.Id})'>Ver más…</button>
     </div>
   </div>`;
+}
+
+function verMasClaseDia(id){
+  const e = _diaClases[id];
+  if(e) abrirModalAgenda(e);
 }
 
 function esDiaPasado(fechaStr){
@@ -1234,28 +1231,6 @@ async function crearEnFecha(fechaStr, hora){
 
 function nuevaEnFecha(fechaStr){
   crearEnFecha(fechaStr, "");
-}
-
-async function guardarClaseDia(id){
-  const caja = document.querySelector(`.dia-clase[data-id="${id}"]`);
-  if(!caja) return;
-  const datos = {Id: id};
-  let fechaDia = "";
-  caja.querySelectorAll("[data-campo]").forEach(el=>{
-    const campo = el.dataset.campo;
-    if(el.type === "checkbox") datos[campo] = el.checked;
-    else if(campo === "duracion_min") datos[campo] = parseInt(el.value);
-    else datos[campo] = el.value;
-  });
-  const clase = _diaClases[id];
-  if(clase) fechaDia = (clase.fecha||"").slice(0,10);
-  try{
-    const r = await fetch(API_AGENDA, {method:"PATCH", credentials:"include",
-      headers:{"Content-Type":"application/json"}, body:JSON.stringify(datos)});
-    const d = await r.json();
-    if(d.ok){ await cargarAgenda(); if(fechaDia) mostrarClasesDelDia(fechaDia, id); }
-    else await avisar(d.error||"No se pudo guardar.", "Error");
-  }catch(e){ await avisar("Error de conexión.", "Error"); }
 }
 
 // --- Menú contextual (clic derecho o hover sobre celda del calendario) ---
