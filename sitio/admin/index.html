@@ -1206,12 +1206,12 @@ async function accionActividad(accion){
   const id = $("#temp-edit-id").value;
   if(!id){ aviso("Guarda antes la actividad.","error"); return; }
 
-  let motivo = "", texto = "";
+  let motivo = "", texto = "", publico = false;
   if(accion !== "reanudar"){
     const opciones = MOTIVOS_ACC[accion] || MOTIVOS_ACC.cancelar;
     const sel = await dialogoMotivo(accion, opciones);
     if(!sel) return;
-    motivo = sel.motivo; texto = sel.texto;
+    motivo = sel.motivo; texto = sel.texto; publico = sel.publico;
   }else if(!await confirmar(
       "Se volverán a programar las clases que quedan hasta la fecha de fin.",
       "Reanudar la actividad")) return;
@@ -1219,7 +1219,8 @@ async function accionActividad(accion){
   try{
     const r = await fetch(API_TEMPORADAS + "/accion", {method:"POST", credentials:"include",
       headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({Id: parseInt(id), accion, motivo, motivo_texto: texto})});
+      body:JSON.stringify({Id: parseInt(id), accion, motivo, motivo_texto: texto,
+                           motivo_publico: publico})});
     const d = await r.json();
     if(d.ok){
       let msg = {suspender:"Actividad suspendida.", cancelar:"Actividad cancelada.",
@@ -1243,7 +1244,16 @@ function dialogoMotivo(accion, opciones){
       ? "Las clases que quedan por dar se marcarán como aplazadas con este motivo. Podrás reanudarla después."
       : "Las clases que quedan por dar se marcarán como canceladas con este motivo. Las ya impartidas no se tocan.";
     $("#dlgDetalle").classList.add("oculto");
-    $("#dlgCheckWrap").classList.add("oculto");
+    // El motivo puede contarse en la web o quedarse en el panel. Va marcado
+    // por defecto en traslados y reprogramaciones —al alumno le interesa saber
+    // que su clase se mueve— y desmarcado al suspender o cancelar, donde el
+    // motivo suele ser cosa de Julia y no del escaparate.
+    const publicoPorDefecto = (accion === "trasladar" || accion === "reprogramar");
+    // El label vive arriba en el HTML, antes del mensaje; aquí interesa
+    // debajo de los campos, así que se mueve al bloque de botones.
+    $("#dlgCheckTxt").textContent = "Publicar el motivo en la web";
+    $("#dlgCheck").checked = publicoPorDefecto;
+    $("#dlgCheckWrap").classList.remove("oculto");
 
     const cont = $("#dlgBotones");
     cont.innerHTML = `
@@ -1253,6 +1263,7 @@ function dialogoMotivo(accion, opciones){
         <label for="dlgMotivoTxt" style="margin-top:.6rem">Explicación (opcional)</label>
         <textarea id="dlgMotivoTxt" rows="2" placeholder="Lo que quieras dejar anotado"></textarea>
       </div>`;
+    cont.appendChild($("#dlgCheckWrap"));
     const fila = document.createElement("div");
     fila.style.cssText = "display:flex;gap:.5rem;justify-content:flex-end;width:100%";
     const bCancel = document.createElement("button");
@@ -1267,7 +1278,8 @@ function dialogoMotivo(accion, opciones){
     bOk.onclick = ()=>{
       const motivo = document.getElementById("dlgMotivo").value;
       const texto = document.getElementById("dlgMotivoTxt").value.trim();
-      cerrar(); resolve({motivo, texto});
+      const publico = $("#dlgCheck").checked;
+      cerrar(); resolve({motivo, texto, publico});
     };
     function onKey(ev){ if(ev.key==="Escape"){ cerrar(); resolve(null); } }
     document.addEventListener("keydown", onKey);

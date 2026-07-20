@@ -145,7 +145,8 @@ def _actividades_lista():
             "servicio_uuid": r.get("servicio_uuid"),
             "estado": r.get("estado"), "hasta": r.get("hasta"),
             "desde": r.get("desde"), "horario": r.get("horario"),
-            "motivo": r.get("motivo"), "periodo": r.get("periodo"),
+            "motivo": r.get("motivo"), "motivo_publico": r.get("motivo_publico"),
+            "periodo": r.get("periodo"),
             "umbral": r.get("umbral"), "plazas": r.get("plazas"),
             "franjas": r.get("franjas"), "franjas_elegibles": r.get("franjas_elegibles"),
             "visible": r.get("visible"), "mostrar_contador": r.get("mostrar_contador"),
@@ -297,6 +298,8 @@ def _accion(body):
         return 422, {"error": "falta Id"}
     motivo = limpio(body.get("motivo"), 100)
     motivo_texto = limpio(body.get("motivo_texto"), 1000)
+    # Julia decide si el motivo se cuenta en la web o se queda en el panel.
+    publico = bool(body.get("motivo_publico"))
     if accion in ("suspender", "cancelar", "trasladar") and not motivo:
         return 422, {"error": "hay que indicar el motivo"}
 
@@ -320,7 +323,8 @@ def _accion(body):
             # el horario nuevo. Aquí solo se deja constancia del porqué en las
             # clases que se van a rehacer.
             n = logica.aplica_a_futuras(act.get("uuid") or "", {
-                "motivo": motivo, "motivo_texto": motivo_texto})
+                "motivo": motivo, "motivo_texto": motivo_texto,
+                "motivo_publico": publico})
             dispara_rebuild()
             return 200, {"ok": True, "accion": accion, "clases": n}
 
@@ -329,10 +333,11 @@ def _accion(body):
         datos.actualiza("Actividades", {
             "Id": body["Id"], "estado": estado_act,
             "motivo": (motivo + (" · " + motivo_texto if motivo_texto else "")),
+            "motivo_publico": publico,
         })
         n = logica.aplica_a_futuras(act.get("uuid") or "", {
             "estado": estado_clase, "motivo": motivo,
-            "motivo_texto": motivo_texto,
+            "motivo_texto": motivo_texto, "motivo_publico": publico,
             "avisar_alumnos": bool(body.get("avisar_alumnos")),
         })
         dispara_rebuild()

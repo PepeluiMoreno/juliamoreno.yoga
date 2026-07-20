@@ -71,6 +71,10 @@ TABLAS = {
         # Suspender no es cancelar: la actividad para un tiempo y se puede
         # reanudar. Se guarda el motivo porque hay que poder explicarlo.
         col("motivo", "LongText"),
+        # Si el motivo se publica en la web o se queda en el panel. Lo decide
+        # Julia en cada caso: "se traslada al jueves" conviene contarlo, "baja
+        # por enfermedad" es asunto suyo.
+        col("motivo_publico", "Checkbox"),
         col("umbral", "Number"), col("interesados", "Number"),
         col("plazas", "Number"), col("cal_event_type_id", "Number"),
         col("mostrar_contador", "Checkbox"), col("visible", "Checkbox"),
@@ -93,6 +97,8 @@ TABLAS = {
         col("dias_semana"), col("lugar"), col("color"),
         col("visible_web", "Checkbox"), col("avisar_alumnos", "Checkbox"),
         col("estado"), col("motivo"), col("motivo_texto", "LongText"),
+        # Si este motivo puede contarse en la web o se queda en el panel.
+        col("motivo_publico", "Checkbox"),
     ],
     "Reservas": [
         col("cal_uid"), col("event_type_id", "Number"), col("inicio"),
