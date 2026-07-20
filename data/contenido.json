@@ -177,230 +177,239 @@
     },
     "lineas": [
       {
-        "id": "taller-respiracion",
-        "estado": "propuesta",
-        "umbral": 8,
-        "interesados": 4,
-        "conteo_franjas": {
-          "sab_manana": 1,
-          "f_2026_03_21": 2,
-          "vie_tarde": 1
-        },
+        "id": "2329def5fb084143a60681936ab249ea",
+        "estado": "en_curso",
+        "umbral": 4,
+        "interesados": 0,
+        "conteo_franjas": {},
         "plazas": 12,
         "foto": "",
-        "precio": "12 € suelto · 40 €/mes",
-        "duracion": "60 min",
-        "lugar": "Estudio Maro",
+        "precio": "12 €",
+        "duracion": "75 min",
+        "lugar": "Nerja",
         "mostrar_contador": true,
-        "franjas_elegibles": true,
+        "franjas_elegibles": false,
+        "cal_event_type_id": 0,
+        "nivel": "Todos los niveles",
+        "hasta": "2026-10-18",
+        "aforo": null,
         "visible": true,
         "titulo": {
-          "es": "Taller de respiración consciente",
-          "en": "Mindful Breathing Workshop",
-          "fr": "Atelier de respiration consciente",
-          "de": "Workshop zum bewussten Atmen"
+          "es": "Hatha yoga",
+          "en": "Hatha yoga",
+          "fr": "Hatha yoga",
+          "de": "Hatha-Yoga"
         },
         "texto": {
-          "es": "Una mañana dedicada a la respiración como herramienta de calma y energía. Técnicas de pranayama adaptadas con criterio científico, aptas para todos los niveles. Si reunimos grupo, lo montamos: dime cuándo te vendría bien.",
-          "en": "A morning dedicated to breathing as a means of finding calm and energy. Scientifically-based pranayama techniques, suitable for all levels. If we can get a group together, we’ll organise it: let me know when would suit you.",
-          "fr": "Une matinée consacrée à la respiration, source de calme et d'énergie. Des techniques de pranayama adaptées selon des critères scientifiques, accessibles à tous les niveaux. Si nous réunissons suffisamment de participants, nous organiserons un cours : dis-moi quand cela t'arrangerait.",
-          "de": "Ein Vormittag, der ganz der Atmung als Mittel zur Beruhigung und Energiegewinnung gewidmet ist. Wissenschaftlich fundierte Pranayama-Techniken, geeignet für alle Niveaus. Wenn sich eine Gruppe zusammenfindet, organisieren wir den Kurs: Sag mir einfach, wann es dir passen würde."
+          "es": "La clase central: posturas, respiración y relajación. Para todos los niveles, desde quien nunca ha pisado una esterilla hasta practicantes con años de recorrido.",
+          "en": "The main class: postures, breathing and relaxation. Suitable for all levels, from those who have never set foot on a mat to practitioners with years of experience.",
+          "fr": "Le cours principal : postures, respiration et relaxation. Pour tous les niveaux, des débutants qui n'ont jamais mis les pieds sur un tapis aux pratiquants confirmés.",
+          "de": "Der Hauptkurs: Körperhaltungen, Atmung und Entspannung. Für alle Niveaus geeignet, vom absoluten Anfänger bis hin zu erfahrenen Praktizierenden mit langjähriger Erfahrung."
         },
         "franjas": []
       },
       {
-        "id": "taller-de-yoga-para-principiantes",
-        "estado": "propuesta",
-        "umbral": 6,
+        "id": "361d006470cc425dba046a458759517b",
+        "estado": "en_curso",
+        "umbral": 4,
         "interesados": 0,
         "conteo_franjas": {},
         "plazas": 10,
         "foto": "",
-        "precio": "50 € el ciclo",
-        "duracion": "75 min",
-        "lugar": "Estudio Maro",
-        "mostrar_contador": true,
-        "franjas_elegibles": true,
-        "visible": true,
-        "titulo": {
-          "es": "Taller de yoga para principiantes",
-          "en": "Yoga workshop for beginners",
-          "fr": "Atelier de yoga pour débutants",
-          "de": "Yoga-Workshop für Anfänger"
-        },
-        "texto": {
-          "es": "Un ciclo de cuatro sesiones para empezar de cero: postura, respiración y los fundamentos del yoga sin prisa. Grupos reducidos.",
-          "en": "A series of four sessions to start from scratch: posture, breathing and the basics of yoga, taken at a leisurely pace. Small groups.",
-          "fr": "Un cycle de quatre séances pour partir de zéro : postures, respiration et bases du yoga, sans se presser. Petits groupes.",
-          "de": "Ein Kurs mit vier Terminen für Anfänger: Körperhaltung, Atmung und die Grundlagen des Yoga in aller Ruhe. Kleine Gruppen."
-        },
-        "franjas": []
-      },
-      {
-        "id": "yoga-restaurativo-luna-llena",
-        "estado": "en_curso",
-        "umbral": 0,
-        "interesados": 0,
-        "conteo_franjas": {},
-        "plazas": 12,
-        "foto": "",
-        "precio": "18 €",
-        "duracion": "90 min",
-        "lugar": "Playa de Maro",
-        "mostrar_contador": false,
-        "franjas_elegibles": false,
-        "visible": true,
-        "titulo": {
-          "es": "Yoga restaurativo de luna llena",
-          "en": "Full Moon Restorative Yoga",
-          "fr": "Yoga réparateur à la pleine lune",
-          "de": "Regeneratives Yoga bei Vollmond"
-        },
-        "texto": {
-          "es": "Sesión suave y profunda coincidiendo con la luna llena: posturas sostenidas, mantas y silencio junto al mar. Plazas muy limitadas.",
-          "en": "A gentle, deep-going session to coincide with the full moon: held poses, blankets and silence by the sea. Places are very limited.",
-          "fr": "Une séance douce et profonde, organisée à l'occasion de la pleine lune : postures maintenues, couvertures et silence au bord de la mer. Places très limitées.",
-          "de": "Eine sanfte und tiefgehende Yoga-Stunde zum Vollmond: lang gehaltene Positionen, Decken und Stille am Meer. Die Teilnehmerzahl ist sehr begrenzt."
-        },
-        "franjas": []
-      },
-      {
-        "id": "vinyasa-manana",
-        "estado": "en_curso",
-        "umbral": 0,
-        "interesados": 0,
-        "conteo_franjas": {},
-        "plazas": 14,
-        "foto": "",
-        "precio": "12 € suelto · 40 €/mes",
+        "precio": "10 €",
         "duracion": "60 min",
-        "lugar": "Estudio Maro",
-        "mostrar_contador": false,
+        "lugar": "Maro",
+        "mostrar_contador": true,
         "franjas_elegibles": false,
+        "cal_event_type_id": 0,
+        "nivel": "Suave",
+        "hasta": "2026-11-17",
+        "aforo": null,
         "visible": true,
         "titulo": {
-          "es": "Vinyasa de mañana",
-          "en": "Morning Vinyasa",
-          "fr": "Vinyasa du matin",
-          "de": "Vinyasa am Morgen"
+          "es": "Yoga para mayores de 60",
+          "en": "Yoga for the over-60s",
+          "fr": "Yoga pour les plus de 60 ans",
+          "de": "Yoga für Menschen über 60"
         },
         "texto": {
-          "es": "Práctica dinámica para empezar el día con energía. Enlazamos respiración y movimiento en una secuencia fluida. Todos los niveles con opciones.",
-          "en": "A dynamic practice to start the day full of energy. We combine breathing and movement in a flowing sequence. Suitable for all levels, with options available.",
-          "fr": "Une séance dynamique pour commencer la journée en pleine forme. Nous associons respiration et mouvement dans une enchaînement fluide. Tous niveaux, avec différentes options.",
-          "de": "Eine dynamische Übung, um voller Energie in den Tag zu starten. Wir verbinden Atmung und Bewegung in einer fließenden Abfolge. Für alle Niveaus geeignet, mit verschiedenen Optionen."
+          "es": "Movilidad, equilibrio y fuerza adaptados a cada persona. Una práctica segura, diseñada con criterio científico, para ganar autonomía y calidad de vida.",
+          "en": "Mobility, balance and strength tailored to each individual. A safe programme, designed on scientific principles, to improve independence and quality of life.",
+          "fr": "Mobilité, équilibre et force adaptés à chaque personne. Une pratique sûre, conçue selon des critères scientifiques, pour gagner en autonomie et améliorer la qualité de vie.",
+          "de": "Beweglichkeit, Gleichgewicht und Kraft – individuell auf jeden Einzelnen zugeschnitten. Ein sicheres, wissenschaftlich fundiertes Trainingsprogramm zur Steigerung der Selbstständigkeit und Lebensqualität."
         },
         "franjas": []
       },
       {
-        "id": "hatha-suave",
-        "estado": "en_curso",
-        "umbral": 0,
-        "interesados": 0,
-        "conteo_franjas": {},
+        "id": "a0a40fe1f8b643d3a9e9f355b138fc75",
+        "estado": "propuesta",
+        "umbral": 4,
+        "interesados": 6,
+        "conteo_franjas": {
+          "lun_tarde": 2,
+          "mar_manana": 1,
+          "mie_tarde": 1,
+          "jue_manana": 1,
+          "sab_manana": 1
+        },
         "plazas": 15,
         "foto": "",
-        "precio": "12 € suelto · 40 €/mes",
+        "precio": "14 €",
         "duracion": "60 min",
-        "lugar": "Sala municipal de Maro",
-        "mostrar_contador": false,
+        "lugar": "Playa de Burriana",
+        "mostrar_contador": true,
         "franjas_elegibles": false,
+        "cal_event_type_id": 0,
+        "nivel": "Todos los niveles",
+        "hasta": "2026-09-18",
+        "aforo": null,
         "visible": true,
         "titulo": {
-          "es": "Hatha suave",
-          "en": "Hatha suave",
-          "fr": "Hatha suave",
-          "de": "Hatha suave"
+          "es": "Yoga junto al mar",
+          "en": "Yoga by the sea",
+          "fr": "Yoga au bord de la mer",
+          "de": "Yoga am Meer"
         },
         "texto": {
-          "es": "Práctica pausada centrada en la alineación y la respiración. Posturas sostenidas con tiempo para asentarlas. Ideal para todos los niveles y para quien busca una práctica sin prisa.",
-          "en": "Práctica pausada centrada en la alineación y la respiración. Posturas sostenidas con tiempo para asentarlas. Ideal para todos los niveles y para quien busca una práctica sin prisa.",
-          "fr": "Práctica pausada centrada en la alineación y la respiración. Posturas sostenidas con tiempo para asentarlas. Ideal para todos los niveles y para quien busca una práctica sin prisa.",
-          "de": "Práctica pausada centrada en la alineación y la respiración. Posturas sostenidas con tiempo para asentarlas. Ideal para todos los niveles y para quien busca una práctica sin prisa."
+          "es": "Sesión de verano al aire libre, a primera hora, cuando la playa todavía está tranquila y el sol no aprieta.",
+          "en": "An early-morning outdoor summer session, when the beach is still quiet and the sun isn’t too strong.",
+          "fr": "Séance estivale en plein air, tôt le matin, quand la plage est encore calme et que le soleil ne tape pas encore fort.",
+          "de": "Ein Sommershooting im Freien, gleich am frühen Morgen, wenn am Strand noch Ruhe herrscht und die Sonne noch nicht so stark scheint."
         },
         "franjas": []
       },
       {
-        "id": "yoga-para-mayores",
+        "id": "6163fcf29b5541298bd4960086a363a0",
         "estado": "en_curso",
-        "umbral": 0,
+        "umbral": 4,
+        "interesados": 3,
+        "conteo_franjas": {
+          "lun_tarde": 1,
+          "mar_manana": 1,
+          "mie_tarde": 1
+        },
+        "plazas": 14,
+        "foto": "",
+        "precio": "14 €",
+        "duracion": "60 min",
+        "lugar": "Nerja",
+        "mostrar_contador": true,
+        "franjas_elegibles": false,
+        "cal_event_type_id": 0,
+        "nivel": "Intermedio",
+        "hasta": "2026-10-18",
+        "aforo": null,
+        "visible": true,
+        "titulo": {
+          "es": "Vinyasa dinámico",
+          "en": "Dynamic Vinyasa",
+          "fr": "Vinyasa dynamique",
+          "de": "Dynamisches Vinyasa"
+        },
+        "texto": {
+          "es": "Secuencias enlazadas con la respiración, a buen ritmo. Para quien ya se maneja con las posturas y busca movimiento continuo.",
+          "en": "Sequences linked to the breath, at a steady pace. For those who are already comfortable with the poses and are looking for continuous movement.",
+          "fr": "Enchaînements synchronisés avec la respiration, à un bon rythme. Pour ceux qui maîtrisent déjà les postures et recherchent un mouvement continu.",
+          "de": "Atemgestützte Bewegungsabläufe in einem angenehmen Tempo. Für alle, die bereits mit den Körperhaltungen vertraut sind und nach fließenden Bewegungen suchen."
+        },
+        "franjas": []
+      },
+      {
+        "id": "56cf954bc44342a9bc884ed407404da7",
+        "estado": "en_curso",
+        "umbral": 4,
+        "interesados": 2,
+        "conteo_franjas": {
+          "lun_tarde": 1,
+          "mar_manana": 1
+        },
+        "plazas": 12,
+        "foto": "",
+        "precio": "12 €",
+        "duracion": "75 min",
+        "lugar": "Maro",
+        "mostrar_contador": true,
+        "franjas_elegibles": false,
+        "cal_event_type_id": 0,
+        "nivel": "Todos los niveles",
+        "hasta": "2026-10-18",
+        "aforo": null,
+        "visible": true,
+        "titulo": {
+          "es": "Yin yoga y descanso",
+          "en": "Yin yoga and relaxation",
+          "fr": "Yin yoga et détente",
+          "de": "Yin-Yoga und Entspannung"
+        },
+        "texto": {
+          "es": "Posturas largas y sostenidas, con apoyos, para soltar tensión profunda. La clase de final de semana.",
+          "en": "Long, sustained poses, using props, to release deep-seated tension. The weekend class.",
+          "fr": "Des postures longues et maintenues, avec des appuis, pour relâcher les tensions profondes. Le cours du week-end.",
+          "de": "Lange, gehaltene Haltungen mit Stützen, um tiefsitzende Verspannungen zu lösen. Der Wochenendkurs."
+        },
+        "franjas": []
+      },
+      {
+        "id": "f171e6e14f9f4cbc898f467dd6b87c70",
+        "estado": "en_curso",
+        "umbral": 4,
+        "interesados": 0,
+        "conteo_franjas": {},
+        "plazas": 10,
+        "foto": "",
+        "precio": "14 €",
+        "duracion": "60 min",
+        "lugar": "Nerja",
+        "mostrar_contador": true,
+        "franjas_elegibles": false,
+        "cal_event_type_id": 0,
+        "nivel": "Todos los niveles",
+        "hasta": "2026-11-17",
+        "aforo": null,
+        "visible": true,
+        "titulo": {
+          "es": "Espalda sana",
+          "en": "A healthy back",
+          "fr": "Un dos en bonne santé",
+          "de": "Ein gesunder Rücken"
+        },
+        "texto": {
+          "es": "Sesiones centradas en la salud de la columna: liberar tensión, fortalecer la musculatura profunda y aprender a moverte sin dolor en el día a día.",
+          "en": "Sessions focusing on spinal health: releasing tension, strengthening the deep muscles and learning to move pain-free in your day-to-day life.",
+          "fr": "Séances axées sur la santé de la colonne vertébrale : relâcher les tensions, renforcer les muscles profonds et apprendre à bouger sans douleur au quotidien.",
+          "de": "Trainingseinheiten mit Schwerpunkt auf der Gesundheit der Wirbelsäule: Verspannungen lösen, die Tiefenmuskulatur stärken und lernen, sich im Alltag schmerzfrei zu bewegen."
+        },
+        "franjas": []
+      },
+      {
+        "id": "e09ad57879d94b2c86781ca1802d8ef0",
+        "estado": "en_curso",
+        "umbral": 4,
         "interesados": 0,
         "conteo_franjas": {},
         "plazas": 12,
         "foto": "",
-        "precio": "10 € suelto · 35 €/mes",
-        "duracion": "60 min",
-        "lugar": "Estudio Maro",
-        "mostrar_contador": false,
+        "precio": "10 €",
+        "duracion": "45 min",
+        "lugar": "Nerja",
+        "mostrar_contador": true,
         "franjas_elegibles": false,
+        "cal_event_type_id": 0,
+        "nivel": "Iniciación",
+        "hasta": "2026-11-17",
+        "aforo": null,
         "visible": true,
         "titulo": {
-          "es": "Yoga para mayores",
-          "en": "Yoga para mayores",
-          "fr": "Yoga para mayores",
-          "de": "Yoga para mayores"
+          "es": "Yoga para niños y familias",
+          "en": "Yoga for children and families",
+          "fr": "Yoga pour les enfants et les familles",
+          "de": "Yoga für Kinder und Familien"
         },
         "texto": {
-          "es": "Sesión adaptada a cuerpos maduros: movilidad articular, equilibrio y respiración, con apoyos y opciones para cada persona. Cuida la autonomía y el bienestar diario.",
-          "en": "Sesión adaptada a cuerpos maduros: movilidad articular, equilibrio y respiración, con apoyos y opciones para cada persona. Cuida la autonomía y el bienestar diario.",
-          "fr": "Sesión adaptada a cuerpos maduros: movilidad articular, equilibrio y respiración, con apoyos y opciones para cada persona. Cuida la autonomía y el bienestar diario.",
-          "de": "Sesión adaptada a cuerpos maduros: movilidad articular, equilibrio y respiración, con apoyos y opciones para cada persona. Cuida la autonomía y el bienestar diario."
-        },
-        "franjas": []
-      },
-      {
-        "id": "yin-yoga",
-        "estado": "en_curso",
-        "umbral": 0,
-        "interesados": 0,
-        "conteo_franjas": {},
-        "plazas": 14,
-        "foto": "",
-        "precio": "12 € suelto · 40 €/mes",
-        "duracion": "60 min",
-        "lugar": "Estudio Maro",
-        "mostrar_contador": false,
-        "franjas_elegibles": false,
-        "visible": true,
-        "titulo": {
-          "es": "Yin Yoga",
-          "en": "Yin Yoga",
-          "fr": "Yin Yoga",
-          "de": "Yin Yoga"
-        },
-        "texto": {
-          "es": "Posturas en el suelo sostenidas varios minutos que trabajan los tejidos profundos y la calma. Una práctica introspectiva perfecta para el final del día.",
-          "en": "Posturas en el suelo sostenidas varios minutos que trabajan los tejidos profundos y la calma. Una práctica introspectiva perfecta para el final del día.",
-          "fr": "Posturas en el suelo sostenidas varios minutos que trabajan los tejidos profundos y la calma. Una práctica introspectiva perfecta para el final del día.",
-          "de": "Posturas en el suelo sostenidas varios minutos que trabajan los tejidos profundos y la calma. Una práctica introspectiva perfecta para el final del día."
-        },
-        "franjas": []
-      },
-      {
-        "id": "clase-junto-al-mar",
-        "estado": "en_curso",
-        "umbral": 0,
-        "interesados": 0,
-        "conteo_franjas": {},
-        "plazas": 18,
-        "foto": "",
-        "precio": "15 €",
-        "duracion": "75 min",
-        "lugar": "Playa de Maro",
-        "mostrar_contador": false,
-        "franjas_elegibles": false,
-        "visible": true,
-        "titulo": {
-          "es": "Clase junto al mar",
-          "en": "Clase junto al mar",
-          "fr": "Clase junto al mar",
-          "de": "Clase junto al mar"
-        },
-        "texto": {
-          "es": "Yoga al aire libre en la playa de Maro, al ritmo de las olas. Una práctica revitalizante que combina movimiento, respiración y el entorno natural. Sujeta a la meteorología.",
-          "en": "Yoga al aire libre en la playa de Maro, al ritmo de las olas. Una práctica revitalizante que combina movimiento, respiración y el entorno natural. Sujeta a la meteorología.",
-          "fr": "Yoga al aire libre en la playa de Maro, al ritmo de las olas. Una práctica revitalizante que combina movimiento, respiración y el entorno natural. Sujeta a la meteorología.",
-          "de": "Yoga al aire libre en la playa de Maro, al ritmo de las olas. Una práctica revitalizante que combina movimiento, respiración y el entorno natural. Sujeta a la meteorología."
+          "es": "El yoga como juego: gestión de las emociones, atención y compañerismo. Años de experiencia impartiendo yoga infantil avalan estas sesiones.",
+          "en": "Yoga as play: managing emotions, focus and camaraderie. Years of experience teaching yoga to children underpin these sessions.",
+          "fr": "Le yoga comme jeu : gestion des émotions, concentration et esprit d'équipe. Ces séances s'appuient sur des années d'expérience dans l'enseignement du yoga aux enfants.",
+          "de": "Yoga als Spiel: Umgang mit Emotionen, Achtsamkeit und Gemeinschaftssinn. Jahrelange Erfahrung im Unterrichten von Kinderyoga spricht für diese Kurse."
         },
         "franjas": []
       }

@@ -261,12 +261,14 @@ def siembra_demo(url, tok, ids):
     # --- Servicios: la cartera. Tres vivos y uno retirado. ---
     servicios = [
         {"k": "hatha", "titulo": "Hatha yoga", "nivel": "Todos los niveles", "tarifa": 12,
-         "texto": "Práctica pausada de posturas y respiración. Sirve para empezar "
-                  "de cero y para sostener el hábito sin castigarse.",
+         "texto": "La clase central: posturas, respiración y relajación. Para todos "
+                  "los niveles, desde quien nunca ha pisado una esterilla hasta "
+                  "practicantes con años de recorrido.",
          "oferta": True},
-        {"k": "mayores", "titulo": "Yoga para mayores", "nivel": "Suave", "tarifa": 10,
-         "texto": "Movimiento amable para articulaciones, equilibrio y respiración. "
-                  "Se puede hacer entero desde una silla.",
+        {"k": "mayores", "titulo": "Yoga para mayores de 60", "nivel": "Suave", "tarifa": 10,
+         "texto": "Movilidad, equilibrio y fuerza adaptados a cada persona. Una "
+                  "práctica segura, diseñada con criterio científico, para ganar "
+                  "autonomía y calidad de vida.",
          "oferta": True},
         {"k": "mar", "titulo": "Yoga junto al mar", "nivel": "Todos los niveles", "tarifa": 14,
          "texto": "Sesión de verano al aire libre, a primera hora, cuando la playa "
@@ -279,6 +281,16 @@ def siembra_demo(url, tok, ids):
         {"k": "yin", "titulo": "Yin yoga y descanso", "nivel": "Todos los niveles", "tarifa": 12,
          "texto": "Posturas largas y sostenidas, con apoyos, para soltar tensión "
                   "profunda. La clase de final de semana.",
+         "oferta": True},
+        {"k": "espalda", "titulo": "Espalda sana", "nivel": "Todos los niveles", "tarifa": 14,
+         "texto": "Sesiones centradas en la salud de la columna: liberar tensión, "
+                  "fortalecer la musculatura profunda y aprender a moverte sin dolor "
+                  "en el día a día.",
+         "oferta": True},
+        {"k": "ninos", "titulo": "Yoga para niños y familias", "nivel": "Iniciación", "tarifa": 10,
+         "texto": "El yoga como juego: gestión de las emociones, atención y "
+                  "compañerismo. Años de experiencia impartiendo yoga infantil "
+                  "avalan estas sesiones.",
          "oferta": True},
         # Retirado de la cartera: NO debe salir en la web, pero conserva su
         # historial (temporada pasada, clases y reservas siguen ahí).
@@ -306,6 +318,8 @@ def siembra_demo(url, tok, ids):
         ("mayores_actual", "mayores", "Curso 2026/27", "en_curso", en(120), True, 10, "Maro", "10 €", "60 min"),
         ("vinyasa_actual", "vinyasa", "Otoño", "en_curso", en(90), True, 14, "Nerja", "14 €", "60 min"),
         ("yin_actual", "yin", "Otoño", "en_curso", en(90), True, 12, "Maro", "12 €", "75 min"),
+        ("espalda_actual", "espalda", "Curso 2026/27", "en_curso", en(120), True, 10, "Nerja", "14 €", "60 min"),
+        ("ninos_actual", "ninos", "Curso 2026/27", "en_curso", en(120), True, 12, "Nerja", "10 €", "45 min"),
         # Propuesta: aún sondeando interés, no debería contar como ofertada.
         ("mar_verano", "mar", "Campaña de verano", "propuesta", en(60), True, 15, "Playa de Burriana", "14 €", "60 min"),
         # Del servicio retirado: caducada, para comprobar que el historial queda.
@@ -333,6 +347,8 @@ def siembra_demo(url, tok, ids):
         ("vinyasa_actual", "mar", "19:30", 60, "Nerja"),
         ("vinyasa_actual", "jue", "19:30", 60, "Nerja"),
         ("yin_actual", "vie", "18:00", 75, "Maro"),
+        ("espalda_actual", "mie", "10:00", 60, "Nerja"),
+        ("ninos_actual", "vie", "17:00", 45, "Nerja"),
         ("mar_verano", "sab", "09:00", 60, "Playa de Burriana"),
     ]
     for (tk, dia, hora, dmin, lugar) in clases:
