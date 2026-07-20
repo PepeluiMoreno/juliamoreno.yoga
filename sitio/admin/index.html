@@ -151,6 +151,10 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dlg-caja label:not(.check){display:block;font-size:.8rem;color:var(--gris);margin:.2rem 0 .3rem;font-weight:600}
 .dlg-caja select,.dlg-caja input[type=text]{width:100%;padding:.6rem .8rem;border:1px solid var(--linea);border-radius:8px;font-size:.95rem;font-family:inherit;background:#fff;color:var(--tinta);box-sizing:border-box}
 .dlg-caja .check{display:flex;align-items:center;gap:.5rem;font-size:.9rem;color:var(--tinta);font-weight:400}
+/* .oculto tiene un solo selector y perdía contra las reglas de arriba, que
+   llevan dos: el checkbox del diálogo se quedaba visible aunque se le pusiera
+   la clase. Se le da aquí la especificidad que necesita para ganar. */
+.dlg-caja .check.oculto,.check.oculto{display:none}
 .dlg-caja .check input{width:auto;margin:0}
 .dlg-botones{display:flex;gap:.6rem;justify-content:flex-end;flex-wrap:wrap}
 .dlg-botones .btn{margin:0}
