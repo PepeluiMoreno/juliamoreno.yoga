@@ -288,6 +288,37 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dash-prep-n{font-size:.82rem;color:var(--gris)}
 .dash-barra{height:6px;background:var(--cielo-claro);border-radius:99px;margin-top:.4rem;overflow:hidden}
 .dash-barra-fill{height:100%;background:var(--mar);border-radius:99px}
+/* --- Programación: carrusel de actividades + ficha de edición --- */
+.prog-carrusel-caja{margin:0 0 1.1rem}
+.prog-carrusel{display:flex;gap:.7rem;overflow-x:auto;padding:.2rem .2rem .7rem;scroll-snap-type:x proximity}
+.prog-tarj{flex:0 0 208px;scroll-snap-align:start;background:#fff;border:1px solid var(--linea);
+  border-radius:10px;padding:.7rem .8rem;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.prog-tarj:hover{border-color:var(--mar)}
+.prog-tarj.activa{border-color:var(--mar);box-shadow:0 0 0 2px var(--cielo-claro)}
+.prog-tarj-serv{font-weight:600;font-size:.9rem;color:var(--tinta);line-height:1.25}
+.prog-tarj-per{font-size:.82rem;color:var(--mar);margin:.15rem 0 .3rem}
+.prog-tarj-meta{font-size:.76rem;color:var(--gris);line-height:1.4}
+.prog-tarj-nueva{border-style:dashed;display:flex;align-items:center;justify-content:center;
+  color:var(--mar);font-weight:600;font-size:.88rem;min-height:92px}
+.prog-ficha-cab{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.4rem}
+.prog-ficha-cab h2{margin:0}
+
+/* Campos con el ancho que pide su contenido: una fecha o unas plazas no
+   necesitan media pantalla, y un precio tampoco. Se dejan crecer solo a los
+   que de verdad llevan texto largo. */
+.campos{display:flex;flex-wrap:wrap;gap:.9rem;margin-top:.9rem;align-items:flex-end}
+.campo{display:flex;flex-direction:column;min-width:0}
+.campo label{margin-bottom:.25rem}
+.campo input,.campo select{width:100%}
+.campo-num{flex:0 0 96px}
+.campo-fecha{flex:0 0 172px}
+.campo-corto{flex:0 0 130px}
+.campo-medio{flex:0 0 240px}
+.campo-ancho{flex:1 1 340px;max-width:560px}
+@media(max-width:620px){
+  .campo-num,.campo-fecha,.campo-corto,.campo-medio,.campo-ancho{flex:1 1 100%;max-width:none}
+}
+
 .dash-tit{margin:1.8rem 0 .2rem;font-size:1.05rem;font-weight:600;color:var(--tinta)}
 .dash-tit-nota{font-weight:400;font-size:.82rem;color:var(--gris)}
 
@@ -481,31 +512,38 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <section class="vista oculto" id="vista-actividades">
   <h1>Programación de Actividades</h1>
   <p style="color:var(--gris);margin:-.4rem 0 1.2rem;font-size:.95rem">
-    Cuándo se da cada servicio. Elige uno de la lista y programa los periodos en que
-    se imparte —una campaña de verano, la temporada de otoño— con sus fechas, plazas
-    y precio. Un mismo servicio puede programarse tantas veces como haga falta.
+    Una actividad es un servicio puesto en marcha en un periodo concreto: una campaña
+    de verano, la temporada de otoño. Pulsa una de las de arriba para verla y editarla,
+    o crea una nueva.
   </p>
 
-  <div class="tarjeta">
-    <label for="prog-servicio">Servicio a programar</label>
-    <select id="prog-servicio"><option value="">Elige un servicio…</option></select>
+  <!-- Carrusel de las actividades ya programadas -->
+  <div class="prog-carrusel-caja">
+    <div class="prog-carrusel" id="prog-carrusel"></div>
   </div>
 
-  <div class="tarjeta oculto" id="temporadas-tarjeta">
-    <h2>Programación de <span id="temp-servicio-nombre"></span></h2>
-    <p style="color:var(--gris);margin:-.4rem 0 1rem;font-size:.92rem">
-      Cada línea es un periodo con sus fechas, su horario y sus plazas.
-    </p>
-    <ul class="lista-act" id="temp-lista"></ul>
+  <div class="tarjeta">
+    <div class="prog-ficha-cab">
+      <h2 id="temp-form-titulo">Nueva actividad</h2>
+      <button class="btn-sec btn-mini oculto" id="temp-btn-cancelar">Dejar de editar</button>
+    </div>
 
-    <h3 id="temp-form-titulo" style="margin-top:1.4rem">Nuevo periodo</h3>
     <input type="hidden" id="temp-edit-id">
-    <input type="hidden" id="temp-servicio-uuid">
-    <label for="temp-periodo">Denominación del periodo en el que se desarrolla</label>
-    <input type="text" id="temp-periodo" maxlength="80"
-           placeholder="Ej. Campaña de verano · Otoño 2026 · Temporada 2026/27">
-    <div class="fila">
-      <div>
+
+    <div class="campos">
+      <div class="campo campo-ancho">
+        <label for="temp-servicio-uuid">Servicio del que es esta actividad</label>
+        <select id="temp-servicio-uuid"><option value="">Elige un servicio…</option></select>
+      </div>
+      <div class="campo campo-ancho">
+        <label for="temp-periodo">Denominación del periodo en el que se desarrolla</label>
+        <input type="text" id="temp-periodo" maxlength="80"
+               placeholder="Ej. Campaña de verano · Otoño 2026 · Temporada 2026/27">
+      </div>
+    </div>
+
+    <div class="campos">
+      <div class="campo campo-medio">
         <label for="temp-estado">Estado</label>
         <select id="temp-estado">
           <option value="propuesta">Propuesta (sondeando interés)</option>
@@ -514,36 +552,36 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
           <option value="finalizada">Finalizada</option>
         </select>
       </div>
-      <div>
-        <label for="temp-umbral">Umbral de interesados</label>
-        <input type="number" id="temp-umbral" min="0" placeholder="8">
-      </div>
-      <div>
-        <label for="temp-plazas">Plazas</label>
-        <input type="number" id="temp-plazas" min="0" placeholder="12">
-      </div>
-      <div>
+      <div class="campo campo-fecha">
         <label for="temp-hasta">Vigente hasta</label>
         <input type="date" id="temp-hasta">
       </div>
+      <div class="campo campo-num">
+        <label for="temp-plazas">Plazas</label>
+        <input type="number" id="temp-plazas" min="0" placeholder="12">
+      </div>
+      <div class="campo campo-num">
+        <label for="temp-umbral">Umbral</label>
+        <input type="number" id="temp-umbral" min="0" placeholder="8">
+      </div>
     </div>
 
-    <div class="fila">
-      <div>
-        <label for="temp-precio">Precio</label>
-        <input type="text" id="temp-precio" placeholder="Ej. 12 € suelto · 40 €/mes" maxlength="40">
-      </div>
-      <div>
+    <div class="campos">
+      <div class="campo campo-corto">
         <label for="temp-duracion">Duración</label>
-        <input type="text" id="temp-duracion" placeholder="Ej. 60 min" maxlength="40">
+        <input type="text" id="temp-duracion" placeholder="60 min" maxlength="40">
       </div>
-      <div>
+      <div class="campo campo-medio">
+        <label for="temp-precio">Precio</label>
+        <input type="text" id="temp-precio" placeholder="12 € suelto · 40 €/mes" maxlength="40">
+      </div>
+      <div class="campo campo-medio">
         <label for="temp-lugar">Lugar</label>
-        <input type="text" id="temp-lugar" placeholder="Ej. Estudio Maro" maxlength="120">
+        <input type="text" id="temp-lugar" placeholder="Estudio Maro" maxlength="120">
       </div>
     </div>
 
-    <label class="check" style="margin-top:1.1rem"><input type="checkbox" id="temp-franjas_elegibles"> Este periodo tiene franjas horarias a elegir</label>
+    <label class="check" style="margin-top:1.1rem"><input type="checkbox" id="temp-franjas_elegibles"> Esta actividad tiene franjas horarias a elegir</label>
     <div id="franjas-wrap" class="oculto">
       <label>Franjas horarias propuestas</label>
       <div class="franjas-grid" id="franjas-grid"></div>
@@ -555,8 +593,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     </div>
 
     <div class="botones">
-      <button class="btn-primario" id="temp-btn-guardar">Crear periodo</button>
-      <button class="btn-sec oculto" id="temp-btn-cancelar">Cancelar edición</button>
+      <button class="btn-primario" id="temp-btn-guardar">Crear actividad</button>
+      <button class="btn-sec oculto" id="temp-btn-borrar">Eliminar esta actividad</button>
     </div>
   </div>
 
@@ -896,10 +934,16 @@ $("#btn-guardar").onclick = async ()=>{
 };
 
 
-// --- Temporadas (programación de un servicio en unas fechas) ---
+// --- Programación de actividades ---
+// Una actividad es un servicio puesto en marcha en un periodo. Arriba van las
+// ya programadas en un carrusel; al pulsar una, baja a la ficha para editarla.
+// El servicio no se elige "antes de empezar": es un campo más de la ficha.
+
+let ACTIVIDADES = [];
 
 function tempReset(){
   $("#temp-edit-id").value="";
+  $("#temp-servicio-uuid").value="";
   $("#temp-periodo").value="";
   $("#temp-estado").value="propuesta";
   $("#temp-umbral").value=""; $("#temp-plazas").value=""; $("#temp-hasta").value="";
@@ -908,15 +952,15 @@ function tempReset(){
   $("#temp-franjas_elegibles").checked=false;
   $("#franjas-wrap").classList.add("oculto");
   marcarFranjas("");
-  $("#temp-form-titulo").textContent="Nuevo periodo";
-  $("#temp-btn-guardar").textContent="Crear periodo";
+  $("#temp-form-titulo").textContent="Nueva actividad";
+  $("#temp-btn-guardar").textContent="Crear actividad";
   $("#temp-btn-cancelar").classList.add("oculto");
+  $("#temp-btn-borrar").classList.add("oculto");
+  document.querySelectorAll(".prog-tarj").forEach(t=>t.classList.remove("activa"));
 }
 
-// La vista de Programación empieza eligiendo a qué servicio se le programan
-// periodos. Se rellena con la cartera ya cargada, sin volver a pedirla.
 function opcionesServicioProg(){
-  const sel = $("#prog-servicio");
+  const sel = $("#temp-servicio-uuid");
   if(!sel) return;
   const previo = sel.value;
   sel.innerHTML = '<option value="">Elige un servicio…</option>'
@@ -925,50 +969,68 @@ function opcionesServicioProg(){
   sel.value = previo;
 }
 
-async function cargarProgramacion(){
-  if(!SERVICIOS.length){ await cargar(); }
-  opcionesServicioProg();
+function _nombreServicio(uuid){
+  const s = SERVICIOS.find(x=>x.uuid===uuid);
+  return s ? (s.titulo_es||"(sin nombre)") : "(servicio desconocido)";
 }
 
-$("#prog-servicio").addEventListener("change", e=>{
-  const uuid = e.target.value;
-  if(uuid) verTemporadas(uuid);
-  else $("#temporadas-tarjeta").classList.add("oculto");
-});
+function pintaCarrusel(){
+  const cont = $("#prog-carrusel");
+  const tarjetas = ACTIVIDADES.map((a,i)=>{
+    const meta = [
+      a.hasta ? "hasta "+String(a.hasta).slice(0,10) : "sin fecha de fin",
+      a.plazas ? a.plazas+" plazas" : null,
+      a.lugar || null,
+    ].filter(Boolean).join(" · ");
+    return `<button type="button" class="prog-tarj" data-i="${i}">
+      <div class="prog-tarj-serv">${_escL(_nombreServicio(a.servicio_uuid))}</div>
+      <div class="prog-tarj-per">${_escL(a.periodo||"(sin periodo)")}</div>
+      <div class="prog-tarj-meta">
+        <span class="badge ${a.estado||'propuesta'}">${a.estado||'propuesta'}</span><br>
+        ${_escL(meta)}${a.visible?"":" · oculta"}
+      </div>
+    </button>`;
+  }).join("");
+  cont.innerHTML = tarjetas
+    + `<button type="button" class="prog-tarj prog-tarj-nueva" data-nueva="1">+ Nueva actividad</button>`;
+  cont.querySelectorAll(".prog-tarj").forEach(t=>{
+    t.addEventListener("click", ()=>{
+      if(t.dataset.nueva){ tempReset(); return; }
+      tempEditar(ACTIVIDADES[Number(t.dataset.i)]);
+      cont.querySelectorAll(".prog-tarj").forEach(x=>x.classList.remove("activa"));
+      t.classList.add("activa");
+    });
+  });
+}
 
-async function verTemporadas(servicioUuid){
-  const serv = SERVICIOS.find(s=>s.uuid===servicioUuid);
-  $("#temp-servicio-uuid").value = servicioUuid;
-  $("#temp-servicio-nombre").textContent = serv ? (serv.titulo_es||"(sin nombre)") : "";
-  $("#temporadas-tarjeta").classList.remove("oculto");
-  tempReset();
+async function cargarProgramacion(){
+  if(!SERVICIOS.length) await cargar();
+  opcionesServicioProg();
   await tempCargar();
 }
 
 async function tempCargar(){
-  const servicioUuid = $("#temp-servicio-uuid").value;
   try{
     const r = await fetch(API_TEMPORADAS, {credentials:"include"});
     if(!r.ok){ aviso("No se pudo cargar la programación.","error"); return; }
     const d = await r.json();
-    const mias = (d.actividades||[]).filter(a=>a.servicio_uuid===servicioUuid);
-    const lista = $("#temp-lista");
-    if(!mias.length){ lista.innerHTML="<li>Este servicio no tiene periodos programados todavía.</li>"; return; }
-    lista.innerHTML = mias.map(a=>`
-      <li>
-        <div class="act-info">
-          <span class="act-titulo">${_escL(a.periodo||"(periodo sin nombre)")}</span>
-          <span class="badge ${a.estado||'propuesta'}">${a.estado||'propuesta'}</span>
-          <div class="act-meta">${a.hasta ? "hasta "+String(a.hasta).slice(0,10) : "sin fecha de fin"} · Plazas: ${a.plazas??'—'} · ${a.lugar||'sin lugar'}${a.visible?'':' · <b>oculta</b>'}</div>
-        </div>
-        <button class="btn-mini" onclick='tempEditar(${JSON.stringify(a)})'>Editar</button>
-        <button class="btn-mini" onclick='borrarTemporada(${JSON.stringify(a)})'>Eliminar</button>
-      </li>`).join("");
-  }catch(e){ aviso("Error de conexión al cargar las temporadas.","error"); }
+    ACTIVIDADES = d.actividades||[];
+    // Agrupadas por servicio, y dentro por fecha de fin: así el carrusel se
+    // lee como la cartera, no como un montón de periodos sueltos.
+    ACTIVIDADES.sort((a,b)=>{
+      const na = _nombreServicio(a.servicio_uuid), nb = _nombreServicio(b.servicio_uuid);
+      if(na!==nb) return na.localeCompare(nb);
+      return String(b.hasta||"").localeCompare(String(a.hasta||""));
+    });
+    pintaCarrusel();
+  }catch(e){ aviso("Error de conexión al cargar la programación.","error"); }
 }
 
 function tempEditar(a){
+  if(!a) return;
   $("#temp-edit-id").value=a.Id;
+  opcionesServicioProg();
+  $("#temp-servicio-uuid").value=a.servicio_uuid||"";
   $("#temp-periodo").value=a.periodo||"";
   $("#temp-estado").value=a.estado||"propuesta";
   $("#temp-umbral").value=a.umbral??""; $("#temp-plazas").value=a.plazas??"";
@@ -980,16 +1042,24 @@ function tempEditar(a){
   $("#temp-franjas_elegibles").checked=!!a.franjas_elegibles;
   $("#franjas-wrap").classList.toggle("oculto", !a.franjas_elegibles);
   marcarFranjas(a.franjas);
-  $("#temp-form-titulo").textContent="Editar periodo";
+  $("#temp-form-titulo").textContent =
+    `${_nombreServicio(a.servicio_uuid)} · ${a.periodo||"(sin periodo)"}`;
   $("#temp-btn-guardar").textContent="Guardar cambios";
   $("#temp-btn-cancelar").classList.remove("oculto");
+  $("#temp-btn-borrar").classList.remove("oculto");
 }
 
 $("#temp-btn-cancelar").onclick = tempReset;
 
+$("#temp-btn-borrar").onclick = ()=>{
+  const id = $("#temp-edit-id").value;
+  const a = ACTIVIDADES.find(x=>String(x.Id)===String(id));
+  if(a) borrarTemporada(a);
+};
+
 $("#temp-btn-guardar").onclick = async ()=>{
   const servicioUuid = $("#temp-servicio-uuid").value;
-  if(!servicioUuid){ aviso("Elige antes un servicio.","error"); return; }
+  if(!servicioUuid){ aviso("Elige de qué servicio es esta actividad.","error"); return; }
   const elegible=$("#temp-franjas_elegibles").checked;
   const datos = {
     servicio_uuid: servicioUuid,
@@ -1012,7 +1082,7 @@ $("#temp-btn-guardar").onclick = async ()=>{
     const r = await fetch(API_TEMPORADAS,{method:metodo,credentials:"include",
       headers:{"Content-Type":"application/json"},body:JSON.stringify(datos)});
     const d = await r.json();
-    if(d.ok){ aviso(editId?"Periodo guardado.":"Periodo creado.","ok"); tempReset(); tempCargar(); }
+    if(d.ok){ aviso(editId?"Actividad guardada.":"Actividad creada.","ok"); tempReset(); tempCargar(); }
     else aviso(d.error||"No se pudo guardar.","error");
   }catch(e){ aviso("Error de conexión al guardar.","error"); }
   finally{ $("#temp-btn-guardar").disabled=false; }
@@ -1035,11 +1105,12 @@ async function _borrarFila(api, tabla, fila, nombre, alTerminar){
 
 function borrarServicio(s){
   _borrarFila(API, "Servicios", s, s.titulo_es||"(sin nombre)",
-              ()=>{ resetForm(); cargar(); $("#temporadas-tarjeta").classList.add("oculto"); });
+              ()=>{ resetForm(); cargar(); });
 }
 
 function borrarTemporada(a){
-  const nombre = a.periodo || (a.hasta ? "periodo hasta "+String(a.hasta).slice(0,10) : "periodo sin nombre");
+  const nombre = `${_nombreServicio(a.servicio_uuid)} · `
+    + (a.periodo || (a.hasta ? "hasta "+String(a.hasta).slice(0,10) : "sin periodo"));
   _borrarFila(API_TEMPORADAS, "Actividades", a, nombre, ()=>{ tempReset(); tempCargar(); });
 }
 
