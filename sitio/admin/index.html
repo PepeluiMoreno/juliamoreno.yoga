@@ -1047,7 +1047,10 @@ function borrarTemporada(a){
 // --- Dashboard (panel de control) ---
 const API_RESUMEN = "https://api.juliamoreno.yoga/admin/api/resumen";
 // --- Piezas del Panel de control ---
-const DIAS_SEM = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"];
+// Ojo: empieza en LUNES, porque el backend manda dia_semana con el weekday()
+// de Python (0=lunes). La otra lista de días del panel, DIAS_SEM, empieza en
+// domingo porque la usa getDay() de JS. No son intercambiables.
+const DIAS_SEMANA_LUN = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"];
 
 // La semana en curso, un día por columna. Cada clase lleva su barra de aforo:
 // el color dice de un vistazo si está vacía, a medias o llena, que es lo que
@@ -1063,7 +1066,7 @@ function pintaSemana(clases, hoyISO){
   cont.innerHTML = `<div class="sem-grid">` + porDia.map((lista, i)=>{
     const esHoy = lista.length ? lista[0].hoy : false;
     const fecha = lista.length ? lista[0].fecha : "";
-    const cab = `${DIAS_SEM[i]}${fecha?` ${Number(fecha.slice(8,10))}`:""}`;
+    const cab = `${DIAS_SEMANA_LUN[i]}${fecha?` ${Number(fecha.slice(8,10))}`:""}`;
     const cuerpo = lista.length ? lista.map(c=>{
       const plazas = c.plazas, ocup = c.ocupadas||0;
       let barra = "";
