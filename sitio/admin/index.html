@@ -350,16 +350,24 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   </section>
 
   <section class="vista oculto" id="vista-actividades">
-  <h1>Gestión de actividades</h1>
+  <h1>Servicios y temporadas</h1>
+  <p style="color:var(--gris);margin:-.4rem 0 1.2rem;font-size:.95rem">
+    Un <b>servicio</b> es lo que enseñas (Hatha yoga): su nombre, su descripción y su
+    foto, que no cambian de un año a otro. Una <b>temporada</b> es ese servicio
+    programado en unas fechas concretas, con su horario, sus plazas y su precio.
+    Un servicio puede tener varias temporadas a lo largo del tiempo; retirarlo de la
+    cartera no borra nada de lo que ya se dio.
+  </p>
 
+  <!-- ---------- Servicios (la cartera) ---------- -->
   <div class="tarjeta">
-    <h2 id="form-titulo">Nueva actividad</h2>
+    <h2 id="form-titulo">Nuevo servicio</h2>
     <input type="hidden" id="edit-id">
-    <label for="titulo_es">Título</label>
-    <input type="text" id="titulo_es" placeholder="Ej. Taller de respiración consciente" maxlength="200">
+    <label for="titulo_es">Nombre del servicio</label>
+    <input type="text" id="titulo_es" placeholder="Ej. Hatha yoga" maxlength="200">
 
     <label for="texto_es">Descripción</label>
-    <textarea id="texto_es" placeholder="Describe la actividad. Se traducirá sola al inglés, francés y alemán."></textarea>
+    <textarea id="texto_es" placeholder="Describe el servicio. Se traducirá solo al inglés, francés y alemán."></textarea>
 
     <label>Foto (opcional)</label>
     <label for="foto-file" class="foto-boton"><span class="foto-boton-ico">&#128247;</span> <span id="foto-boton-txt">Seleccionar foto…</span></label>
@@ -373,42 +381,6 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 
     <div class="fila">
       <div>
-        <label for="estado">Estado</label>
-        <select id="estado">
-          <option value="propuesta">Propuesta (sondeando interés)</option>
-          <option value="programada">Programada (hay grupo, con fecha)</option>
-          <option value="en_curso">En marcha (celebrándose)</option>
-          <option value="finalizada">Finalizada</option>
-        </select>
-      </div>
-      <div>
-        <label for="umbral">Umbral de interesados</label>
-        <input type="number" id="umbral" min="0" placeholder="8">
-      </div>
-      <div>
-        <label for="plazas">Plazas</label>
-        <input type="number" id="plazas" min="0" placeholder="12">
-      </div>
-    </div>
-
-    <div class="fila">
-      <div>
-        <label for="precio">Precio</label>
-        <input type="text" id="precio" placeholder="Ej. 12 € suelto · 40 €/mes" maxlength="40">
-      </div>
-      <div>
-        <label for="duracion">Duración</label>
-        <input type="text" id="duracion" placeholder="Ej. 60 min" maxlength="40">
-      </div>
-      <div>
-        <label for="lugar">Lugar</label>
-        <input type="text" id="lugar" placeholder="Ej. Estudio Maro" maxlength="120">
-      </div>
-      <div>
-        <label for="hasta">Vigente hasta</label>
-        <input type="date" id="hasta">
-      </div>
-      <div>
         <label for="nivel">Nivel</label>
         <select id="nivel">
           <option value="">Sin especificar (no se mostrará)</option>
@@ -420,26 +392,91 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       </div>
     </div>
 
-    <label class="check" style="margin-top:1.1rem"><input type="checkbox" id="franjas_elegibles"> Esta actividad tiene franjas horarias a elegir</label>
+    <label class="check" style="margin-top:1.1rem">
+      <input type="checkbox" id="se_sigue_ofertando" checked>
+      Se sigue ofertando (está en la cartera actual)
+    </label>
+    <p style="font-size:.82rem;color:var(--gris);margin:.3rem 0 0">
+      Al desmarcarlo el servicio deja de anunciarse en la web, pero se conserva
+      entero: sus temporadas, sus clases y su historial siguen ahí.
+    </p>
+
+    <div class="botones">
+      <button class="btn-primario" id="btn-guardar">Crear servicio</button>
+      <button class="btn-sec oculto" id="btn-cancelar">Cancelar edición</button>
+    </div>
+  </div>
+
+  <div class="tarjeta">
+    <h2>Servicios</h2>
+    <ul class="lista-act" id="lista"></ul>
+  </div>
+
+  <!-- ---------- Temporadas del servicio seleccionado ---------- -->
+  <div class="tarjeta oculto" id="temporadas-tarjeta">
+    <h2>Temporadas de <span id="temp-servicio-nombre"></span></h2>
+    <p style="color:var(--gris);margin:-.4rem 0 1rem;font-size:.92rem">
+      Cada temporada es una programación con sus fechas, su horario y sus plazas.
+    </p>
+    <ul class="lista-act" id="temp-lista"></ul>
+
+    <h3 id="temp-form-titulo" style="margin-top:1.4rem">Nueva temporada</h3>
+    <input type="hidden" id="temp-edit-id">
+    <input type="hidden" id="temp-servicio-uuid">
+    <div class="fila">
+      <div>
+        <label for="temp-estado">Estado</label>
+        <select id="temp-estado">
+          <option value="propuesta">Propuesta (sondeando interés)</option>
+          <option value="programada">Programada (hay grupo, con fecha)</option>
+          <option value="en_curso">En marcha (celebrándose)</option>
+          <option value="finalizada">Finalizada</option>
+        </select>
+      </div>
+      <div>
+        <label for="temp-umbral">Umbral de interesados</label>
+        <input type="number" id="temp-umbral" min="0" placeholder="8">
+      </div>
+      <div>
+        <label for="temp-plazas">Plazas</label>
+        <input type="number" id="temp-plazas" min="0" placeholder="12">
+      </div>
+      <div>
+        <label for="temp-hasta">Vigente hasta</label>
+        <input type="date" id="temp-hasta">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div>
+        <label for="temp-precio">Precio</label>
+        <input type="text" id="temp-precio" placeholder="Ej. 12 € suelto · 40 €/mes" maxlength="40">
+      </div>
+      <div>
+        <label for="temp-duracion">Duración</label>
+        <input type="text" id="temp-duracion" placeholder="Ej. 60 min" maxlength="40">
+      </div>
+      <div>
+        <label for="temp-lugar">Lugar</label>
+        <input type="text" id="temp-lugar" placeholder="Ej. Estudio Maro" maxlength="120">
+      </div>
+    </div>
+
+    <label class="check" style="margin-top:1.1rem"><input type="checkbox" id="temp-franjas_elegibles"> Esta temporada tiene franjas horarias a elegir</label>
     <div id="franjas-wrap" class="oculto">
       <label>Franjas horarias propuestas</label>
       <div class="franjas-grid" id="franjas-grid"></div>
     </div>
 
     <div class="fila">
-      <label class="check"><input type="checkbox" id="visible" checked> Visible en la web</label>
-      <label class="check"><input type="checkbox" id="mostrar_contador" checked> Mostrar contador de interesados</label>
+      <label class="check"><input type="checkbox" id="temp-visible" checked> Visible en la web</label>
+      <label class="check"><input type="checkbox" id="temp-mostrar_contador" checked> Mostrar contador de interesados</label>
     </div>
 
     <div class="botones">
-      <button class="btn-primario" id="btn-guardar">Crear actividad</button>
-      <button class="btn-sec oculto" id="btn-cancelar">Cancelar edición</button>
+      <button class="btn-primario" id="temp-btn-guardar">Crear temporada</button>
+      <button class="btn-sec oculto" id="temp-btn-cancelar">Cancelar edición</button>
     </div>
-  </div>
-
-  <div class="tarjeta">
-    <h2>Actividades existentes</h2>
-    <ul class="lista-act" id="lista"></ul>
   </div>
 
   <div class="pie">Panel de gestión · <a href="/">volver a la web</a></div>
@@ -603,7 +640,10 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 </div>
 
 <script>
-const API = "https://api.juliamoreno.yoga/admin/api/actividades";
+// Servicios = la cartera (identidad, atemporal). Actividades = temporadas
+// (programación con fechas) que cuelgan de un servicio por servicio_uuid.
+const API = "https://api.juliamoreno.yoga/admin/api/servicios";
+const API_TEMPORADAS = "https://api.juliamoreno.yoga/admin/api/actividades";
 const FRANJAS = [
   ["lun_manana","Lunes mañana"],["lun_tarde","Lunes tarde"],
   ["mar_manana","Martes mañana"],["mar_tarde","Martes tarde"],
@@ -620,7 +660,7 @@ $("#franjas-grid").innerHTML = FRANJAS.map(([k,v]) =>
   `<label class="franja-op"><input type="checkbox" value="${k}"> ${v}</label>`).join("");
 
 // Mostrar/ocultar franjas segun el checkbox de elegibles
-$("#franjas_elegibles").addEventListener("change", e=>{
+$("#temp-franjas_elegibles").addEventListener("change", e=>{
   $("#franjas-wrap").classList.toggle("oculto", !e.target.checked);
 });
 
@@ -669,48 +709,47 @@ function marcarFranjas(str){
   document.querySelectorAll("#franjas-grid input").forEach(c=>{c.checked = set.has(c.value);});
 }
 
+// --- Servicios (la cartera: identidad atemporal) ---
+
 function resetForm(){
   $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value="";
   mostrarFoto(""); $("#foto-estado").textContent="";
-  $("#estado").value="propuesta"; $("#umbral").value=""; $("#plazas").value="";
-  $("#precio").value=""; $("#duracion").value=""; $("#lugar").value=""; $("#nivel").value=""; $("#hasta").value="";
-  $("#visible").checked=true; $("#mostrar_contador").checked=true;
-  $("#franjas_elegibles").checked=false; $("#franjas-wrap").classList.add("oculto");
-  marcarFranjas("");
-  $("#form-titulo").textContent="Nueva actividad";
-  $("#btn-guardar").textContent="Crear actividad";
+  $("#nivel").value=""; $("#se_sigue_ofertando").checked=true;
+  $("#form-titulo").textContent="Nuevo servicio";
+  $("#btn-guardar").textContent="Crear servicio";
   $("#btn-cancelar").classList.add("oculto");
 }
+
+// Servicios cargados, para saber el nombre del que se está mirando.
+let SERVICIOS = [];
 
 async function cargar(){
   try{
     const r = await fetch(API, {credentials:"include"});
-    if(!r.ok){ aviso("No se pudieron cargar las actividades (¿sesión caducada?).","error"); return; }
+    if(!r.ok){ aviso("No se pudieron cargar los servicios (¿sesión caducada?).","error"); return; }
     const d = await r.json();
+    SERVICIOS = d.servicios || [];
     const lista = $("#lista");
-    if(!d.actividades || !d.actividades.length){ lista.innerHTML="<li>No hay actividades todavía.</li>"; return; }
-    lista.innerHTML = d.actividades.map(a=>`
+    if(!SERVICIOS.length){ lista.innerHTML="<li>No hay servicios todavía.</li>"; return; }
+    lista.innerHTML = SERVICIOS.map(s=>`
       <li>
         <div class="act-info">
-          <span class="act-titulo">${a.titulo_es||"(sin título)"}</span>
-          <span class="badge ${a.estado||'propuesta'}">${a.estado||'propuesta'}</span>
-          <div class="act-meta">Umbral: ${a.umbral??'—'} · Plazas: ${a.plazas??'—'} · Interesados: ${a.interesados??0}${a.visible?'':' · <b>oculta</b>'}</div>
+          <span class="act-titulo">${s.titulo_es||"(sin nombre)"}</span>
+          ${s.se_sigue_ofertando?'':'<span class="badge finalizada">fuera de cartera</span>'}
+          <div class="act-meta">${s.nivel||"sin nivel"}</div>
         </div>
-        <button class="btn-mini" onclick='editar(${JSON.stringify(a)})'>Editar</button>
+        <button class="btn-mini" onclick='verTemporadas(${JSON.stringify(s.uuid)})'>Temporadas</button>
+        <button class="btn-mini" onclick='editar(${JSON.stringify(s)})'>Editar</button>
       </li>`).join("");
   }catch(e){ aviso("Error de conexión al cargar.","error"); }
 }
 
-function editar(a){
-  $("#edit-id").value=a.Id; $("#titulo_es").value=a.titulo_es||"";
-  $("#texto_es").value=a.texto_es||""; mostrarFoto(a.foto||""); $("#foto-estado").textContent=""; $("#estado").value=a.estado||"propuesta";
-  $("#umbral").value=a.umbral??""; $("#plazas").value=a.plazas??"";
-  $("#precio").value=a.precio||""; $("#duracion").value=a.duracion||""; $("#lugar").value=a.lugar||""; $("#nivel").value=a.nivel||""; $("#hasta").value=(a.hasta||"").slice(0,10);
-  $("#visible").checked=!!a.visible; $("#mostrar_contador").checked=!!a.mostrar_contador;
-  $("#franjas_elegibles").checked=!!a.franjas_elegibles;
-  $("#franjas-wrap").classList.toggle("oculto", !a.franjas_elegibles);
-  marcarFranjas(a.franjas);
-  $("#form-titulo").textContent="Editar: "+(a.titulo_es||"");
+function editar(s){
+  $("#edit-id").value=s.Id; $("#titulo_es").value=s.titulo_es||"";
+  $("#texto_es").value=s.texto_es||""; mostrarFoto(s.foto||"");
+  $("#foto-estado").textContent=""; $("#nivel").value=s.nivel||"";
+  $("#se_sigue_ofertando").checked = s.se_sigue_ofertando!==false;
+  $("#form-titulo").textContent="Editar: "+(s.titulo_es||"");
   $("#btn-guardar").textContent="Guardar cambios";
   $("#btn-cancelar").classList.remove("oculto");
   window.scrollTo({top:0,behavior:"smooth"});
@@ -720,19 +759,12 @@ $("#btn-cancelar").onclick = resetForm;
 
 $("#btn-guardar").onclick = async ()=>{
   const titulo = $("#titulo_es").value.trim();
-  if(!titulo){ aviso("El título es obligatorio.","error"); return; }
-  const elegible=$("#franjas_elegibles").checked;
+  if(!titulo){ aviso("El nombre del servicio es obligatorio.","error"); return; }
   const datos = {
     titulo_es:titulo, texto_es:$("#texto_es").value.trim(),
-    estado:$("#estado").value,
-    foto:$("#foto").value.trim(),
-    franjas: elegible ? franjasSeleccionadas().join(",") : "",
-    franjas_elegibles: elegible,
-    visible:$("#visible").checked, mostrar_contador:$("#mostrar_contador").checked,
-    precio:$("#precio").value.trim(), duracion:$("#duracion").value.trim(), lugar:$("#lugar").value.trim(), nivel:$("#nivel").value, hasta:$("#hasta").value,
+    foto:$("#foto").value.trim(), nivel:$("#nivel").value,
+    se_sigue_ofertando: $("#se_sigue_ofertando").checked,
   };
-  const um=$("#umbral").value, pl=$("#plazas").value;
-  if(um!=="") datos.umbral=parseInt(um); if(pl!=="") datos.plazas=parseInt(pl);
   const editId = $("#edit-id").value;
   const metodo = editId ? "PATCH" : "POST";
   if(editId) datos.Id = parseInt(editId);
@@ -741,10 +773,107 @@ $("#btn-guardar").onclick = async ()=>{
     const r = await fetch(API,{method:metodo,credentials:"include",
       headers:{"Content-Type":"application/json"},body:JSON.stringify(datos)});
     const d = await r.json();
-    if(d.ok){ aviso(editId?"Cambios guardados.":"Actividad creada.","ok"); resetForm(); cargar(); }
+    if(d.ok){ aviso(editId?"Cambios guardados.":"Servicio creado.","ok"); resetForm(); cargar(); }
     else aviso(d.error||"No se pudo guardar.","error");
   }catch(e){ aviso("Error de conexión al guardar.","error"); }
   finally{ $("#btn-guardar").disabled=false; }
+};
+
+
+// --- Temporadas (programación de un servicio en unas fechas) ---
+
+function tempReset(){
+  $("#temp-edit-id").value="";
+  $("#temp-estado").value="propuesta";
+  $("#temp-umbral").value=""; $("#temp-plazas").value=""; $("#temp-hasta").value="";
+  $("#temp-precio").value=""; $("#temp-duracion").value=""; $("#temp-lugar").value="";
+  $("#temp-visible").checked=true; $("#temp-mostrar_contador").checked=true;
+  $("#temp-franjas_elegibles").checked=false;
+  $("#franjas-wrap").classList.add("oculto");
+  marcarFranjas("");
+  $("#temp-form-titulo").textContent="Nueva temporada";
+  $("#temp-btn-guardar").textContent="Crear temporada";
+  $("#temp-btn-cancelar").classList.add("oculto");
+}
+
+async function verTemporadas(servicioUuid){
+  const serv = SERVICIOS.find(s=>s.uuid===servicioUuid);
+  $("#temp-servicio-uuid").value = servicioUuid;
+  $("#temp-servicio-nombre").textContent = serv ? (serv.titulo_es||"(sin nombre)") : "";
+  $("#temporadas-tarjeta").classList.remove("oculto");
+  tempReset();
+  await tempCargar();
+  $("#temporadas-tarjeta").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+async function tempCargar(){
+  const servicioUuid = $("#temp-servicio-uuid").value;
+  try{
+    const r = await fetch(API_TEMPORADAS, {credentials:"include"});
+    if(!r.ok){ aviso("No se pudieron cargar las temporadas.","error"); return; }
+    const d = await r.json();
+    const mias = (d.actividades||[]).filter(a=>a.servicio_uuid===servicioUuid);
+    const lista = $("#temp-lista");
+    if(!mias.length){ lista.innerHTML="<li>Este servicio no tiene temporadas todavía.</li>"; return; }
+    lista.innerHTML = mias.map(a=>`
+      <li>
+        <div class="act-info">
+          <span class="act-titulo">${a.hasta ? "Hasta "+a.hasta.slice(0,10) : "Sin fecha de fin"}</span>
+          <span class="badge ${a.estado||'propuesta'}">${a.estado||'propuesta'}</span>
+          <div class="act-meta">Plazas: ${a.plazas??'—'} · Umbral: ${a.umbral??'—'} · ${a.lugar||'sin lugar'}${a.visible?'':' · <b>oculta</b>'}</div>
+        </div>
+        <button class="btn-mini" onclick='tempEditar(${JSON.stringify(a)})'>Editar</button>
+      </li>`).join("");
+  }catch(e){ aviso("Error de conexión al cargar las temporadas.","error"); }
+}
+
+function tempEditar(a){
+  $("#temp-edit-id").value=a.Id;
+  $("#temp-estado").value=a.estado||"propuesta";
+  $("#temp-umbral").value=a.umbral??""; $("#temp-plazas").value=a.plazas??"";
+  $("#temp-hasta").value=(a.hasta||"").slice(0,10);
+  $("#temp-precio").value=a.precio||""; $("#temp-duracion").value=a.duracion||"";
+  $("#temp-lugar").value=a.lugar||"";
+  $("#temp-visible").checked=!!a.visible;
+  $("#temp-mostrar_contador").checked=!!a.mostrar_contador;
+  $("#temp-franjas_elegibles").checked=!!a.franjas_elegibles;
+  $("#franjas-wrap").classList.toggle("oculto", !a.franjas_elegibles);
+  marcarFranjas(a.franjas);
+  $("#temp-form-titulo").textContent="Editar temporada";
+  $("#temp-btn-guardar").textContent="Guardar cambios";
+  $("#temp-btn-cancelar").classList.remove("oculto");
+}
+
+$("#temp-btn-cancelar").onclick = tempReset;
+
+$("#temp-btn-guardar").onclick = async ()=>{
+  const servicioUuid = $("#temp-servicio-uuid").value;
+  if(!servicioUuid){ aviso("Elige antes un servicio.","error"); return; }
+  const elegible=$("#temp-franjas_elegibles").checked;
+  const datos = {
+    servicio_uuid: servicioUuid,
+    estado:$("#temp-estado").value,
+    franjas: elegible ? franjasSeleccionadas().join(",") : "",
+    franjas_elegibles: elegible,
+    visible:$("#temp-visible").checked,
+    mostrar_contador:$("#temp-mostrar_contador").checked,
+    precio:$("#temp-precio").value.trim(), duracion:$("#temp-duracion").value.trim(),
+    lugar:$("#temp-lugar").value.trim(), hasta:$("#temp-hasta").value,
+  };
+  const um=$("#temp-umbral").value, pl=$("#temp-plazas").value;
+  if(um!=="") datos.umbral=parseInt(um); if(pl!=="") datos.plazas=parseInt(pl);
+  const editId = $("#temp-edit-id").value;
+  const metodo = editId ? "PATCH" : "POST";
+  if(editId) datos.Id = parseInt(editId);
+  $("#temp-btn-guardar").disabled=true;
+  try{
+    const r = await fetch(API_TEMPORADAS,{method:metodo,credentials:"include",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify(datos)});
+    const d = await r.json();
+    if(d.ok){ aviso(editId?"Temporada guardada.":"Temporada creada.","ok"); tempReset(); tempCargar(); }
+    else aviso(d.error||"No se pudo guardar.","error");
+  }catch(e){ aviso("Error de conexión al guardar.","error"); }
+  finally{ $("#temp-btn-guardar").disabled=false; }
 };
 
 
@@ -1041,18 +1170,34 @@ function actualizarLayoutAgenda(){
 
 let actsCache = null;
 
+// Una clase de la agenda se asocia a una TEMPORADA (actividad_id guarda su
+// uuid). Se etiqueta con el nombre del servicio y su fecha de fin, que es lo
+// que distingue una temporada de otra del mismo servicio.
+async function cargarTemporadasCache(){
+  if(actsCache) return actsCache;
+  try{
+    const [rs, ra] = await Promise.all([
+      fetch(API, {credentials:"include"}),
+      fetch(API_TEMPORADAS, {credentials:"include"}),
+    ]);
+    const ds = await rs.json(), da = await ra.json();
+    const nombres = {};
+    (ds.servicios||[]).forEach(s=>{ nombres[s.uuid] = s.titulo_es || "(sin nombre)"; });
+    actsCache = (da.actividades||[]).map(a=>({
+      uuid: a.uuid,
+      etiqueta: (nombres[a.servicio_uuid] || "(sin servicio)")
+                + (a.hasta ? " · hasta " + String(a.hasta).slice(0,10) : ""),
+    }));
+  }catch(err){ actsCache = []; }
+  return actsCache;
+}
+
 async function opcionesActividad(seleccionada){
   const sel = $("#ag-actividad");
   if(!sel) return;
-  if(!actsCache){
-    try{
-      const r = await fetch(API, {credentials:"include"});
-      const d = await r.json();
-      actsCache = d.actividades || [];
-    }catch(err){ actsCache = []; }
-  }
+  const temporadas = await cargarTemporadasCache();
   sel.innerHTML = '<option value="">(sin asociar)</option>'
-    + actsCache.map(a=>`<option value="${a.id}">${a.titulo_es||a.id}</option>`).join("");
+    + temporadas.map(a=>`<option value="${a.uuid}">${a.etiqueta}</option>`).join("");
   sel.value = seleccionada || "";
 }
 
@@ -1377,8 +1522,8 @@ function cancelarHoverMenu(){ if(hoverTimer){ clearTimeout(hoverTimer); hoverTim
 
 function _nombreActividad(id){
   if(!id) return null;
-  const a = (actsCache || []).find(x=> x.id === id);
-  return a ? (a.titulo_es || a.id) : id;
+  const a = (actsCache || []).find(x=> x.uuid === id);
+  return a ? a.etiqueta : id;
 }
 
 function _cuandoLargo(e){
@@ -2114,18 +2259,22 @@ const sesSel = new Map();            // clave de sesión -> Set de índices
 function _hoyISO(d){ return new Date(Date.now() + (d||0)*864e5).toISOString().slice(0,10); }
 function _claveSes(s){ return `${s.event_type_id}|${s.inicio}`; }
 
+// Las sesiones se filtran por SERVICIO (el backend las agrupa por el uuid del
+// servicio, no por temporada): aquí interesa "las clases de Hatha", no "las de
+// la temporada de otoño".
+let sesServiciosCache = null;
 async function sesOpcionesActividad(){
   const sel = $("#ses-actividad");
   if(sel.options.length > 1) return;
-  if(!actsCache){
+  if(!sesServiciosCache){
     try{
       const r = await fetch(API, {credentials:"include"});
       const d = await r.json();
-      actsCache = d.actividades || [];
-    }catch(err){ actsCache = []; }
+      sesServiciosCache = d.servicios || [];
+    }catch(err){ sesServiciosCache = []; }
   }
   sel.innerHTML = '<option value="">Todas</option>'
-    + actsCache.map(a=>`<option value="${a.id}">${_escL(a.titulo_es||a.id)}</option>`).join("");
+    + sesServiciosCache.map(s=>`<option value="${s.uuid}">${_escL(s.titulo_es||s.uuid)}</option>`).join("");
 }
 
 async function cargarSesiones(){
