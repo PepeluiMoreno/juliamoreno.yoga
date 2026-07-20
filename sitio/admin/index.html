@@ -642,7 +642,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <h3 class="ficha-sub">Acciones sobre esta actividad</h3>
       <p class="ficha-nota" id="temp-motivo-actual"></p>
       <div class="acc-botones">
-        <button type="button" class="btn-sec btn-mini" data-accion="suspender">Suspender</button>
+        <button type="button" class="btn-sec btn-mini" data-accion="suspender" id="temp-acc-suspender">Suspender</button>
         <button type="button" class="btn-sec btn-mini oculto" data-accion="reanudar" id="temp-acc-reanudar">Reanudar</button>
         <button type="button" class="btn-sec btn-mini" data-accion="cancelar">Cancelar la actividad</button>
         <button type="button" class="btn-sec btn-mini" id="temp-btn-borrar">Eliminar</button>
@@ -1002,6 +1002,8 @@ function tempReset(){
   $("#temp-desde").value=""; $("#temp-hasta").value="";
   pintaHorario([]);
   $("#temp-acciones").classList.add("oculto");
+  $("#temp-acc-suspender").classList.remove("oculto");
+  $("#temp-acc-reanudar").classList.add("oculto");
   $("#temp-precio").value=""; $("#temp-duracion").value=""; $("#temp-lugar").value="";
   $("#temp-visible").checked=true; $("#temp-mostrar_contador").checked=true;
   $("#temp-franjas_elegibles").checked=false;
@@ -1166,7 +1168,11 @@ function tempEditar(a){
   try{ fr = JSON.parse(a.horario||"[]"); }catch(e){ fr = []; }
   pintaHorario(Array.isArray(fr)?fr:[]);
   $("#temp-acciones").classList.remove("oculto");
-  $("#temp-acc-reanudar").classList.toggle("oculto", a.estado!=="suspendida");
+  // Suspender y Reanudar son la misma palanca: se enseña la que toca según
+  // como esté la actividad, no las dos a la vez.
+  const suspendida = a.estado==="suspendida";
+  $("#temp-acc-reanudar").classList.toggle("oculto", !suspendida);
+  $("#temp-acc-suspender").classList.toggle("oculto", suspendida);
   $("#temp-motivo-actual").textContent = a.motivo ? `Motivo registrado: ${a.motivo}` : "";
   $("#temp-precio").value=a.precio||""; $("#temp-duracion").value=a.duracion||"";
   $("#temp-lugar").value=a.lugar||"";
