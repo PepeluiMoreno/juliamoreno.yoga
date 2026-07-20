@@ -317,16 +317,25 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 /* Tarjeta de lugar apaisada: más ancha que alta, con el nombre arriba y la
    foto pequeña junto a los datos. En vertical la foto mandaba sobre todo lo
    demás y la tarjeta se estiraba sin necesidad. */
-.prog-tarj-lugar{flex:0 0 340px;min-height:0;padding:.8rem .9rem;display:block}
-.lug-cab{display:flex;align-items:baseline;justify-content:space-between;
-  gap:.6rem;margin-bottom:.55rem}
-.lug-nombre{font-weight:600;font-size:1rem;color:var(--tinta);line-height:1.25}
-.lug-cuerpo{display:flex;gap:.75rem;align-items:flex-start}
+/* Altura común: sin ella cada tarjeta medía lo que daba su contenido y los
+   títulos quedaban a distinta altura, que es lo que delata que no comparten
+   formato. */
+.prog-tarj-lugar{flex:0 0 340px;min-height:158px;padding:.8rem .9rem;display:flex;
+  flex-direction:column}
+/* El nombre puede ocupar una línea o dos; alineando la cabecera arriba y
+   fijándole un alto mínimo, el bloque de datos empieza siempre a la misma
+   altura en todas las tarjetas. */
+.lug-cab{display:flex;align-items:flex-start;justify-content:space-between;
+  gap:.6rem;margin-bottom:.55rem;min-height:2.5em}
+.lug-nombre{font-weight:600;font-size:1rem;color:var(--tinta);line-height:1.25;flex:1 1 auto}
+.lug-cab .badge{flex:0 0 auto;margin-left:0;white-space:nowrap}
+.lug-cuerpo{display:flex;gap:.75rem;align-items:flex-start;flex:1 1 auto}
 .lug-mini{flex:0 0 84px;height:84px;border-radius:8px;background-size:cover;
   background-position:center;background-color:var(--cielo-claro);display:block}
 .lug-mini-vacia{display:flex;align-items:center;justify-content:center;
   font-size:.75rem;color:var(--gris);text-align:center;line-height:1.2}
-.lug-datos{flex:1 1 auto;min-width:0;font-size:.82rem;color:var(--gris);line-height:1.5}
+.lug-datos{flex:1 1 auto;min-width:0;font-size:.82rem;color:var(--gris);line-height:1.5;
+  overflow-wrap:anywhere}
 /* Miniatura y mapa de la FICHA. Sin estas reglas la imagen se pinta a tamaño
    natural y se come la pantalla, que es lo que pasó al reescribir este bloque
    y llevarme por delante los estilos que ya estaban. */
@@ -335,7 +344,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .lug-mapa-prev{display:block;width:100%;height:140px;border:1px solid var(--linea);
   border-radius:10px;margin-top:.7rem}
 .lug-mapa-prev.oculto{display:none}
-.lug-mapa{display:inline-block;margin-top:.35rem;font-size:.82rem;color:var(--mar);
+.lug-mapa{display:block;margin-top:.4rem;font-size:.82rem;color:var(--mar);
   text-decoration:underline}
 .franja-corta{flex:0 0 128px}
 /* Ficha a dos columnas: aprovecha el ancho en vez de dejar media pantalla
