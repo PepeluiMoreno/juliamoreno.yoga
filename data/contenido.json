@@ -107,51 +107,63 @@
     },
     "lineas": [
       {
-        "id": "nerja",
+        "id": "35d1781c464e4be4b9befef3a54f894b",
         "visible": true,
         "lugar": {
-          "es": "Nerja",
-          "en": "Nerja",
-          "fr": "Nerja",
-          "de": "Nerja"
+          "es": "Estudio de Nerja",
+          "en": "Estudio de Nerja",
+          "fr": "Estudio de Nerja",
+          "de": "Estudio de Nerja"
         },
+        "direccion": "Calle Almirante Ferrándiz 12, 29780 Nerja (Málaga)",
+        "lat": 36.7452,
+        "lon": -3.8756,
+        "como_llegar": "A dos minutos del Balcón de Europa. Portal azul, primera planta.",
         "clases": {
-          "es": "Hatha yoga · Yoga para mayores · Espalda sana · Yoga infantil",
-          "en": "Hatha yoga · Yoga for seniors · Healthy back · Kids yoga",
-          "fr": "Hatha yoga · Yoga pour seniors · Dos en bonne santé · Yoga pour enfants",
-          "de": "Hatha Yoga · Yoga für Senioren · Gesunder Rücken · Kinderyoga"
+          "es": "",
+          "en": "",
+          "fr": "",
+          "de": ""
         }
       },
       {
-        "id": "maro",
+        "id": "385680f0f93942369d164489b45c217a",
         "visible": true,
         "lugar": {
           "es": "Maro (local municipal)",
-          "en": "Maro (municipal hall)",
-          "fr": "Maro (salle municipale)",
-          "de": "Maro (Gemeindesaal)"
+          "en": "Maro (local municipal)",
+          "fr": "Maro (local municipal)",
+          "de": "Maro (local municipal)"
         },
+        "direccion": "Plaza de las Maravillas s/n, 29787 Maro (Málaga)",
+        "lat": 36.7614,
+        "lon": -3.8237,
+        "como_llegar": "Junto a la iglesia. Aparcamiento en la plaza.",
         "clases": {
-          "es": "Hatha yoga · todos los niveles (dos días por semana)",
-          "en": "Hatha yoga · all levels (twice a week)",
-          "fr": "Hatha yoga · tous niveaux (deux jours par semaine)",
-          "de": "Hatha Yoga · alle Niveaus (zweimal wöchentlich)"
+          "es": "",
+          "en": "",
+          "fr": "",
+          "de": ""
         }
       },
       {
-        "id": "almunecar",
+        "id": "7197fcf3bb004cbaadfec319604432d4",
         "visible": true,
         "lugar": {
-          "es": "Almuñécar (Centro Profesional de Danza Juan Pablo García)",
-          "en": "Almuñécar (Centro Profesional de Danza Juan Pablo García)",
-          "fr": "Almuñécar (Centro Profesional de Danza Juan Pablo García)",
-          "de": "Almuñécar (Centro Profesional de Danza Juan Pablo García)"
+          "es": "Playa de Burriana",
+          "en": "Playa de Burriana",
+          "fr": "Playa de Burriana",
+          "de": "Playa de Burriana"
         },
+        "direccion": "Paseo marítimo de Burriana, 29780 Nerja (Málaga)",
+        "lat": 36.7419,
+        "lon": -3.8672,
+        "como_llegar": "Al final del paseo, junto al chiringuito. Se practica en la arena.",
         "clases": {
-          "es": "Hatha yoga · todos los niveles (viernes)",
-          "en": "Hatha yoga · all levels (Fridays)",
-          "fr": "Hatha yoga · tous niveaux (vendredis)",
-          "de": "Hatha Yoga · alle Niveaus (freitags)"
+          "es": "",
+          "en": "",
+          "fr": "",
+          "de": ""
         }
       }
     ],
@@ -177,7 +189,7 @@
     },
     "lineas": [
       {
-        "id": "2329def5fb084143a60681936ab249ea",
+        "id": "72b768e957b04c9e99ef18f6e1a5dbfd",
         "estado": "en_curso",
         "umbral": 4,
         "interesados": 0,
@@ -204,12 +216,12 @@
           "es": "La clase central: posturas, respiración y relajación. Para todos los niveles, desde quien nunca ha pisado una esterilla hasta practicantes con años de recorrido.",
           "en": "The main class: postures, breathing and relaxation. Suitable for all levels, from those who have never set foot on a mat to practitioners with years of experience.",
           "fr": "Le cours principal : postures, respiration et relaxation. Pour tous les niveaux, des débutants qui n'ont jamais mis les pieds sur un tapis aux pratiquants confirmés.",
-          "de": "Der Hauptkurs: Körperhaltungen, Atmung und Entspannung. Für alle Niveaus geeignet, vom absoluten Anfänger bis hin zu erfahrenen Praktizierenden mit langjähriger Erfahrung."
+          "de": "Der Hauptkurs: Körperhaltungen, Atmung und Entspannung. Für alle Niveaus, vom absoluten Anfänger bis hin zu erfahrenen Praktizierenden mit langjähriger Erfahrung."
         },
         "franjas": []
       },
       {
-        "id": "361d006470cc425dba046a458759517b",
+        "id": "648fec912db34aeaa94adb134f6c8bda",
         "estado": "en_curso",
         "umbral": 4,
         "interesados": 0,
@@ -241,8 +253,8 @@
         "franjas": []
       },
       {
-        "id": "a0a40fe1f8b643d3a9e9f355b138fc75",
-        "estado": "propuesta",
+        "id": "79401bdc408e42748ad920382a1e1f62",
+        "estado": "programada",
         "umbral": 4,
         "interesados": 6,
         "conteo_franjas": {
@@ -279,7 +291,7 @@
         "franjas": []
       },
       {
-        "id": "6163fcf29b5541298bd4960086a363a0",
+        "id": "3d7ebe2e616c4a7a8dc27b9dbda6f3d0",
         "estado": "en_curso",
         "umbral": 4,
         "interesados": 3,
@@ -315,8 +327,8 @@
         "franjas": []
       },
       {
-        "id": "56cf954bc44342a9bc884ed407404da7",
-        "estado": "en_curso",
+        "id": "9e02c78b92164ec0850979d6c14bcd34",
+        "estado": "suspendida",
         "umbral": 4,
         "interesados": 2,
         "conteo_franjas": {
@@ -350,7 +362,7 @@
         "franjas": []
       },
       {
-        "id": "f171e6e14f9f4cbc898f467dd6b87c70",
+        "id": "f390d2d198e3433c906ca3168ca7a4c6",
         "estado": "en_curso",
         "umbral": 4,
         "interesados": 0,
@@ -382,7 +394,7 @@
         "franjas": []
       },
       {
-        "id": "e09ad57879d94b2c86781ca1802d8ef0",
+        "id": "5ce9fb8e865848aaa6a3278223d8a359",
         "estado": "en_curso",
         "umbral": 4,
         "interesados": 0,
