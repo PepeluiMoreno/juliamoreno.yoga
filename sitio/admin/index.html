@@ -326,14 +326,21 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   justify-content:center;font-size:.82rem;color:var(--gris)}
 /* La miniatura de la ficha se recorta igual que la tarjeta: así se ve de
    antemano cómo va a quedar el encuadre. */
-.lug-foto-prev{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;
-  border-radius:10px;border:1px solid var(--linea)}
+.lug-mapa-prev{display:block;width:100%;max-width:280px;height:150px;
+  max-height:22vh;border:1px solid var(--linea);border-radius:10px;margin-top:.6rem}
+.lug-mapa-prev.oculto{display:none}
+/* Acotada: con aspect-ratio sobre una columna ancha la foto se comía la
+   pantalla y estiraba la ficha. Se limita el ancho y se le da un alto máximo
+   en unidades de viewport, así encoge con la ventana y la ficha sigue
+   cabiendo sin desplazarse. */
+.lug-foto-prev{display:block;width:100%;max-width:280px;aspect-ratio:4/3;
+  max-height:26vh;object-fit:cover;border-radius:10px;border:1px solid var(--linea)}
 .lug-mapa{display:inline-block;margin-top:.5rem;font-size:.82rem;color:var(--mar);
   text-decoration:underline}
 .franja-corta{flex:0 0 128px}
 /* Ficha a dos columnas: aprovecha el ancho en vez de dejar media pantalla
    vacía y obligar a desplazarse. */
-.ficha-dos{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:1.6rem;align-items:start}
+.ficha-dos{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:1.6rem;align-items:start}
 .ficha-col{min-width:0}
 /* Horario compacto: cada línea es una regla completa y cabe entera. */
 .hor-linea{display:flex;flex-wrap:wrap;gap:.4rem;align-items:flex-end;margin-bottom:.4rem;
@@ -778,9 +785,11 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
             <input type="number" id="lug-lon" step="0.0001" placeholder="-3.8756">
           </div>
         </div>
-
-        <label for="lug-llegar">Cómo llegar</label>
-        <textarea id="lug-llegar" rows="2" placeholder="Junto a la iglesia, portal azul…"></textarea>
+        <!-- El mapa se ve, no se describe: al teclear las coordenadas se
+             actualiza solo y se comprueba de un vistazo si el punto cae donde
+             debe. -->
+        <iframe id="lug-mapa-prev" class="lug-mapa-prev oculto" loading="lazy"
+                title="Mapa del lugar"></iframe>
 
         <div class="campos">
           <div class="campo campo-medio">
@@ -1141,7 +1150,7 @@ function pintaCarruselLugares(){
       : "";
     const lineas = [
       l.aforo ? `Aforo ${l.aforo}` : "Sin aforo definido",
-      l.direccion || "Sin dirección",
+      _direccionCorta(l.direccion),
       _resumenHorario(l.disponibilidad),
       l.contacto_nombre || l.contacto_telefono
         ? [l.contacto_nombre, l.contacto_telefono].filter(Boolean).join(" · ")
@@ -1166,6 +1175,14 @@ function pintaCarruselLugares(){
       t.classList.add("activa");
     });
   });
+}
+
+// En la tarjeta cabe la calle y poco más: el código postal y la provincia no
+// dicen nada que Julia no sepa, y hacen que la dirección ocupe tres renglones.
+function _direccionCorta(dir){
+  if(!dir) return "Sin dirección";
+  const calle = String(dir).split(",")[0].trim();
+  return calle.length > 34 ? calle.slice(0, 32) + "…" : calle;
 }
 
 function _resumenHorario(json){
@@ -1289,6 +1306,23 @@ $("#lug-add-franja").addEventListener("click", ()=>{
 });
 
 // Subida de foto del lugar: mismo mecanismo que la de los servicios.
+// El mapa se dibuja con las coordenadas que haya en la ficha. Se llama al
+// abrir un lugar y cada vez que se tocan lat/lon, para poder comprobar que el
+// punto cae donde debe sin salir del panel.
+function pintaMapaLugar(){
+  const lat = parseFloat($("#lug-lat").value), lon = parseFloat($("#lug-lon").value);
+  const marco = $("#lug-mapa-prev");
+  if(isNaN(lat) || isNaN(lon)){ marco.classList.add("oculto"); marco.src = "about:blank"; return; }
+  const d = 0.004;   // un par de manzanas alrededor
+  marco.src = `https://www.openstreetmap.org/export/embed.html`
+    + `?bbox=${lon-d}%2C${lat-d}%2C${lon+d}%2C${lat+d}`
+    + `&layer=mapnik&marker=${lat}%2C${lon}`;
+  marco.classList.remove("oculto");
+}
+
+["#lug-lat","#lug-lon"].forEach(sel=>
+  $(sel).addEventListener("input", pintaMapaLugar));
+
 function lugMostrarFoto(url){
   $("#lug-foto").value = url || "";
   $("#lug-foto-wrap").classList.toggle("oculto", !url);
@@ -1328,7 +1362,8 @@ function lugReset(){
   LUGAR_EDIT = null;
   $("#lug-edit-id").value=""; $("#lug-nombre").value="";
   $("#lug-aforo").value=""; $("#lug-direccion").value="";
-  $("#lug-lat").value=""; $("#lug-lon").value=""; $("#lug-llegar").value="";
+  $("#lug-lat").value=""; $("#lug-lon").value="";
+  pintaMapaLugar();
   lugMostrarFoto(""); $("#lug-foto-estado").textContent="";
   $("#lug-contacto").value=""; $("#lug-tel").value="";
   $("#lug-visible").checked = true;
@@ -1349,7 +1384,7 @@ function lugEditar(l){
   $("#lug-aforo").value=l.aforo??"";
   $("#lug-direccion").value=l.direccion||"";
   $("#lug-lat").value=l.lat??""; $("#lug-lon").value=l.lon??"";
-  $("#lug-llegar").value=l.como_llegar||"";
+  pintaMapaLugar();
   lugMostrarFoto(l.foto||"");
   $("#lug-contacto").value=l.contacto_nombre||"";
   $("#lug-tel").value=l.contacto_telefono||"";
@@ -1387,7 +1422,6 @@ $("#lug-btn-guardar").onclick = async ()=>{
   const datos = {
     nombre_es: nombre,
     direccion: $("#lug-direccion").value.trim(),
-    como_llegar: $("#lug-llegar").value.trim(),
     lat: $("#lug-lat").value, lon: $("#lug-lon").value,
     foto: $("#lug-foto").value.trim(),
     contacto_nombre: $("#lug-contacto").value.trim(),

@@ -13,8 +13,8 @@ Las dos cosas se comprueban en los DOS niveles de planificación —el
 calendario semanal de la actividad y la clase suelta de la agenda—, en
 backend.agenda (valida_horario_actividad, cabe_en_lugar).
 
-Y es también lo que el alumno necesita para llegar: dirección, coordenadas
-para el mapa, y cómo llegar en palabras.
+Y es también lo que el alumno necesita para llegar: la dirección y las
+coordenadas con las que se pinta el mapa.
 """
 import json
 import uuid
@@ -35,7 +35,7 @@ def _lista():
             "nombre_fr": r.get("nombre_fr"), "nombre_de": r.get("nombre_de"),
             "direccion": r.get("direccion"),
             "lat": r.get("lat"), "lon": r.get("lon"),
-            "como_llegar": r.get("como_llegar"), "foto": r.get("foto"),
+            "foto": r.get("foto"),
             "contacto_nombre": r.get("contacto_nombre"),
             "contacto_telefono": r.get("contacto_telefono"),
             "aforo": r.get("aforo"),
@@ -77,7 +77,7 @@ def _valida_disponibilidad(crudo):
 
 def _campos(body, fila):
     for c in ("nombre_es", "nombre_en", "nombre_fr", "nombre_de",
-              "direccion", "como_llegar", "notas",
+              "direccion", "notas",
               "foto", "contacto_nombre", "contacto_telefono"):
         if c in body:
             fila[c] = limpio(body[c], 500)

@@ -302,7 +302,6 @@ def siembra_demo(url, tok, ids):
         {"k": "nerja", "nombre": "Estudio de Nerja", "aforo": 14,
          "dir": "Calle Almirante Ferrándiz 12, 29780 Nerja (Málaga)",
          "lat": 36.7452, "lon": -3.8756,
-         "llegar": "A dos minutos del Balcón de Europa. Portal azul, primera planta.",
          "foto": "",   # se sube desde el panel
          "contacto": "", "tel": "",
          # En invierno tarde larga; en verano se corta a mediodía por el calor.
@@ -315,7 +314,6 @@ def siembra_demo(url, tok, ids):
         {"k": "maro", "nombre": "Maro (local municipal)", "aforo": 12,
          "dir": "Plaza de las Maravillas s/n, 29787 Maro (Málaga)",
          "lat": 36.7614, "lon": -3.8237,
-         "llegar": "Junto a la iglesia. Aparcamiento en la plaza.",
          "foto": "",   # se sube desde el panel
          "contacto": "Antonio Ruiz (conserje)", "tel": "952 52 00 00",
          # Es municipal: entre semana cierra a las 21:30 y en festivo solo
@@ -329,7 +327,6 @@ def siembra_demo(url, tok, ids):
         {"k": "playa", "nombre": "Playa de Burriana", "aforo": 20,
          "dir": "Paseo marítimo de Burriana, 29780 Nerja (Málaga)",
          "lat": 36.7419, "lon": -3.8672,
-         "llegar": "Al final del paseo, junto al chiringuito. Se practica en la arena.",
          "foto": "",   # se sube desde el panel
          "contacto": "Chiringuito Ayo", "tel": "952 52 22 89",
          # Solo en verano y a primera hora: después ni hay sitio ni se puede
@@ -344,7 +341,7 @@ def siembra_demo(url, tok, ids):
         post("Lugares", [{
             "uuid": l_uuid[l["k"]], "nombre_es": l["nombre"],
             "direccion": l["dir"], "lat": l["lat"], "lon": l["lon"],
-            "como_llegar": l["llegar"], "aforo": l["aforo"],
+            "aforo": l["aforo"],
             "foto": l["foto"], "contacto_nombre": l["contacto"],
             "contacto_telefono": l["tel"],
             "disponibilidad": json.dumps(l["disp"], ensure_ascii=False),
