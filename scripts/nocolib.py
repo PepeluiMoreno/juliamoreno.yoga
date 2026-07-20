@@ -66,6 +66,18 @@ def columnas(url, tok, tid):
     return {c.get("title") for c in meta.get("columns", [])}
 
 
-def records(url, tok, tid, limit=200):
-    return api(url, tok, "GET",
-               f"/api/v2/tables/{tid}/records?limit={limit}").get("list", [])
+def records(url, tok, tid, limit=200, incluir_eliminados=False):
+    """Filas de una tabla. Por defecto OCULTA las borradas lógicamente
+    (eliminado=true): la papelera es lo único que quiere verlas, y pasa
+    incluir_eliminados=True.
+
+    El filtro se aplica aquí, en la primitiva, y no en cada llamante: por
+    aquí pasan tanto el backend (via datos.lee) como build-web.py y los
+    scripts de calcom, de modo que una fila en la papelera no puede colarse
+    en la web publica ni en el alta de clases por haber olvidado un filtro.
+    """
+    filas = api(url, tok, "GET",
+                f"/api/v2/tables/{tid}/records?limit={limit}").get("list", [])
+    if incluir_eliminados:
+        return filas
+    return [f for f in filas if not f.get("eliminado")]

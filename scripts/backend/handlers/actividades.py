@@ -94,7 +94,28 @@ def _servicios_handle(req):
         except Exception as e:
             return 502, {"error": f"no se pudo guardar: {e}"}
 
+    if req.metodo == "DELETE":
+        return _borrar("Servicios", req.body or {})
+
     return None
+
+
+def _borrar(tabla, body):
+    """Manda a la papelera (o borra para siempre con definitivo=true).
+
+    Retirar algo de la oferta NO es borrarlo: para eso está
+    se_sigue_ofertando en el servicio, que conserva el historial. Aquí se
+    borra de verdad, y por eso el panel enseña antes qué arrastra.
+    """
+    if not body.get("Id"):
+        return 422, {"error": "falta Id"}
+    definitivo = bool(body.get("definitivo"))
+    try:
+        datos.borra(tabla, body["Id"], definitivo=definitivo)
+        dispara_rebuild()
+        return 200, {"ok": True, "definitivo": definitivo}
+    except Exception as e:
+        return 502, {"error": f"no se pudo eliminar: {e}"}
 
 
 # --- Actividades / temporadas (programación temporal) ----------------------
@@ -181,6 +202,9 @@ def _actividades_handle(req):
             return 200, {"ok": True}
         except Exception as e:
             return 502, {"error": f"no se pudo guardar: {e}"}
+
+    if req.metodo == "DELETE":
+        return _borrar("Actividades", req.body or {})
 
     return None
 

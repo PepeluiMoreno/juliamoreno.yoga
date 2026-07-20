@@ -228,23 +228,28 @@ def _eliminar(body):
         ids = [body["Id"]] if body.get("Id") else []
     if not ids:
         return 422, {"error": "falta Id"}
+    definitivo = bool(body.get("definitivo"))
     try:
-        # Regla: solo se elimina una clase puntual, no visible en web y sin
-        # actividad en curso detrás. El resto se cancela o aplaza, no se borra.
-        agenda = {r.get("Id"): r for r in datos.lee("Agenda")}
-        act_estado = {a.get("uuid"): (a.get("estado") or "").strip()
-                      for a in datos.lee("Actividades")}
-        for i in ids:
-            r = agenda.get(int(i))
-            if not r:
-                continue
-            en_curso = act_estado.get(r.get("actividad_id")) == "en_curso"
-            anunciada = bool(r.get("visible_web"))
-            if en_curso or anunciada:
-                return 409, {"error": "esa clase no se puede eliminar (pertenece a una actividad en curso o está anunciada en la web). Puedes aplazarla o cancelarla."}
-        datos.borra_varios("Agenda", [int(i) for i in ids])
+        # El borrado normal manda la clase a la papelera y se puede deshacer,
+        # así que se permite siempre. El DEFINITIVO no tiene vuelta atrás: ahí
+        # sigue valiendo la regla de siempre —una clase en curso o anunciada en
+        # la web se cancela o se aplaza, no se hace desaparecer— porque hay
+        # alumnos que cuentan con ella.
+        if definitivo:
+            agenda = {r.get("Id"): r for r in datos.lee("Agenda")}
+            act_estado = {a.get("uuid"): (a.get("estado") or "").strip()
+                          for a in datos.lee("Actividades")}
+            for i in ids:
+                r = agenda.get(int(i))
+                if not r:
+                    continue
+                en_curso = act_estado.get(r.get("actividad_id")) == "en_curso"
+                anunciada = bool(r.get("visible_web"))
+                if en_curso or anunciada:
+                    return 409, {"error": "esa clase no se puede borrar para siempre (pertenece a una actividad en curso o está anunciada en la web). Puedes cancelarla, aplazarla, o mandarla a la papelera."}
+        datos.borra_varios("Agenda", [int(i) for i in ids], definitivo=definitivo)
         dispara_rebuild()
-        return 200, {"ok": True, "borradas": len(ids)}
+        return 200, {"ok": True, "borradas": len(ids), "definitivo": definitivo}
     except Exception as e:
         return 502, {"error": f"no se pudo borrar: {e}"}
 

@@ -6,6 +6,7 @@ CRUD básicas (lee/guarda/actualiza/borra, y sus variantes en lote). Todo el
 resto del backend habla con NocoDB a través de aquí; nadie más llama a
 nocolib directamente para escribir.
 """
+import datetime
 import pathlib
 import sys
 
@@ -38,9 +39,15 @@ def _tid(tabla):
     return _TABLAS[tabla]
 
 
-def lee(tabla):
+def lee(tabla, incluir_eliminados=False):
+    """Filas de una tabla. Por defecto sin las que están en la papelera."""
     url, tok, _ = nc.cfg()
-    return nc.records(url, tok, _tid(tabla))
+    return nc.records(url, tok, _tid(tabla), incluir_eliminados=incluir_eliminados)
+
+
+def papelera(tabla):
+    """Solo las filas borradas lógicamente, para la vista de papelera."""
+    return [f for f in lee(tabla, incluir_eliminados=True) if f.get("eliminado")]
 
 
 def guarda(tabla, fila):
@@ -63,15 +70,31 @@ def actualiza_varios(tabla, filas):
     nc.api(url, tok, "PATCH", f"/api/v2/tables/{_tid(tabla)}/records", filas)
 
 
-def borra(tabla, rid):
-    url, tok, _ = nc.cfg()
-    nc.api(url, tok, "DELETE", f"/api/v2/tables/{_tid(tabla)}/records", [{"Id": rid}])
+def borra(tabla, rid, definitivo=False):
+    """Manda una fila a la papelera. Con definitivo=True la borra de verdad."""
+    borra_varios(tabla, [rid], definitivo=definitivo)
 
 
-def borra_varios(tabla, ids):
+def borra_varios(tabla, ids, definitivo=False):
+    """Borrado LÓGICO por defecto (va a la papelera y se puede restaurar);
+    con definitivo=True, DELETE real e irreversible en NocoDB."""
     url, tok, _ = nc.cfg()
-    nc.api(url, tok, "DELETE", f"/api/v2/tables/{_tid(tabla)}/records",
-           [{"Id": i} for i in ids])
+    if definitivo:
+        nc.api(url, tok, "DELETE", f"/api/v2/tables/{_tid(tabla)}/records",
+               [{"Id": i} for i in ids])
+        return
+    ahora = datetime.datetime.now().isoformat()
+    nc.api(url, tok, "PATCH", f"/api/v2/tables/{_tid(tabla)}/records",
+           [{"Id": i, "eliminado": True, "eliminado_fecha": ahora} for i in ids])
+
+
+def restaura(tabla, ids):
+    """Saca filas de la papelera y las deja como estaban."""
+    if not isinstance(ids, (list, tuple)):
+        ids = [ids]
+    url, tok, _ = nc.cfg()
+    nc.api(url, tok, "PATCH", f"/api/v2/tables/{_tid(tabla)}/records",
+           [{"Id": i, "eliminado": False, "eliminado_fecha": None} for i in ids])
 
 
 def servicios_por_uuid():

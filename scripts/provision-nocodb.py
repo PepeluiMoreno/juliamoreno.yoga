@@ -88,6 +88,15 @@ TABLAS = {
 }
 
 
+# Papelera: en el panel Julia siempre puede eliminar, pero el borrado normal
+# es LÓGICO (eliminado=true) y se puede deshacer desde la papelera. Solo el
+# "borrado definitivo" saca la fila de NocoDB. Se añaden a TODAS las tablas
+# para que la papelera funcione igual sea cual sea el objeto.
+for _cols in TABLAS.values():
+    _cols.append(col("eliminado", "Checkbox"))
+    _cols.append(col("eliminado_fecha", "DateTime"))
+
+
 def _uuid():
     return uuid.uuid4().hex
 
@@ -144,7 +153,7 @@ def main():
                   + (f" (+{len(faltan)} columnas añadidas)" if faltan else ""))
 
     # Siembra solo en tablas vacías
-    if not nc.records(url, tok, ids["Precios"], 1):
+    if not nc.records(url, tok, ids["Precios"], 1, incluir_eliminados=True):
         filas = [{"id": l["id"], "valor": l["valor"], "visible": l.get("visible", True)}
                  for l in DATA["precios"]["lineas"]]
         nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Precios']}/records", filas)
@@ -152,7 +161,7 @@ def main():
     else:
         print("Precios: ya tiene datos")
 
-    if not nc.records(url, tok, ids["Horarios"], 1):
+    if not nc.records(url, tok, ids["Horarios"], 1, incluir_eliminados=True):
         filas = [{"id": l["id"], "visible": l.get("visible", True)}
                  for l in DATA["horarios"]["lineas"]]
         nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Horarios']}/records", filas)
@@ -169,7 +178,9 @@ def main():
 def _vacia(url, tok, tid):
     """Borra todas las filas de una tabla (por su Id de NocoDB). Se usa antes
     de sembrar el demo para partir de cero."""
-    ids = [{"Id": r["Id"]} for r in nc.records(url, tok, tid, 1000) if r.get("Id")]
+    ids = [{"Id": r["Id"]} for r in nc.records(url, tok, tid, 1000,
+                                               incluir_eliminados=True)
+           if r.get("Id")]
     for i in range(0, len(ids), 100):
         nc.api(url, tok, "DELETE", f"/api/v2/tables/{tid}/records", ids[i:i + 100])
     return len(ids)

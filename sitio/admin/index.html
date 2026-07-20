@@ -144,7 +144,9 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dlg-fondo[hidden]{display:none}
 .dlg-caja{background:#fff;border-radius:14px;padding:1.6rem 1.7rem;max-width:440px;width:100%;box-shadow:0 12px 40px rgba(21,63,84,.25)}
 .dlg-caja h3{font-family:'Marcellus',serif;font-weight:400;color:var(--tinta);margin:0 0 .6rem;font-size:1.25rem}
-.dlg-caja p{color:var(--tinta);margin:0 0 1.3rem;line-height:1.5;font-size:.95rem}
+.dlg-caja p{color:var(--tinta);margin:0 0 1.3rem;line-height:1.5;font-size:.95rem;white-space:pre-line}
+.dlg-detalle{margin:-.8rem 0 1.2rem;padding-left:1.1rem;color:var(--tinta);font-size:.92rem;line-height:1.6}
+.dlg-detalle.oculto{display:none}
 .dlg-caja label:not(.check){display:block;font-size:.8rem;color:var(--gris);margin:.2rem 0 .3rem;font-weight:600}
 .dlg-caja select,.dlg-caja input[type=text]{width:100%;padding:.6rem .8rem;border:1px solid var(--linea);border-radius:8px;font-size:.95rem;font-family:inherit;background:#fff;color:var(--tinta);box-sizing:border-box}
 .dlg-caja .check{display:flex;align-items:center;gap:.5rem;font-size:.9rem;color:var(--tinta);font-weight:400}
@@ -312,6 +314,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <a href="#" class="menu-item" data-vista="sesiones">Sesiones</a>
       <a href="#" class="menu-item" data-vista="actividades">Actividades</a>
       <a href="#" class="menu-item" data-vista="tarifas">Tarifas</a>
+      <a href="#" class="menu-item" data-vista="papelera">Papelera</a>
       <a href="#" class="menu-item" data-vista="estados">Estado</a>
     </nav>
   </aside>
@@ -628,9 +631,37 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <div class="dlg-caja" role="dialog" aria-modal="true">
       <h3 id="dlgTitulo"></h3>
       <p id="dlgMensaje"></p>
+      <!-- Detalle opcional: al borrar, qué historial arrastra la fila -->
+      <ul id="dlgDetalle" class="dlg-detalle oculto"></ul>
+      <!-- Casilla opcional: el "borrado definitivo" de la papelera -->
+      <label id="dlgCheckWrap" class="check oculto" style="margin-top:.8rem">
+        <input type="checkbox" id="dlgCheck"> <span id="dlgCheckTxt"></span>
+      </label>
       <div class="dlg-botones" id="dlgBotones"></div>
     </div>
   </div>
+
+  <section class="vista oculto" id="vista-papelera">
+    <h1>Papelera</h1>
+    <p style="color:var(--gris);margin:-.4rem 0 1.2rem;font-size:.95rem">
+      Lo que has eliminado sigue aquí y puede volver a su sitio tal como estaba.
+      Solo desaparece de verdad si lo borras para siempre desde esta pantalla.
+    </p>
+    <div class="tarjeta">
+      <label for="pap-tabla">Qué mirar</label>
+      <select id="pap-tabla">
+        <option value="Servicios">Servicios</option>
+        <option value="Actividades">Temporadas</option>
+        <option value="Agenda">Clases de la agenda</option>
+        <option value="Clases">Clases de la semana</option>
+        <option value="Reservas">Reservas</option>
+        <option value="Interesados">Interesados</option>
+        <option value="Contactos">Contactos</option>
+      </select>
+      <ul class="lista-act" id="pap-lista" style="margin-top:1.1rem"></ul>
+    </div>
+    <div class="pie">Panel de gestión · <a href="/">volver a la web</a></div>
+  </section>
 
   <section class="vista oculto" id="vista-estados">
     <h1>Estado de las actividades</h1>
@@ -740,6 +771,7 @@ async function cargar(){
         </div>
         <button class="btn-mini" onclick='verTemporadas(${JSON.stringify(s.uuid)})'>Temporadas</button>
         <button class="btn-mini" onclick='editar(${JSON.stringify(s)})'>Editar</button>
+        <button class="btn-mini" onclick='borrarServicio(${JSON.stringify(s)})'>Eliminar</button>
       </li>`).join("");
   }catch(e){ aviso("Error de conexión al cargar.","error"); }
 }
@@ -823,6 +855,7 @@ async function tempCargar(){
           <div class="act-meta">Plazas: ${a.plazas??'—'} · Umbral: ${a.umbral??'—'} · ${a.lugar||'sin lugar'}${a.visible?'':' · <b>oculta</b>'}</div>
         </div>
         <button class="btn-mini" onclick='tempEditar(${JSON.stringify(a)})'>Editar</button>
+        <button class="btn-mini" onclick='borrarTemporada(${JSON.stringify(a)})'>Eliminar</button>
       </li>`).join("");
   }catch(e){ aviso("Error de conexión al cargar las temporadas.","error"); }
 }
@@ -875,6 +908,31 @@ $("#temp-btn-guardar").onclick = async ()=>{
   }catch(e){ aviso("Error de conexión al guardar.","error"); }
   finally{ $("#temp-btn-guardar").disabled=false; }
 };
+
+async function _borrarFila(api, tabla, fila, nombre, alTerminar){
+  const c = await confirmarBorrado(tabla, fila.uuid, nombre);
+  if(!c.ok) return;
+  try{
+    const r = await fetch(api, {method:"DELETE", credentials:"include",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({Id: fila.Id, definitivo: c.definitivo})});
+    const d = await r.json();
+    if(d.ok){
+      aviso(c.definitivo ? "Eliminado para siempre." : "Enviado a la papelera.", "ok");
+      alTerminar();
+    }else aviso(d.error||"No se pudo eliminar.","error");
+  }catch(e){ aviso("Error de conexión al eliminar.","error"); }
+}
+
+function borrarServicio(s){
+  _borrarFila(API, "Servicios", s, s.titulo_es||"(sin nombre)",
+              ()=>{ resetForm(); cargar(); $("#temporadas-tarjeta").classList.add("oculto"); });
+}
+
+function borrarTemporada(a){
+  const nombre = a.hasta ? "temporada hasta "+String(a.hasta).slice(0,10) : "temporada sin fecha";
+  _borrarFila(API_TEMPORADAS, "Actividades", a, nombre, ()=>{ tempReset(); tempCargar(); });
+}
 
 
 // --- Dashboard (panel de control) ---
@@ -933,25 +991,82 @@ async function cargarDash(){
 
 // --- Sistema de modales (reemplaza alert/confirm del navegador) ---
 // dialogo({titulo, mensaje, botones:[{texto, valor, tipo}]}) -> Promise(valor)
+// opts.detalle: lista de líneas a mostrar (p. ej. el impacto de un borrado).
+// opts.check:   {texto} añade una casilla; el valor devuelto pasa a ser
+//               {valor, check} en vez de solo el valor del botón.
 function dialogo(opts){
   return new Promise(resolve=>{
     const fondo = $("#dlgFondo");
     $("#dlgTitulo").textContent = opts.titulo || "";
     $("#dlgMensaje").textContent = opts.mensaje || "";
+
+    const det = $("#dlgDetalle");
+    const lineas = opts.detalle || [];
+    det.innerHTML = lineas.map(t=>`<li>${t}</li>`).join("");
+    det.classList.toggle("oculto", !lineas.length);
+
+    const chkWrap = $("#dlgCheckWrap"), chk = $("#dlgCheck");
+    chk.checked = false;
+    $("#dlgCheckTxt").textContent = opts.check ? opts.check.texto : "";
+    chkWrap.classList.toggle("oculto", !opts.check);
+
     const cont = $("#dlgBotones");
     cont.innerHTML = "";
     (opts.botones || [{texto:"Aceptar", valor:true}]).forEach(b=>{
       const btn = document.createElement("button");
       btn.className = "btn" + (b.tipo==="sec"?" btn-sec":"") + (b.tipo==="peligro"?" btn-peligro":"");
       btn.textContent = b.texto;
-      btn.addEventListener("click", ()=>{ cerrar(); resolve(b.valor); });
+      btn.addEventListener("click", ()=>{
+        const marcada = chk.checked;
+        cerrar();
+        resolve(opts.check ? {valor:b.valor, check:marcada} : b.valor);
+      });
       cont.appendChild(btn);
     });
     function cerrar(){ fondo.hidden = true; document.removeEventListener("keydown", onKey); }
-    function onKey(ev){ if(ev.key==="Escape"){ cerrar(); resolve(null); } }
+    function onKey(ev){
+      if(ev.key==="Escape"){ cerrar(); resolve(opts.check ? {valor:null, check:false} : null); }
+    }
     document.addEventListener("keydown", onKey);
     fondo.hidden = false;
   });
+}
+
+// --- Borrado con papelera ---
+// Julia siempre puede borrar; lo normal es que la fila vaya a la papelera y se
+// pueda recuperar. Antes de confirmar se le enseña QUÉ arrastra, porque un
+// servicio es la cabecera de todo un historial, y en ese caso se le recuerda
+// que para dejar de ofrecerlo basta con retirarlo de la cartera.
+const API_PAPELERA = "https://api.juliamoreno.yoga/admin/api/papelera";
+const API_IMPACTO = "https://api.juliamoreno.yoga/admin/api/impacto";
+
+async function confirmarBorrado(tabla, uuid, nombre){
+  let imp = null;
+  if(uuid){
+    try{
+      const r = await fetch(`${API_IMPACTO}?tabla=${encodeURIComponent(tabla)}&uuid=${encodeURIComponent(uuid)}`,
+                            {credentials:"include"});
+      imp = await r.json();
+    }catch(e){ /* sin impacto: se avisa igual, solo que sin detalle */ }
+  }
+  const detalle = (imp && imp.depende || []).map(d=>`${d.cuantos} ${d.que}`);
+  let mensaje = `Se va a eliminar «${nombre}».`;
+  if(detalle.length){
+    mensaje += " Esto arrastra su historial:";
+  }
+  mensaje += "\n\nLo eliminado va a la papelera y se puede recuperar."
+           + " Marca la casilla solo si quieres borrarlo para siempre.";
+  if(imp && imp.sugerir_retirar){
+    mensaje += "\n\nSi solo quieres dejar de ofrecerlo, no hace falta borrarlo:"
+             + " desmarca «Se sigue ofertando» y conservas todo el historial.";
+  }
+  const res = await dialogo({
+    titulo: "Eliminar", mensaje, detalle,
+    check: {texto:"Borrado definitivo (no se podrá recuperar)"},
+    botones:[{texto:"Cancelar", valor:false, tipo:"sec"},
+             {texto:"Eliminar", valor:true, tipo:"peligro"}],
+  });
+  return res && res.valor ? {ok:true, definitivo:res.check} : {ok:false};
 }
 // Confirmación simple sí/no -> Promise(bool)
 function confirmar(mensaje, titulo){
@@ -2611,6 +2726,63 @@ $("#tar-deshacer").addEventListener("click", ()=>{
 });
 
 // --- Navegación entre vistas del menú lateral ---
+// --- Papelera ---
+function _fechaCorta(iso){
+  if(!iso) return "";
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("es-ES",
+    {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+}
+
+async function cargarPapelera(){
+  const tabla = $("#pap-tabla").value;
+  const lista = $("#pap-lista");
+  lista.innerHTML = "<li>Cargando…</li>";
+  try{
+    const r = await fetch(`${API_PAPELERA}?tabla=${encodeURIComponent(tabla)}`,
+                          {credentials:"include"});
+    const d = await r.json();
+    if(!d.ok){ lista.innerHTML = `<li>${_escL(d.error||"No se pudo cargar.")}</li>`; return; }
+    if(!d.filas.length){ lista.innerHTML = "<li>Aquí no hay nada eliminado.</li>"; return; }
+    lista.innerHTML = d.filas.map(f=>`
+      <li>
+        <div class="act-info">
+          <span class="act-titulo">${_escL(String(f.etiqueta))}</span>
+          <div class="act-meta">Eliminado ${_escL(_fechaCorta(f.eliminado_fecha))}</div>
+        </div>
+        <button class="btn-mini" onclick='papRestaurar(${JSON.stringify(tabla)},${f.Id})'>Restaurar</button>
+        <button class="btn-mini" onclick='papPurgar(${JSON.stringify(tabla)},${f.Id},${JSON.stringify(String(f.etiqueta))})'>Borrar para siempre</button>
+      </li>`).join("");
+  }catch(e){ lista.innerHTML = "<li>Error de conexión.</li>"; }
+}
+
+$("#pap-tabla").addEventListener("change", cargarPapelera);
+
+async function papRestaurar(tabla, id){
+  try{
+    const r = await fetch(API_PAPELERA+"/restaurar", {method:"POST", credentials:"include",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify({tabla, ids:[id]})});
+    const d = await r.json();
+    if(d.ok){ aviso("Restaurado.","ok"); cargarPapelera(); }
+    else aviso(d.error||"No se pudo restaurar.","error");
+  }catch(e){ aviso("Error de conexión.","error"); }
+}
+
+async function papPurgar(tabla, id, nombre){
+  const ok = await confirmar(
+    `«${nombre}» desaparecerá para siempre. Esto no se puede deshacer.`,
+    "Borrar para siempre");
+  if(!ok) return;
+  try{
+    const r = await fetch(API_PAPELERA+"/purgar", {method:"POST", credentials:"include",
+      headers:{"Content-Type":"application/json"}, body:JSON.stringify({tabla, ids:[id]})});
+    const d = await r.json();
+    if(d.ok){ aviso("Borrado para siempre.","ok"); cargarPapelera(); }
+    else aviso(d.error||"No se pudo borrar.","error");
+  }catch(e){ aviso("Error de conexión.","error"); }
+}
+
+
 document.querySelectorAll(".menu-item").forEach(item=>{
   item.addEventListener("click", e=>{
     e.preventDefault();
@@ -2623,6 +2795,7 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     if(vista==="sesiones") cargarSesiones();
     if(vista==="tarifas") cargarTarifas();
     if(vista==="actividades") cargar();
+    if(vista==="papelera") cargarPapelera();
     if(vista==="agenda"){
       // Precargar los nombres de actividad: la ficha del menú los muestra
       // y no puede esperar a una petición mientras se abre.
