@@ -311,6 +311,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .prog-tarj-serv{font-weight:600;font-size:1rem;color:var(--tinta);line-height:1.3}
 .prog-tarj-per{font-size:.88rem;color:var(--mar);margin:.2rem 0 .55rem}
 .prog-tarj-meta{font-size:.8rem;color:var(--gris);line-height:1.55;margin-top:auto}
+.prog-tarj-lugar{padding-top:0;overflow:hidden}
+.lug-foto{height:82px;margin:0 -1rem .6rem;background-size:cover;background-position:center;
+  border-radius:12px 12px 0 0;background-color:var(--cielo-claro)}
+.lug-foto-vacia{display:flex;align-items:center;justify-content:center;
+  font-size:.76rem;color:var(--gris)}
+.lug-mapa{display:inline-block;margin-top:.5rem;font-size:.76rem;color:var(--mar);
+  text-decoration:underline}
+.franja-corta{flex:0 0 128px}
 .prog-tarj-nueva{border-style:dashed;align-items:center;justify-content:center;
   color:var(--mar);font-weight:600;font-size:.92rem}
 .prog-ficha-cab{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.4rem}
@@ -745,6 +753,24 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <label for="lug-llegar">Cómo llegar</label>
     <textarea id="lug-llegar" rows="2" placeholder="Referencias que ayuden a encontrarlo: junto a la iglesia, portal azul…"></textarea>
 
+    <div class="campos">
+      <div class="campo campo-ancho">
+        <label for="lug-foto">Foto del lugar (URL)</label>
+        <input type="text" id="lug-foto" maxlength="400" placeholder="/assets/img/estudio-nerja.jpg">
+      </div>
+    </div>
+
+    <div class="campos">
+      <div class="campo campo-medio">
+        <label for="lug-contacto">Persona de contacto</label>
+        <input type="text" id="lug-contacto" maxlength="120" placeholder="Quién abre o a quién avisar">
+      </div>
+      <div class="campo campo-medio">
+        <label for="lug-tel">Teléfono</label>
+        <input type="tel" id="lug-tel" maxlength="30" placeholder="952 52 00 00">
+      </div>
+    </div>
+
     <h3 class="ficha-sub">Horario del local</h3>
     <p class="ficha-nota">
       A qué horas se puede usar. Si lo dejas vacío, se entiende que no hay
@@ -1062,17 +1088,32 @@ function opcionesLugar(sel, elegido, vacio){
 function pintaCarruselLugares(){
   const cont = $("#lug-carrusel");
   cont.innerHTML = LUGARES.map((l,i)=>{
+    // La foto y el mapa se ven antes que se leen: dicen de un vistazo cuál
+    // es el sitio mejor que cualquier rótulo.
+    const foto = l.foto
+      ? `<div class="lug-foto" style="background-image:url('${_escA(l.foto)}')"></div>`
+      : `<div class="lug-foto lug-foto-vacia">sin foto</div>`;
+    const mapa = (l.lat && l.lon)
+      ? `<a class="lug-mapa" href="https://www.openstreetmap.org/?mlat=${l.lat}&mlon=${l.lon}#map=17/${l.lat}/${l.lon}"
+            target="_blank" rel="noopener" title="Ver en el mapa"
+            onclick="event.stopPropagation()">Ver en el mapa</a>`
+      : "";
     const lineas = [
       l.aforo ? `Aforo ${l.aforo}` : "Sin aforo definido",
       l.direccion || "Sin dirección",
       _resumenHorario(l.disponibilidad),
+      l.contacto_nombre || l.contacto_telefono
+        ? [l.contacto_nombre, l.contacto_telefono].filter(Boolean).join(" · ")
+        : null,
     ].filter(Boolean);
-    return `<button type="button" class="prog-tarj" data-i="${i}">
+    return `<button type="button" class="prog-tarj prog-tarj-lugar" data-i="${i}">
+      ${foto}
       <div class="prog-tarj-estado">
         <span class="badge ${l.visible?"en_curso":"finalizada"}">${l.visible?"en la web":"oculto"}</span>
       </div>
       <div class="prog-tarj-serv">${_escL(l.nombre_es||"(sin nombre)")}</div>
       <div class="prog-tarj-meta">${lineas.map(x=>_escL(x)).join("<br>")}</div>
+      ${mapa}
     </button>`;
   }).join("")
     + `<button type="button" class="prog-tarj prog-tarj-nueva" data-nuevo="1">+ Nuevo lugar</button>`;
@@ -1090,17 +1131,24 @@ function _resumenHorario(json){
   let fr = [];
   try{ fr = JSON.parse(json||"[]"); }catch(e){ fr = []; }
   if(!Array.isArray(fr) || !fr.length) return "Sin restricción horaria";
-  const dias = fr.map(f=>f.dia).join(", ");
-  return `Abierto ${dias}`;
+  // Se resume por temporada, que es lo que distingue un horario de otro.
+  const temps = [...new Set(fr.map(f=>f.temporada).filter(Boolean))];
+  const dias = [...new Set(fr.map(f=>f.dia))].join(", ");
+  return temps.length ? `${temps.join(" y ")}: ${dias}` : `Abierto ${dias}`;
 }
 
 function lugFranjaLinea(f){
   f = f || {};
   const ops = DIAS_FRANJA.map(([k,v])=>
     `<option value="${k}"${f.dia===k?" selected":""}>${v}</option>`).join("");
+  const sel = (v,o)=>o.map(([k,t])=>`<option value="${k}"${v===k?" selected":""}>${t}</option>`).join("");
   return `<div class="franja-linea">
     <div class="campo franja-dia"><label>Día</label>
       <select class="lf-dia">${ops}</select></div>
+    <div class="campo franja-corta"><label>Temporada</label>
+      <select class="lf-temporada">${sel(f.temporada||"", [["","Todo el año"],["verano","Verano"],["invierno","Invierno"]])}</select></div>
+    <div class="campo franja-corta"><label>Días</label>
+      <select class="lf-tipo">${sel(f.tipo||"", [["","Cualquiera"],["laborable","Laborables"],["festivo","Festivos"]])}</select></div>
     <div class="campo franja-hora"><label>Abre</label>
       <input type="time" class="lf-desde" value="${f.desde||""}"></div>
     <div class="campo franja-hora"><label>Cierra</label>
@@ -1127,6 +1175,8 @@ function pintaLugHorario(fr){
 function leeLugHorario(){
   return [...document.querySelectorAll("#lug-horario .franja-linea")].map(l=>({
     dia: l.querySelector(".lf-dia").value,
+    temporada: l.querySelector(".lf-temporada").value,
+    tipo: l.querySelector(".lf-tipo").value,
     desde: l.querySelector(".lf-desde").value,
     hasta: l.querySelector(".lf-hasta").value,
   })).filter(f=>f.desde && f.hasta);
@@ -1149,6 +1199,7 @@ function lugReset(){
   $("#lug-edit-id").value=""; $("#lug-nombre").value="";
   $("#lug-aforo").value=""; $("#lug-direccion").value="";
   $("#lug-lat").value=""; $("#lug-lon").value=""; $("#lug-llegar").value="";
+  $("#lug-foto").value=""; $("#lug-contacto").value=""; $("#lug-tel").value="";
   $("#lug-visible").checked = true;
   pintaLugHorario([]);
   $("#lug-form-titulo").textContent="Nuevo lugar";
@@ -1167,6 +1218,9 @@ function lugEditar(l){
   $("#lug-direccion").value=l.direccion||"";
   $("#lug-lat").value=l.lat??""; $("#lug-lon").value=l.lon??"";
   $("#lug-llegar").value=l.como_llegar||"";
+  $("#lug-foto").value=l.foto||"";
+  $("#lug-contacto").value=l.contacto_nombre||"";
+  $("#lug-tel").value=l.contacto_telefono||"";
   $("#lug-visible").checked = l.visible!==false;
   let fr=[]; try{ fr=JSON.parse(l.disponibilidad||"[]"); }catch(e){ fr=[]; }
   pintaLugHorario(Array.isArray(fr)?fr:[]);
@@ -1201,6 +1255,9 @@ $("#lug-btn-guardar").onclick = async ()=>{
     direccion: $("#lug-direccion").value.trim(),
     como_llegar: $("#lug-llegar").value.trim(),
     lat: $("#lug-lat").value, lon: $("#lug-lon").value,
+    foto: $("#lug-foto").value.trim(),
+    contacto_nombre: $("#lug-contacto").value.trim(),
+    contacto_telefono: $("#lug-tel").value.trim(),
     aforo: $("#lug-aforo").value,
     visible: $("#lug-visible").checked,
     disponibilidad: JSON.stringify(leeLugHorario()),

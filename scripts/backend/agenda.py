@@ -410,9 +410,17 @@ def lugares_por_uuid():
         return {}
 
 
-def disponibilidad_de(lugar):
+def disponibilidad_de(lugar, temporada=None, tipo=None):
     """Franjas en que se puede usar el local: [(dia, desde_min, hasta_min)].
-    Sin datos, [] = el local no impone horario."""
+
+    El horario tiene dos dimensiones además del día: la TEMPORADA (verano o
+    invierno, porque un local de costa no abre igual en agosto que en enero)
+    y el TIPO DE DÍA (laborable o festivo). Una franja sin temporada o sin
+    tipo vale para todas, que es el caso corriente y evita tener que escribir
+    cuatro veces lo mismo.
+
+    Sin datos, [] = el local no impone horario.
+    """
     try:
         crudo = json.loads((lugar or {}).get("disponibilidad") or "[]")
     except Exception:
@@ -426,11 +434,32 @@ def disponibilidad_de(lugar):
         dia = (f.get("dia") or "").strip()
         if DIA_NUM.get(dia) is None:
             continue
+        # Una franja marcada para otra temporada u otro tipo de día no aplica.
+        f_temp = (f.get("temporada") or "").strip()
+        f_tipo = (f.get("tipo") or "").strip()
+        if temporada and f_temp and f_temp != temporada:
+            continue
+        if tipo and f_tipo and f_tipo != tipo:
+            continue
         d, h = _min_hhmm(f.get("desde")), _min_hhmm(f.get("hasta"))
         if d is None or h is None or h <= d:
             continue
         fuera.append((dia, d, h))
     return fuera
+
+
+# Verano es temporada alta en la costa: el local de la playa solo sirve
+# entonces, y los de interior cambian de horario. Se toma por meses porque
+# no hay una fecha oficial que valga para todos los años.
+MESES_VERANO = (6, 7, 8, 9)
+
+
+def temporada_de(fecha):
+    """"verano" o "invierno" según el mes."""
+    try:
+        return "verano" if fecha.month in MESES_VERANO else "invierno"
+    except Exception:
+        return None
 
 
 def _min_hhmm(hhmm):
@@ -441,12 +470,25 @@ def _min_hhmm(hhmm):
         return None
 
 
-def cabe_en_lugar(lugar, dia, hora, duracion_min):
+def cabe_en_lugar(lugar, dia, hora, duracion_min, temporada=None, tipo=None):
     """¿Cabe una clase de `duracion_min` ese día a esa hora en el local?
-    Devuelve None si cabe, o el motivo por el que no."""
-    franjas = disponibilidad_de(lugar)
+    Devuelve None si cabe, o el motivo por el que no. `temporada` y `tipo`
+    acotan qué franjas del horario aplican.
+
+    Ojo con la diferencia entre "el local no tiene horario" y "el local no
+    abre en esta temporada": la primera no impone nada, la segunda lo cierra
+    del todo. Se distingue mirando el horario completo antes de filtrar.
+    """
+    todas = disponibilidad_de(lugar)          # sin filtrar: ¿tiene horario?
+    if not todas:
+        return None                            # sin horario = sin restricción
+    franjas = disponibilidad_de(lugar, temporada, tipo)
     if not franjas:
-        return None
+        # Tiene horario, pero ninguna franja vale para esta temporada o tipo
+        # de día: entonces está cerrado, no libre.
+        cuando = " ".join(x for x in (("en " + temporada) if temporada else "",
+                                      ("los días " + tipo) if tipo else "") if x)
+        return "%s no abre %s" % (nombre_lugar(lugar), cuando or "ese día")
     ini = _min_hhmm(hora)
     if ini is None:
         return None

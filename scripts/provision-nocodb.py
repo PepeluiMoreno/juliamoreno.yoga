@@ -57,8 +57,19 @@ TABLAS = {
         # Decimal, no Number: el "Number" de NocoDB es un bigint y truncaba
         # 36.7452 a 37, dejando el mapa a kilómetros del sitio.
         col("direccion"), col("lat", "Decimal"), col("lon", "Decimal"),
-        col("como_llegar", "LongText"),
-        col("aforo", "Number"), col("disponibilidad", "LongText"),
+        col("como_llegar", "LongText"), col("foto", "URL"),
+        # Con quién se habla cuando el local no es de Julia: el conserje del
+        # local municipal, el del chiringuito de la playa. Cuando hay que
+        # cambiar una llave o avisar de algo, el nombre y el teléfono son lo
+        # que hace falta y no está en ninguna parte.
+        col("contacto_nombre"), col("contacto_telefono"),
+        col("aforo", "Number"),
+        # El horario no es uno solo: un local abre distinto entre semana que
+        # en festivo, y cambia de verano a invierno. Se guarda en JSON con esas
+        # dos dimensiones: [{"temporada":"verano","tipo":"laborable",
+        # "dia":"lun","desde":"08:00","hasta":"22:00"}, ...]. Sin temporada ni
+        # tipo, la franja vale siempre, que es el caso corriente.
+        col("disponibilidad", "LongText"),
         col("visible", "Checkbox"),   # si sale en la sección de horarios
         col("notas", "LongText"),
     ],
@@ -292,19 +303,39 @@ def siembra_demo(url, tok, ids):
          "dir": "Calle Almirante Ferrándiz 12, 29780 Nerja (Málaga)",
          "lat": 36.7452, "lon": -3.8756,
          "llegar": "A dos minutos del Balcón de Europa. Portal azul, primera planta.",
-         "disp": [{"dia": d, "desde": "08:00", "hasta": "22:00"}
-                  for d in ("lun", "mar", "mie", "jue", "vie")]},
+         "foto": "/assets/img/estudio-nerja.jpg",
+         "contacto": "", "tel": "",
+         # En invierno tarde larga; en verano se corta a mediodía por el calor.
+         "disp": ([{"temporada": "invierno", "tipo": "laborable", "dia": d,
+                    "desde": "08:00", "hasta": "22:00"}
+                   for d in ("lun", "mar", "mie", "jue", "vie")]
+                  + [{"temporada": "verano", "tipo": "laborable", "dia": d,
+                      "desde": "08:00", "hasta": "14:00"}
+                     for d in ("lun", "mar", "mie", "jue", "vie")])},
         {"k": "maro", "nombre": "Maro (local municipal)", "aforo": 12,
          "dir": "Plaza de las Maravillas s/n, 29787 Maro (Málaga)",
          "lat": 36.7614, "lon": -3.8237,
          "llegar": "Junto a la iglesia. Aparcamiento en la plaza.",
-         "disp": [{"dia": d, "desde": "09:00", "hasta": "21:30"}
-                  for d in ("lun", "mar", "mie", "jue", "vie")]},
+         "foto": "/assets/img/local-maro.jpg",
+         "contacto": "Antonio Ruiz (conserje)", "tel": "952 52 00 00",
+         # Es municipal: entre semana cierra a las 21:30 y en festivo solo
+         # abre por la mañana, si hay quien abra.
+         "disp": ([{"temporada": "", "tipo": "laborable", "dia": d,
+                    "desde": "09:00", "hasta": "21:30"}
+                   for d in ("lun", "mar", "mie", "jue", "vie")]
+                  + [{"temporada": "", "tipo": "festivo", "dia": d,
+                      "desde": "10:00", "hasta": "14:00"}
+                     for d in ("sab", "dom")])},
         {"k": "playa", "nombre": "Playa de Burriana", "aforo": 20,
          "dir": "Paseo marítimo de Burriana, 29780 Nerja (Málaga)",
          "lat": 36.7419, "lon": -3.8672,
          "llegar": "Al final del paseo, junto al chiringuito. Se practica en la arena.",
-         "disp": [{"dia": d, "desde": "07:30", "hasta": "11:00"}
+         "foto": "/assets/img/playa-burriana.jpg",
+         "contacto": "Chiringuito Ayo", "tel": "952 52 22 89",
+         # Solo en verano y a primera hora: después ni hay sitio ni se puede
+         # estar. En invierno el local sencillamente no sirve.
+         "disp": [{"temporada": "verano", "tipo": "", "dia": d,
+                   "desde": "07:30", "hasta": "11:00"}
                   for d in ("sab", "dom")]},
     ]
     l_uuid = {}
@@ -314,10 +345,12 @@ def siembra_demo(url, tok, ids):
             "uuid": l_uuid[l["k"]], "nombre_es": l["nombre"],
             "direccion": l["dir"], "lat": l["lat"], "lon": l["lon"],
             "como_llegar": l["llegar"], "aforo": l["aforo"],
+            "foto": l["foto"], "contacto_nombre": l["contacto"],
+            "contacto_telefono": l["tel"],
             "disponibilidad": json.dumps(l["disp"], ensure_ascii=False),
             "visible": True, "notas": "",
         }])
-    print(f"demo: {len(LUGARES)} lugares con aforo, horario y coordenadas")
+    print(f"demo: {len(LUGARES)} lugares con aforo, horario por temporada y coordenadas")
 
     # --- Servicios: la cartera. Tres vivos y uno retirado. ---
     servicios = [

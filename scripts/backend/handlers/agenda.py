@@ -193,8 +193,11 @@ def _crear(body):
             try:
                 d = datetime.date.fromisoformat(str(fila.get("fecha"))[:10])
                 dia = ["lun","mar","mie","jue","vie","sab","dom"][d.weekday()]
+                # La temporada sale de la fecha: el local de la playa solo
+                # abre en verano, y los demás cambian de horario.
                 cerrado = logica.cabe_en_lugar(lug, dia, fila.get("hora_inicio"),
-                                               fila.get("duracion_min"))
+                                               fila.get("duracion_min"),
+                                               temporada=logica.temporada_de(d))
                 if cerrado:
                     return 409, {"error": cerrado, "lugar": True}
             except Exception:
