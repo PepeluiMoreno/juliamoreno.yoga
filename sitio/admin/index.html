@@ -42,14 +42,14 @@ h2{font-size:1.3rem;margin:0 0 1rem}
 .badge.prevista{background:#e4e9f7;color:#3b4a80}
 .badge.confirmada{background:#dcefe0;color:#276b3c}
 label{display:block;font-size:.85rem;font-weight:600;color:var(--gris-hondo);margin:.9rem 0 .3rem}
-input[type=text],input[type=number],input[type=date],input[type=time],textarea,select{
+input[type=text],input[type=tel],input[type=number],input[type=date],input[type=time],textarea,select{
   width:100%;padding:.6rem .8rem;border:1px solid var(--linea);border-radius:8px;
   font-size:.95rem;font-family:inherit;background:#fff;color:var(--tinta)}
 input[type=date],input[type=time]{appearance:none;-webkit-appearance:none;min-height:calc(.6rem*2 + .95rem + 2px)}
 input[type=date]::-webkit-calendar-picker-indicator,
 input[type=time]::-webkit-calendar-picker-indicator{
   opacity:.5;cursor:pointer;filter:invert(24%) sepia(30%) saturate(900%) hue-rotate(160deg)}
-input[type=date]:focus,input[type=time]:focus,input[type=text]:focus,
+input[type=date]:focus,input[type=time]:focus,input[type=text]:focus,input[type=tel]:focus,
 input[type=number]:focus,textarea:focus,select:focus{
   outline:none;border-color:var(--mar);box-shadow:0 0 0 3px var(--cielo-claro)}
 textarea{min-height:90px;resize:vertical}
@@ -319,6 +319,19 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .lug-mapa{display:inline-block;margin-top:.5rem;font-size:.76rem;color:var(--mar);
   text-decoration:underline}
 .franja-corta{flex:0 0 128px}
+/* Ficha a dos columnas: aprovecha el ancho en vez de dejar media pantalla
+   vacía y obligar a desplazarse. */
+.ficha-dos{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:1.6rem;align-items:start}
+.ficha-col{min-width:0}
+/* Horario compacto: cada línea es una regla completa y cabe entera. */
+.hor-linea{display:flex;flex-wrap:wrap;gap:.4rem;align-items:flex-end;margin-bottom:.4rem;
+  background:var(--cielo-claro);border-radius:8px;padding:.45rem .55rem}
+.hor-linea .campo{margin:0}
+.hor-linea label{font-size:.7rem;margin-bottom:.15rem}
+.hor-dias{flex:1 1 150px}
+.hor-temp{flex:0 0 104px}
+.hor-hora{flex:0 0 92px}
+@media(max-width:900px){ .ficha-dos{grid-template-columns:1fr} }
 .prog-tarj-nueva{border-style:dashed;align-items:center;justify-content:center;
   color:var(--mar);font-weight:600;font-size:.92rem}
 .prog-ficha-cab{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.4rem}
@@ -724,64 +737,76 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     </div>
     <input type="hidden" id="lug-edit-id">
 
-    <div class="campos">
-      <div class="campo campo-ancho">
-        <label for="lug-nombre">Nombre</label>
-        <input type="text" id="lug-nombre" maxlength="120" placeholder="Ej. Estudio de Nerja">
-      </div>
-      <div class="campo campo-num">
-        <label for="lug-aforo">Aforo</label>
-        <input type="number" id="lug-aforo" min="0" placeholder="14">
-      </div>
-    </div>
+    <!-- Dos columnas: los datos del sitio a la izquierda, la foto y el horario
+         a la derecha. Antes era una sola columna estrecha que obligaba a
+         desplazarse mientras media pantalla quedaba vacía. -->
+    <div class="ficha-dos">
+      <div class="ficha-col">
+        <div class="campos">
+          <div class="campo campo-ancho">
+            <label for="lug-nombre">Nombre</label>
+            <input type="text" id="lug-nombre" maxlength="120" placeholder="Ej. Estudio de Nerja">
+          </div>
+          <div class="campo campo-num">
+            <label for="lug-aforo">Aforo</label>
+            <input type="number" id="lug-aforo" min="0" placeholder="14">
+          </div>
+        </div>
 
-    <div class="campos">
-      <div class="campo campo-ancho">
         <label for="lug-direccion">Dirección</label>
         <input type="text" id="lug-direccion" maxlength="200" placeholder="Calle, número, código postal y población">
+
+        <div class="campos">
+          <div class="campo campo-corto">
+            <label for="lug-lat">Latitud</label>
+            <input type="number" id="lug-lat" step="0.0001" placeholder="36.7452">
+          </div>
+          <div class="campo campo-corto">
+            <label for="lug-lon">Longitud</label>
+            <input type="number" id="lug-lon" step="0.0001" placeholder="-3.8756">
+          </div>
+        </div>
+
+        <label for="lug-llegar">Cómo llegar</label>
+        <textarea id="lug-llegar" rows="2" placeholder="Junto a la iglesia, portal azul…"></textarea>
+
+        <div class="campos">
+          <div class="campo campo-medio">
+            <label for="lug-contacto">Persona de contacto</label>
+            <input type="text" id="lug-contacto" maxlength="120" placeholder="Quién abre o a quién avisar">
+          </div>
+          <div class="campo campo-corto">
+            <label for="lug-tel">Teléfono</label>
+            <input type="tel" id="lug-tel" maxlength="30" placeholder="952 52 00 00">
+          </div>
+        </div>
+
+        <label class="check" style="margin-top:.9rem">
+          <input type="checkbox" id="lug-visible" checked> Se muestra en la web
+        </label>
       </div>
-      <div class="campo campo-corto">
-        <label for="lug-lat">Latitud</label>
-        <input type="number" id="lug-lat" step="0.0001" placeholder="36.7452">
-      </div>
-      <div class="campo campo-corto">
-        <label for="lug-lon">Longitud</label>
-        <input type="number" id="lug-lon" step="0.0001" placeholder="-3.8756">
+
+      <div class="ficha-col">
+        <label>Foto del lugar</label>
+        <label for="lug-foto-file" class="foto-boton"><span class="foto-boton-ico">&#128247;</span>
+          <span id="lug-foto-txt">Seleccionar foto…</span></label>
+        <input type="file" id="lug-foto-file" accept="image/jpeg,image/png,image/webp" class="foto-input-oculto">
+        <input type="hidden" id="lug-foto">
+        <div id="lug-foto-wrap" class="oculto" style="margin-top:.5rem">
+          <img id="lug-foto-prev" alt="" style="max-width:100%;border-radius:8px;border:1px solid var(--linea)">
+          <button type="button" class="btn-mini" id="lug-foto-quitar" style="margin-top:.4rem">Quitar foto</button>
+        </div>
+        <p id="lug-foto-estado" style="font-size:.8rem;color:var(--gris);margin-top:.3rem"></p>
+
+        <h3 class="ficha-sub" style="margin-top:1.2rem">Horario del local</h3>
+        <p class="ficha-nota">
+          Cuándo se puede usar. Vacío = sin restricción. No se podrán programar
+          clases fuera de estas horas.
+        </p>
+        <div id="lug-horario"></div>
+        <button type="button" class="btn-mini" id="lug-add-franja" style="margin-top:.5rem">+ Añadir horario</button>
       </div>
     </div>
-
-    <label for="lug-llegar">Cómo llegar</label>
-    <textarea id="lug-llegar" rows="2" placeholder="Referencias que ayuden a encontrarlo: junto a la iglesia, portal azul…"></textarea>
-
-    <div class="campos">
-      <div class="campo campo-ancho">
-        <label for="lug-foto">Foto del lugar (URL)</label>
-        <input type="text" id="lug-foto" maxlength="400" placeholder="/assets/img/estudio-nerja.jpg">
-      </div>
-    </div>
-
-    <div class="campos">
-      <div class="campo campo-medio">
-        <label for="lug-contacto">Persona de contacto</label>
-        <input type="text" id="lug-contacto" maxlength="120" placeholder="Quién abre o a quién avisar">
-      </div>
-      <div class="campo campo-medio">
-        <label for="lug-tel">Teléfono</label>
-        <input type="tel" id="lug-tel" maxlength="30" placeholder="952 52 00 00">
-      </div>
-    </div>
-
-    <h3 class="ficha-sub">Horario del local</h3>
-    <p class="ficha-nota">
-      A qué horas se puede usar. Si lo dejas vacío, se entiende que no hay
-      restricción. No se podrán programar clases fuera de estas horas.
-    </p>
-    <div id="lug-horario"></div>
-    <button type="button" class="btn-mini" id="lug-add-franja" style="margin-top:.5rem">+ Añadir día</button>
-
-    <label class="check" style="margin-top:1.1rem">
-      <input type="checkbox" id="lug-visible" checked> Se muestra en la web
-    </label>
 
     <div class="botones">
       <button class="btn-primario" id="lug-btn-guardar">Crear lugar</button>
@@ -1137,21 +1162,28 @@ function _resumenHorario(json){
   return temps.length ? `${temps.join(" y ")}: ${dias}` : `Abierto ${dias}`;
 }
 
-function lugFranjaLinea(f){
+// Una línea de horario es una regla completa: "laborables, en verano, de 8 a
+// 14". Antes había que escribir cinco líneas para decir "de lunes a viernes",
+// que es justo lo corriente; ahora los días son un solo campo con los grupos
+// que se usan de verdad.
+const GRUPOS_DIA = [
+  ["laborable", "De lunes a viernes", ["lun","mar","mie","jue","vie"]],
+  ["festivo",   "Sábados y domingos", ["sab","dom"]],
+  ["diario",    "Todos los días",     ["lun","mar","mie","jue","vie","sab","dom"]],
+];
+
+function lugHorarioLinea(f){
   f = f || {};
-  const ops = DIAS_FRANJA.map(([k,v])=>
-    `<option value="${k}"${f.dia===k?" selected":""}>${v}</option>`).join("");
   const sel = (v,o)=>o.map(([k,t])=>`<option value="${k}"${v===k?" selected":""}>${t}</option>`).join("");
-  return `<div class="franja-linea">
-    <div class="campo franja-dia"><label>Día</label>
-      <select class="lf-dia">${ops}</select></div>
-    <div class="campo franja-corta"><label>Temporada</label>
+  const grupos = GRUPOS_DIA.map(([k,t])=>[k,t]);
+  return `<div class="hor-linea">
+    <div class="campo hor-dias"><label>Días</label>
+      <select class="lf-grupo">${sel(f.tipo||"laborable", grupos)}</select></div>
+    <div class="campo hor-temp"><label>Temporada</label>
       <select class="lf-temporada">${sel(f.temporada||"", [["","Todo el año"],["verano","Verano"],["invierno","Invierno"]])}</select></div>
-    <div class="campo franja-corta"><label>Días</label>
-      <select class="lf-tipo">${sel(f.tipo||"", [["","Cualquiera"],["laborable","Laborables"],["festivo","Festivos"]])}</select></div>
-    <div class="campo franja-hora"><label>Abre</label>
+    <div class="campo hor-hora"><label>Abre</label>
       <input type="time" class="lf-desde" value="${f.desde||""}"></div>
-    <div class="campo franja-hora"><label>Cierra</label>
+    <div class="campo hor-hora"><label>Cierra</label>
       <input type="time" class="lf-hasta" value="${f.hasta||""}"></div>
     <button type="button" class="btn-mini franja-quitar">Quitar</button>
   </div>`;
@@ -1161,37 +1193,94 @@ function _lugVacio(){
   return '<div class="franja-vacia">Sin horario: se puede usar a cualquier hora.</div>';
 }
 
+// De las franjas guardadas (una por día) a las líneas que se editan (una por
+// regla): se agrupan las que comparten temporada, tipo y horas.
+function _agrupaHorario(fr){
+  const vistas = new Map();
+  (fr||[]).forEach(f=>{
+    const k = [f.temporada||"", f.tipo||"", f.desde||"", f.hasta||""].join("|");
+    if(!vistas.has(k)) vistas.set(k, {temporada:f.temporada||"", tipo:f.tipo||"",
+                                      desde:f.desde||"", hasta:f.hasta||"", dias:[]});
+    vistas.get(k).dias.push(f.dia);
+  });
+  return [...vistas.values()].map(g=>{
+    // Si los días no encajan en un grupo conocido, se deja el que más se le
+    // parezca para no perder la regla al editarla.
+    const encaja = GRUPOS_DIA.find(([,,dias]) =>
+      dias.length===g.dias.length && dias.every(d=>g.dias.includes(d)));
+    return {...g, tipo: encaja ? encaja[0] : (g.tipo || "laborable")};
+  });
+}
+
 function pintaLugHorario(fr){
   const cont = $("#lug-horario");
-  cont.innerHTML = (fr && fr.length) ? fr.map(lugFranjaLinea).join("") : _lugVacio();
+  const lineas = _agrupaHorario(fr);
+  cont.innerHTML = lineas.length ? lineas.map(lugHorarioLinea).join("") : _lugVacio();
   cont.querySelectorAll(".franja-quitar").forEach(b=>{
     b.addEventListener("click", ()=>{
-      b.closest(".franja-linea").remove();
-      if(!cont.querySelector(".franja-linea")) cont.innerHTML = _lugVacio();
+      b.closest(".hor-linea").remove();
+      if(!cont.querySelector(".hor-linea")) cont.innerHTML = _lugVacio();
     });
   });
 }
 
+// Y de vuelta: cada línea se despliega en una franja por día, que es como lo
+// entiende la validación de la agenda.
 function leeLugHorario(){
-  return [...document.querySelectorAll("#lug-horario .franja-linea")].map(l=>({
-    dia: l.querySelector(".lf-dia").value,
-    temporada: l.querySelector(".lf-temporada").value,
-    tipo: l.querySelector(".lf-tipo").value,
-    desde: l.querySelector(".lf-desde").value,
-    hasta: l.querySelector(".lf-hasta").value,
-  })).filter(f=>f.desde && f.hasta);
+  const fuera = [];
+  [...document.querySelectorAll("#lug-horario .hor-linea")].forEach(l=>{
+    const grupo = l.querySelector(".lf-grupo").value;
+    const desde = l.querySelector(".lf-desde").value;
+    const hasta = l.querySelector(".lf-hasta").value;
+    if(!desde || !hasta) return;
+    const def = GRUPOS_DIA.find(([k])=>k===grupo) || GRUPOS_DIA[0];
+    def[2].forEach(dia=>fuera.push({
+      dia, tipo: (grupo==="diario" ? "" : grupo),
+      temporada: l.querySelector(".lf-temporada").value,
+      desde, hasta,
+    }));
+  });
+  return fuera;
 }
 
 $("#lug-add-franja").addEventListener("click", ()=>{
   const cont = $("#lug-horario");
   if(cont.querySelector(".franja-vacia")) cont.innerHTML = "";
   cont.insertAdjacentHTML("beforeend",
-    lugFranjaLinea({dia:"lun", desde:"09:00", hasta:"21:00"}));
+    lugHorarioLinea({tipo:"laborable", desde:"09:00", hasta:"21:00"}));
   const ultima = cont.lastElementChild;
   ultima.querySelector(".franja-quitar").addEventListener("click", ()=>{
     ultima.remove();
-    if(!cont.querySelector(".franja-linea")) cont.innerHTML = _lugVacio();
+    if(!cont.querySelector(".hor-linea")) cont.innerHTML = _lugVacio();
   });
+});
+
+// Subida de foto del lugar: mismo mecanismo que la de los servicios.
+function lugMostrarFoto(url){
+  $("#lug-foto").value = url || "";
+  $("#lug-foto-wrap").classList.toggle("oculto", !url);
+  if(url) $("#lug-foto-prev").src = url;
+  else $("#lug-foto-txt").textContent = "Seleccionar foto…";
+}
+
+$("#lug-foto-file").addEventListener("change", async e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  $("#lug-foto-txt").textContent = file.name.length>26 ? file.name.slice(0,23)+"…" : file.name;
+  $("#lug-foto-estado").textContent = "Subiendo foto…";
+  const fd = new FormData();
+  fd.append("foto", file);
+  try{
+    const r = await fetch(API_FOTO, {method:"POST", credentials:"include", body:fd});
+    const d = await r.json();
+    if(d.ok){ lugMostrarFoto(d.url); $("#lug-foto-estado").textContent = "Foto lista."; }
+    else $("#lug-foto-estado").textContent = "Error: " + (d.error||"no se pudo subir");
+  }catch(err){ $("#lug-foto-estado").textContent = "Error de conexión al subir la foto."; }
+  e.target.value = "";
+});
+
+$("#lug-foto-quitar").addEventListener("click", ()=>{
+  lugMostrarFoto(""); $("#lug-foto-estado").textContent = "";
 });
 
 function lugReset(){
@@ -1199,7 +1288,8 @@ function lugReset(){
   $("#lug-edit-id").value=""; $("#lug-nombre").value="";
   $("#lug-aforo").value=""; $("#lug-direccion").value="";
   $("#lug-lat").value=""; $("#lug-lon").value=""; $("#lug-llegar").value="";
-  $("#lug-foto").value=""; $("#lug-contacto").value=""; $("#lug-tel").value="";
+  lugMostrarFoto(""); $("#lug-foto-estado").textContent="";
+  $("#lug-contacto").value=""; $("#lug-tel").value="";
   $("#lug-visible").checked = true;
   pintaLugHorario([]);
   $("#lug-form-titulo").textContent="Nuevo lugar";
@@ -1218,7 +1308,7 @@ function lugEditar(l){
   $("#lug-direccion").value=l.direccion||"";
   $("#lug-lat").value=l.lat??""; $("#lug-lon").value=l.lon??"";
   $("#lug-llegar").value=l.como_llegar||"";
-  $("#lug-foto").value=l.foto||"";
+  lugMostrarFoto(l.foto||"");
   $("#lug-contacto").value=l.contacto_nombre||"";
   $("#lug-tel").value=l.contacto_telefono||"";
   $("#lug-visible").checked = l.visible!==false;
