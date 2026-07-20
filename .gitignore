@@ -16,3 +16,7 @@ __pycache__/
 # Fotos subidas desde el panel (datos de produccion, no codigo)
 sitio/uploads/*
 !sitio/uploads/.gitkeep
+
+# Volcados de NocoDB: llevan nombres, correos y telefonos de alumnos. Se
+# guardan para poder restaurar, pero fuera del repositorio.
+backups/
