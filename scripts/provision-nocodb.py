@@ -497,6 +497,27 @@ def siembra_demo(url, tok, ids):
     print(f"demo: {len(reservas)} reservas de {len(A)} alumnos "
           f"({n_baja} canceladas por el alumno)")
 
+    # --- Interesados: gente apuntada a la lista de espera de un servicio ---
+    # Se cuentan contra el `umbral` de las actividades en propuesta: cuando lo
+    # alcanzan, la actividad pasa sola a programada. Sin esto no hay forma de
+    # ver funcionar ese salto. Van al SERVICIO (su uuid), que es a lo que se
+    # apunta uno, no a un tramo concreto de calendario.
+    _vacia(url, tok, ids["Interesados"])
+    FRANJAS_INT = ["lun_tarde", "mar_manana", "mie_tarde", "jue_manana", "sab_manana"]
+    interesados = []
+    for k, cuantos in (("mar", 6), ("vinyasa", 3), ("yin", 2)):
+        for j in range(cuantos):
+            n, e, t = _ALUMNOS_DEMO[(j * 3 + cuantos) % len(_ALUMNOS_DEMO)]
+            interesados.append({
+                "actividad": s_uuid[k], "nombre": n, "contacto": e,
+                "franjas": FRANJAS_INT[j % len(FRANJAS_INT)],
+                "idioma": ["es", "en", "de", "fr", "nl", "sv"][j % 6],
+                "fecha": ahora,
+            })
+    post("Interesados", interesados)
+    print(f"demo: {len(interesados)} interesados "
+          f"(6 en «Yoga junto al mar», que está en propuesta con umbral 4)")
+
     # --- Papelera: dos filas borradas lógicamente ---
     # Para comprobar de un vistazo que lo eliminado NO sale en las vistas ni en
     # la web, pero sigue estando y se puede restaurar.
