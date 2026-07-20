@@ -67,7 +67,10 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .btn-sec{background:transparent;color:var(--mar);border:1px solid var(--mar)}
 .btn-sec:hover{background:var(--cielo-claro)}
 .btn-mini{font-size:.8rem;padding:.35rem .8rem;background:transparent;color:var(--mar);border:1px solid var(--linea)}
-.foto-input-oculto{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;z-index:-1}
+/* Oculto pero alcanzable: con z-index:-1 el input quedaba por detrás y el
+   label no siempre conseguía abrir el selector de archivos. */
+.foto-input-oculto{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap}
 .foto-boton{display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1.1rem;border:1px dashed var(--mar);border-radius:8px;background:var(--cielo-claro);color:var(--mar);font-weight:600;font-size:.9rem;cursor:pointer;transition:background .15s}
 .foto-boton:hover{background:#dcebf2}
 .foto-boton-ico{font-size:1.1rem}
@@ -787,7 +790,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       </div>
 
       <div class="ficha-col">
-        <label>Foto del lugar</label>
+        <h3 class="ficha-sub" style="margin-top:0">Foto del lugar</h3>
         <label for="lug-foto-file" class="foto-boton"><span class="foto-boton-ico">&#128247;</span>
           <span id="lug-foto-txt">Seleccionar foto…</span></label>
         <input type="file" id="lug-foto-file" accept="image/jpeg,image/png,image/webp" class="foto-input-oculto">
@@ -1283,6 +1286,14 @@ function lugMostrarFoto(url){
   if(url) $("#lug-foto-prev").src = url;
   else $("#lug-foto-txt").textContent = "Seleccionar foto…";
 }
+
+// El label debería bastar para abrir el selector, pero si algo se interpone
+// —otro label, un z-index— el botón se queda mudo y no hay forma de saberlo.
+// Abrirlo también desde aquí lo hace seguro.
+document.querySelector('label[for="lug-foto-file"]').addEventListener("click", e=>{
+  e.preventDefault();
+  $("#lug-foto-file").click();
+});
 
 $("#lug-foto-file").addEventListener("change", async e=>{
   const file = e.target.files[0];
