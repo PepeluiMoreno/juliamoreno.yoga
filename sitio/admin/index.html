@@ -1501,7 +1501,7 @@ function pintaCarruselServicios(){
       <div class="prog-tarj-meta">${lineas.map(l=>_escL(l)).join("<br>")}</div>
     </button>`;
   }).join("");
-  cont.innerHTML = (tarjetas || '<div class="franja-vacia">Ningún servicio con ese filtro.</div>')
+  cont.innerHTML = tarjetas
     + `<button type="button" class="prog-tarj prog-tarj-nueva" data-nuevo="1">+ Nuevo servicio</button>`;
   cont.querySelectorAll(".prog-tarj").forEach(t=>{
     t.addEventListener("click", ()=>{
@@ -1713,7 +1713,7 @@ function pintaCarrusel(){
       <div class="prog-tarj-meta">${lineas.map(l=>_escL(l)).join("<br>")}</div>
     </button>`;
   }).join("");
-  cont.innerHTML = (tarjetas || '<div class="franja-vacia">Ninguna actividad con ese filtro.</div>')
+  cont.innerHTML = tarjetas
     + `<button type="button" class="prog-tarj prog-tarj-nueva" data-nueva="1">+ Nueva actividad</button>`;
   cont.querySelectorAll(".prog-tarj").forEach(t=>{
     t.addEventListener("click", ()=>{
