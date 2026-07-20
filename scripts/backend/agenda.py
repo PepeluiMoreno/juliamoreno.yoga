@@ -35,6 +35,7 @@ def _ocurrencia(base, fecha, serie, visible=None):
         "fecha": fecha.isoformat(),
         "hora_inicio": base.get("hora_inicio", ""),
         "duracion_min": base.get("duracion_min"),
+        "lugar_uuid": base.get("lugar_uuid", ""),
         "lugar": base.get("lugar", ""),
         "color": base.get("color", ""),
         "visible_web": base.get("visible_web", False) if visible is None else visible,
@@ -269,6 +270,7 @@ def horario_de(actividad):
         limpias.append({
             "dia": dia, "hora": hora,
             "duracion_min": int(f.get("duracion_min") or 60),
+            "lugar_uuid": (f.get("lugar_uuid") or "").strip(),
             "lugar": (f.get("lugar") or "").strip(),
         })
     return limpias
@@ -315,6 +317,7 @@ def proyecta_actividad(actividad, titulo, desde_min=None):
                     "actividad_id": actividad.get("uuid") or "",
                     "hora_inicio": f["hora"],
                     "duracion_min": f["duracion_min"],
+                    "lugar_uuid": f.get("lugar_uuid") or actividad.get("lugar_uuid") or "",
                     "lugar": f["lugar"] or actividad.get("lugar") or "",
                     "color": "",
                 }, dia, serie, visible=bool(actividad.get("visible"))))
@@ -362,6 +365,7 @@ def sincroniza_matriz(actividad):
             "actividad_id": uuid_act,
             "dia_semana": f["dia"], "hora_inicio": f["hora"],
             "duracion_min": f["duracion_min"],
+            "lugar_uuid": f.get("lugar_uuid") or actividad.get("lugar_uuid") or "",
             "lugar": f["lugar"] or actividad.get("lugar") or "",
             "color": "", "activa": True,
         } for f in horario_de(actividad)]
@@ -389,3 +393,115 @@ def aplica_a_futuras(actividad_uuid, cambios, desde=None):
     for i in range(0, len(filas), 50):
         datos.actualiza_varios("Agenda", filas[i:i + 50])
     return len(filas)
+
+
+# --- El lugar como límite de la planificación ------------------------------
+#
+# Un local no es solo una etiqueta: tiene un aforo y unas horas en que se puede
+# usar, y las dos cosas acotan lo que se puede programar. Hay que comprobarlo
+# en los DOS niveles de planificación, porque son puertas distintas: el
+# calendario semanal de una actividad, y la clase suelta que se mete en la
+# agenda. Si solo se validara uno, por el otro entraría lo imposible.
+
+def lugares_por_uuid():
+    try:
+        return {(l.get("uuid") or ""): l for l in datos.lee("Lugares")}
+    except Exception:
+        return {}
+
+
+def disponibilidad_de(lugar):
+    """Franjas en que se puede usar el local: [(dia, desde_min, hasta_min)].
+    Sin datos, [] = el local no impone horario."""
+    try:
+        crudo = json.loads((lugar or {}).get("disponibilidad") or "[]")
+    except Exception:
+        return []
+    if not isinstance(crudo, list):
+        return []
+    fuera = []
+    for f in crudo:
+        if not isinstance(f, dict):
+            continue
+        dia = (f.get("dia") or "").strip()
+        if DIA_NUM.get(dia) is None:
+            continue
+        d, h = _min_hhmm(f.get("desde")), _min_hhmm(f.get("hasta"))
+        if d is None or h is None or h <= d:
+            continue
+        fuera.append((dia, d, h))
+    return fuera
+
+
+def _min_hhmm(hhmm):
+    try:
+        h, _, m = (hhmm or "").partition(":")
+        return int(h) * 60 + int(m[:2])
+    except (TypeError, ValueError):
+        return None
+
+
+def cabe_en_lugar(lugar, dia, hora, duracion_min):
+    """¿Cabe una clase de `duracion_min` ese día a esa hora en el local?
+    Devuelve None si cabe, o el motivo por el que no."""
+    franjas = disponibilidad_de(lugar)
+    if not franjas:
+        return None
+    ini = _min_hhmm(hora)
+    if ini is None:
+        return None
+    fin = ini + int(duracion_min or 60)
+    del_dia = [(d, h) for (dd, d, h) in franjas if dd == dia]
+    if not del_dia:
+        return "%s no abre los %s" % (nombre_lugar(lugar), dia)
+    for (d, h) in del_dia:
+        if ini >= d and fin <= h:
+            return None
+    abierto = ", ".join("%s-%s" % (_hhmm_de(d), _hhmm_de(h)) for (d, h) in del_dia)
+    return "%s los %s solo está disponible de %s" % (
+        nombre_lugar(lugar), dia, abierto)
+
+
+def _hhmm_de(mins):
+    return "%02d:%02d" % (mins // 60, mins % 60)
+
+
+def nombre_lugar(lugar):
+    return (lugar or {}).get("nombre_es") or "el local"
+
+
+def valida_aforo(lugar, plazas):
+    """Las plazas de una actividad no pueden pasar del aforo de la sala."""
+    if not lugar or not plazas:
+        return None
+    try:
+        aforo = int(lugar.get("aforo") or 0)
+        plazas = int(plazas)
+    except Exception:
+        return None
+    if aforo and plazas > aforo:
+        return "%s tiene aforo para %d, y se piden %d plazas" % (
+            nombre_lugar(lugar), aforo, plazas)
+    return None
+
+
+def valida_horario_actividad(actividad, lugares=None):
+    """Comprueba el calendario semanal de una actividad contra su local.
+
+    Este es el primer nivel de planificación: lo que se decide una vez y luego
+    se proyecta muchas veces. Un choque aquí se multiplica por todas las clases
+    del periodo, así que conviene cazarlo antes de proyectar nada.
+    """
+    lugares = lugares if lugares is not None else lugares_por_uuid()
+    problemas = []
+    aforo = valida_aforo(lugares.get(actividad.get("lugar_uuid") or ""),
+                         actividad.get("plazas"))
+    if aforo:
+        problemas.append(aforo)
+    for f in horario_de(actividad):
+        # Cada franja puede tener su propio local; si no, el de la actividad.
+        lug = lugares.get(f.get("lugar_uuid") or actividad.get("lugar_uuid") or "")
+        choque = cabe_en_lugar(lug, f["dia"], f["hora"], f["duracion_min"])
+        if choque:
+            problemas.append(choque)
+    return problemas

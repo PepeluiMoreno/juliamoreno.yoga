@@ -36,7 +36,32 @@ def col(title, uidt="SingleLineText"):
 # además su propio `Id` numérico, que es el que usan los PATCH/DELETE.
 TABLAS = {
     "Precios": [col("id"), col("valor"), col("visible", "Checkbox")],
-    "Horarios": [col("id"), col("visible", "Checkbox")],
+    # Los sitios donde se da clase. Antes eran texto libre repetido en tres
+    # tablas —"Maro", "maro" y "Estudio Maro" convivían como si fueran sitios
+    # distintos— y a la vez una tabla Horarios que solo decía si publicarlos.
+    # Ahora son una entidad: su nombre en los cuatro idiomas de la web, su
+    # dirección y su aforo, que es del local y no de la temporada.
+    # El lugar CONDICIONA la planificación en sus dos niveles, el de la
+    # actividad (su calendario semanal) y el de la clase suelta en la agenda:
+    #  - `aforo` es el de la sala. Las plazas de una actividad no pueden
+    #    pasarlo: doce esterillas no caben en un local de diez.
+    #  - `disponibilidad` es cuándo se puede usar el local, en JSON
+    #    [{"dia":"lun","desde":"09:00","hasta":"22:00"}, ...]. Un local
+    #    municipal no abre a cualquier hora. Vacío = sin restricción.
+    "Lugares": [
+        col("uuid"),
+        col("nombre_es"), col("nombre_en"), col("nombre_fr"), col("nombre_de"),
+        # Dónde está, para que el alumno lo encuentre: la dirección para
+        # leerla y las coordenadas para pintar el mapa y abrir la ruta en
+        # cualquier aplicación, sin atarse a un proveedor concreto.
+        # Decimal, no Number: el "Number" de NocoDB es un bigint y truncaba
+        # 36.7452 a 37, dejando el mapa a kilómetros del sitio.
+        col("direccion"), col("lat", "Decimal"), col("lon", "Decimal"),
+        col("como_llegar", "LongText"),
+        col("aforo", "Number"), col("disponibilidad", "LongText"),
+        col("visible", "Checkbox"),   # si sale en la sección de horarios
+        col("notas", "LongText"),
+    ],
     "Servicios": [
         col("uuid"), col("se_sigue_ofertando", "Checkbox"),
         col("foto", "URL"), col("nivel"),
@@ -79,7 +104,10 @@ TABLAS = {
         col("plazas", "Number"), col("cal_event_type_id", "Number"),
         col("mostrar_contador", "Checkbox"), col("visible", "Checkbox"),
         col("franjas_elegibles", "Checkbox"), col("franjas", "LongText"),
-        col("precio"), col("duracion"), col("lugar"),
+        col("precio"), col("duracion"),
+        # lugar_uuid manda; `lugar` se conserva como rótulo suelto para las
+        # clases que no se den en un sitio del catálogo (una playa, una casa).
+        col("lugar_uuid"), col("lugar"),
     ],
     # actividad_id en Clases/Agenda guarda el UUID de la temporada (Actividad)
     # a la que pertenece. Se conserva el nombre `actividad_id` —no `_uuid`—
@@ -88,13 +116,13 @@ TABLAS = {
     "Clases": [
         col("uuid"), col("actividad_id"),
         col("dia_semana"), col("hora_inicio"), col("duracion_min", "Number"),
-        col("lugar"), col("color"), col("activa", "Checkbox"),
+        col("lugar_uuid"), col("lugar"), col("color"), col("activa", "Checkbox"),
     ],
     "Agenda": [
         col("uuid"), col("actividad_id"), col("serie_id"),
         col("titulo", "LongText"), col("tipo"),
         col("fecha"), col("hora_inicio"), col("duracion_min", "Number"),
-        col("dias_semana"), col("lugar"), col("color"),
+        col("dias_semana"), col("lugar_uuid"), col("lugar"), col("color"),
         col("visible_web", "Checkbox"), col("avisar_alumnos", "Checkbox"),
         col("estado"), col("motivo"), col("motivo_texto", "LongText"),
         # Si este motivo puede contarse en la web o se queda en el panel.
@@ -206,13 +234,9 @@ def main():
     else:
         print("Precios: ya tiene datos")
 
-    if not nc.records(url, tok, ids["Horarios"], 1, incluir_eliminados=True):
-        filas = [{"id": l["id"], "visible": l.get("visible", True)}
-                 for l in DATA["horarios"]["lineas"]]
-        nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Horarios']}/records", filas)
-        print(f"Horarios: {len(filas)} filas sembradas")
-    else:
-        print("Horarios: ya tiene datos")
+    # La tabla Horarios ya no existe: era una lista de sitios que solo sabía
+    # decir si se publicaban. Ahora eso vive en Lugares, que además guarda su
+    # dirección, su aforo y sus horas de apertura.
 
     if "--seed-demo" in sys.argv:
         siembra_demo(url, tok, ids)
@@ -246,7 +270,7 @@ def siembra_demo(url, tok, ids):
 
     DESTRUCTIVO: vacía las cinco tablas del modelo de oferta. Solo --seed-demo.
     """
-    for t in ("Servicios", "Actividades", "Clases", "Agenda", "Reservas"):
+    for t in ("Lugares", "Servicios", "Actividades", "Clases", "Agenda", "Reservas"):
         n = _vacia(url, tok, ids[t])
         print(f"demo: {t} vaciada ({n} filas)")
 
@@ -257,6 +281,43 @@ def siembra_demo(url, tok, ids):
 
     post = lambda tabla, filas: nc.api(
         url, tok, "POST", f"/api/v2/tables/{ids[tabla]}/records", filas)
+
+    # --- Lugares: dónde se da clase, con lo que condiciona la planificación ---
+    # El aforo y el horario no son adorno: acotan lo que se puede programar,
+    # y la dirección con sus coordenadas es lo que el alumno necesita para
+    # llegar. El local municipal cierra a las 21:30 y la playa solo vale por
+    # la mañana, que son justo los casos que hacen fallar una planificación.
+    LUGARES = [
+        {"k": "nerja", "nombre": "Estudio de Nerja", "aforo": 14,
+         "dir": "Calle Almirante Ferrándiz 12, 29780 Nerja (Málaga)",
+         "lat": 36.7452, "lon": -3.8756,
+         "llegar": "A dos minutos del Balcón de Europa. Portal azul, primera planta.",
+         "disp": [{"dia": d, "desde": "08:00", "hasta": "22:00"}
+                  for d in ("lun", "mar", "mie", "jue", "vie")]},
+        {"k": "maro", "nombre": "Maro (local municipal)", "aforo": 12,
+         "dir": "Plaza de las Maravillas s/n, 29787 Maro (Málaga)",
+         "lat": 36.7614, "lon": -3.8237,
+         "llegar": "Junto a la iglesia. Aparcamiento en la plaza.",
+         "disp": [{"dia": d, "desde": "09:00", "hasta": "21:30"}
+                  for d in ("lun", "mar", "mie", "jue", "vie")]},
+        {"k": "playa", "nombre": "Playa de Burriana", "aforo": 20,
+         "dir": "Paseo marítimo de Burriana, 29780 Nerja (Málaga)",
+         "lat": 36.7419, "lon": -3.8672,
+         "llegar": "Al final del paseo, junto al chiringuito. Se practica en la arena.",
+         "disp": [{"dia": d, "desde": "07:30", "hasta": "11:00"}
+                  for d in ("sab", "dom")]},
+    ]
+    l_uuid = {}
+    for l in LUGARES:
+        l_uuid[l["k"]] = _uuid()
+        post("Lugares", [{
+            "uuid": l_uuid[l["k"]], "nombre_es": l["nombre"],
+            "direccion": l["dir"], "lat": l["lat"], "lon": l["lon"],
+            "como_llegar": l["llegar"], "aforo": l["aforo"],
+            "disponibilidad": json.dumps(l["disp"], ensure_ascii=False),
+            "visible": True, "notas": "",
+        }])
+    print(f"demo: {len(LUGARES)} lugares con aforo, horario y coordenadas")
 
     # --- Servicios: la cartera. Tres vivos y uno retirado. ---
     servicios = [
@@ -325,6 +386,8 @@ def siembra_demo(url, tok, ids):
         # Del servicio retirado: caducada, para comprobar que el historial queda.
         ("embarazo_2025", "embarazo", "Ciclo 2025", "finalizada", en(-200), True, 8, "Nerja", "15 €", "60 min"),
     ]
+    # El texto del lugar se traduce a su uuid: lugar_uuid es quien manda.
+    LUG_DE = {"Nerja": "nerja", "Maro": "maro", "Playa de Burriana": "playa"}
     a_uuid = {}
     for (k, serv, periodo, estado, hasta, visible, plazas, lugar, precio, dur) in temporadas:
         a_uuid[k] = _uuid()
@@ -335,6 +398,7 @@ def siembra_demo(url, tok, ids):
             "cal_event_type_id": 0, "mostrar_contador": True, "visible": visible,
             "franjas_elegibles": False, "franjas": "[]",
             "precio": precio, "duracion": dur, "lugar": lugar,
+            "lugar_uuid": l_uuid.get(LUG_DE.get(lugar, ""), ""),
         }])
     print(f"demo: {len(temporadas)} temporadas (Hatha con 2: una caducada y una vigente)")
 
@@ -355,7 +419,8 @@ def siembra_demo(url, tok, ids):
         post("Clases", [{
             "uuid": _uuid(), "actividad_id": a_uuid[tk],
             "dia_semana": dia, "hora_inicio": hora, "duracion_min": dmin,
-            "lugar": lugar, "color": "", "activa": True,
+            "lugar": lugar, "lugar_uuid": l_uuid.get(LUG_DE.get(lugar, ""), ""),
+            "color": "", "activa": True,
         }])
     print(f"demo: {len(clases)} clases en la semana tipo")
 
@@ -380,7 +445,8 @@ def siembra_demo(url, tok, ids):
                 "uuid": _uuid(), "actividad_id": a_uuid[tk], "serie_id": serie[tk],
                 "titulo": titulo_de[tk], "tipo": "recurrente",
                 "fecha": f.isoformat(), "hora_inicio": hora, "duracion_min": dmin,
-                "dias_semana": "", "lugar": lugar, "color": "",
+                "dias_semana": "", "lugar": lugar,
+                "lugar_uuid": l_uuid.get(LUG_DE.get(lugar, ""), ""), "color": "",
                 "visible_web": True, "avisar_alumnos": False,
                 "estado": "programada", "motivo": "", "motivo_texto": "",
             })

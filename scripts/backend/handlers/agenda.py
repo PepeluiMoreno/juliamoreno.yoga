@@ -10,6 +10,8 @@ backend.handlers.agenda — rutas /admin/api/agenda y sus operaciones.
   POST   /admin/api/agenda/proyectar-matriz  despliega la matriz sobre un mes
   POST   /admin/api/agenda/copiar-mes      copia un mes a otro
 """
+import datetime
+
 from .. import agenda as logica
 from .. import datos
 from ..util import limpio
@@ -184,6 +186,19 @@ def _crear(body):
             return 422, {"error": "una sesión puntual necesita hora de inicio",
                          "sugerencia_hora": _primer_hueco(
                              fila.get("fecha"), fila.get("duracion_min"))}
+        # Segundo nivel de planificación: la clase suelta. El local impone su
+        # horario también aquí, no solo al fijar el calendario de la actividad.
+        lug = logica.lugares_por_uuid().get(fila.get("lugar_uuid") or "")
+        if lug:
+            try:
+                d = datetime.date.fromisoformat(str(fila.get("fecha"))[:10])
+                dia = ["lun","mar","mie","jue","vie","sab","dom"][d.weekday()]
+                cerrado = logica.cabe_en_lugar(lug, dia, fila.get("hora_inicio"),
+                                               fila.get("duracion_min"))
+                if cerrado:
+                    return 409, {"error": cerrado, "lugar": True}
+            except Exception:
+                pass
         choque = _valida_holgura([fila])
         if choque:
             return 409, {"error": choque,

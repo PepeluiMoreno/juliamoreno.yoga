@@ -216,7 +216,8 @@ def _actividades_lista():
             "visible": r.get("visible"), "mostrar_contador": r.get("mostrar_contador"),
             "cal_event_type_id": r.get("cal_event_type_id"),
             "precio": r.get("precio"), "duracion": r.get("duracion"),
-            "lugar": r.get("lugar"), "interesados": r.get("interesados"),
+            "lugar": r.get("lugar"), "lugar_uuid": r.get("lugar_uuid"),
+            "interesados": r.get("interesados"),
         })
     return out
 
@@ -255,9 +256,15 @@ def _actividades_handle(req):
         fila["precio"] = limpio(body.get("precio"), 40)
         fila["duracion"] = limpio(body.get("duracion"), 40)
         fila["lugar"] = limpio(body.get("lugar"), 120)
+        fila["lugar_uuid"] = limpio(body.get("lugar_uuid"), 40)
         # Vigencia: pasada esta fecha la temporada se archiva sola y deja el
         # grid principal (sigue visible en /pasadas.html).
         fila["hasta"] = limpio(body.get("hasta"), 10)
+        # El local manda sobre lo que se puede programar: ni más plazas que
+        # aforo, ni clases a horas en que está cerrado.
+        problemas = logica.valida_horario_actividad(fila)
+        if problemas:
+            return 409, {"error": " · ".join(problemas), "lugar": True}
         try:
             datos.guarda("Actividades", fila)
             resultado = {"ok": True, "uuid": fila["uuid"]}
@@ -284,7 +291,7 @@ def _actividades_handle(req):
             return 422, {"error": "falta Id"}
         fila = {"Id": body["Id"]}
         for c in ("servicio_uuid", "estado", "periodo", "franjas", "precio",
-                  "duracion", "lugar", "hasta", "desde", "motivo"):
+                  "duracion", "lugar", "lugar_uuid", "hasta", "desde", "motivo"):
             if c in body:
                 fila[c] = limpio(body[c], 500)
         if "horario" in body:
@@ -302,6 +309,12 @@ def _actividades_handle(req):
         # dar: de nada sirve guardar "los martes a las 19" si la agenda sigue
         # con los lunes. Se reprograma solo lo futuro; lo impartido es historia.
         reprograma = any(c in body for c in ("horario", "desde", "hasta"))
+        if any(c in body for c in ("horario", "lugar_uuid", "plazas")):
+            actual = _actividad_por_id(body["Id"]) or {}
+            futura = dict(actual, **fila)
+            problemas = logica.valida_horario_actividad(futura)
+            if problemas:
+                return 409, {"error": " · ".join(problemas), "lugar": True}
         try:
             datos.actualiza("Actividades", fila)
             resultado = {"ok": True}

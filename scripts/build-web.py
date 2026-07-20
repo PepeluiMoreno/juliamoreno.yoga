@@ -416,7 +416,7 @@ def desde_nocodb(data):
     if not bid:
         raise RuntimeError(f"la base '{base}' no existe en NocoDB")
     ids = nc.tablas(url, tok, bid)
-    for t in ("Precios", "Horarios", "Servicios", "Actividades"):
+    for t in ("Precios", "Lugares", "Servicios", "Actividades"):
         if t not in ids:
             raise RuntimeError(f"falta la tabla '{t}' (ejecute provision-nocodb.py)")
     # Traducir (DeepL) lo que haya cambiado, antes de leer para generar
@@ -427,11 +427,27 @@ def desde_nocodb(data):
             if ln["id"] == fila.get("id"):
                 ln["valor"] = str(fila.get("valor") or ln["valor"])
                 ln["visible"] = bool(fila.get("visible"))
-    # Horarios
-    for fila in nc.records(url, tok, ids["Horarios"]):
-        for ln in data["horarios"]["lineas"]:
-            if ln["id"] == fila.get("id"):
-                ln["visible"] = bool(fila.get("visible"))
+    # Horarios: la sección de "dónde y cuándo" se arma desde Lugares, que es
+    # donde vive cada sitio con su nombre en los cuatro idiomas y su dirección.
+    # Antes había una tabla Horarios que solo guardaba un visible y los textos
+    # estaban a mano en contenido.json: dos sitios para lo mismo.
+    lineas_h = []
+    for lug in nc.records(url, tok, ids["Lugares"]):
+        if not bool(lug.get("visible")):
+            continue
+        nom = lambda i: (lug.get(f"nombre_{i}") or lug.get("nombre_es") or "")
+        lineas_h.append({
+            "id": lug.get("uuid"), "visible": True,
+            "lugar": {i: nom(i) for i in ("es", "en", "fr", "de")},
+            "direccion": lug.get("direccion") or "",
+            "lat": lug.get("lat"), "lon": lug.get("lon"),
+            "como_llegar": lug.get("como_llegar") or "",
+            # Qué se da en este sitio: se deriva de las actividades vigentes,
+            # en vez de escribirlo a mano y que se quede viejo.
+            "clases": {i: "" for i in ("es", "en", "fr", "de")},
+        })
+    if lineas_h:
+        data["horarios"]["lineas"] = lineas_h
     # Modelo Servicio -> temporada: la web pinta UNA línea por SERVICIO que se
     # sigue ofertando, combinando su identidad (título/texto/foto/nivel) con la
     # TEMPORADA VIGENTE (programación: estado, aforo, franjas, precio, lugar).
