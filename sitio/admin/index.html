@@ -402,19 +402,28 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .ficha-sub{margin:1.6rem 0 .2rem;font-size:.98rem;font-weight:600;color:var(--tinta)}
 .ficha-nota{font-size:.85rem;color:var(--gris);line-height:1.5;margin:.2rem 0 .7rem}
 /* Calendario semanal: una línea por franja, con el ancho que pide cada dato */
-.franja-linea{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;margin-bottom:.5rem;
-  background:var(--cielo-claro);border-radius:8px;padding:.55rem .7rem}
-.franja-linea .campo{margin:0}
-.franja-linea label{font-size:.85rem}
-.franja-dia{flex:0 0 132px}
-.franja-hora{flex:0 0 116px}
-.franja-dur{flex:0 0 92px}
-.franja-lugar{flex:1 1 180px}
+/* El calendario de la actividad se ve igual que el horario del lugar: mismo
+   fondo, misma rejilla en dos filas y mismo tamaño de letra. Son dos formas de
+   decir "esto pasa estos días a estas horas" y no había motivo para que cada
+   una tuviera su aspecto. */
+.franja-linea{display:grid;grid-template-columns:1fr 100px 100px auto;
+  gap:.4rem .5rem;align-items:end;margin-bottom:.45rem;background:var(--cielo-claro);
+  border-radius:8px;padding:.5rem .6rem}
+.franja-linea .campo{margin:0;min-width:0}
+.franja-linea label{font-size:.85rem;margin-bottom:.2rem}
+.franja-dia{grid-column:1/2}
+.franja-hora{grid-column:2/3}
+.franja-dur{grid-column:3/4}
+/* El desplegable de lugar ocupa la fila entera: con 180px no se leía el
+   nombre del sitio, solo las primeras letras. */
+.franja-lugar{grid-column:1/4;grid-row:2}
+.franja-linea .franja-quitar{grid-row:1/3;grid-column:4;align-self:center}
 .franja-quitar{flex:0 0 auto;align-self:flex-end;margin-bottom:.1rem}
 .franja-vacia{font-size:.85rem;color:var(--gris);padding:.4rem 0}
 .acc-botones{display:flex;flex-wrap:wrap;gap:.5rem}
 @media(max-width:620px){
-  .franja-dia,.franja-hora,.franja-dur,.franja-lugar{flex:1 1 100%}
+  .franja-linea{grid-template-columns:1fr 1fr auto}
+  .franja-dia,.franja-lugar{grid-column:1/3}
 }
 
 .dash-tit{margin:1.8rem 0 .2rem;font-size:1.05rem;font-weight:600;color:var(--tinta)}
