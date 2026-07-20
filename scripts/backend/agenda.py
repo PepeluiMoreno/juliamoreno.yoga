@@ -177,44 +177,39 @@ def copia_mes(desde_ym, hasta_ym):
 
 
 def horas_programadas_mes():
-    """Suma las horas de clase del mes en curso a partir de la Agenda."""
+    """Suma las horas de clase del mes en curso a partir de la Agenda.
+
+    Cada fila de Agenda ES una ocurrencia con su fecha —las recurrentes se
+    materializan al crearlas o al proyectar la matriz—, así que basta con
+    sumar las del mes. Antes, para las de tipo "recurrente" se intentaba
+    expandir dias_semana como si la fila fuera la regla y no la ocurrencia:
+    como una ocurrencia ya materializada no lleva dias_semana, no sumaban
+    nada y el panel daba 2 horas al mes teniendo la agenda llena.
+
+    No cuentan las canceladas: esa clase no se dio. Las aplazadas tampoco
+    aquí, porque su hora se cuenta el día al que se movieron.
+    """
     try:
         filas = datos.lee("Agenda")
     except Exception:
         return 0.0
     hoy = datetime.date.today()
-    ndias = calendar.monthrange(hoy.year, hoy.month)[1]
     total = 0.0
     for f in filas:
+        if (f.get("estado") or "") in ("cancelada", "aplazada"):
+            continue
         try:
             dur = int(f.get("duracion_min") or 0) / 60.0
         except Exception:
-            dur = 0.0
+            continue
         if dur <= 0:
             continue
-        tipo = (f.get("tipo") or "").strip()
-        if tipo == "puntual":
-            try:
-                d = datetime.date.fromisoformat((f.get("fecha") or "")[:10])
-                if d.year == hoy.year and d.month == hoy.month:
-                    total += dur
-            except Exception:
-                pass
-        elif tipo == "recurrente":
-            dias = {DIA_NUM.get(x.strip()) for x in (f.get("dias_semana") or "").split(",")}
-            dias.discard(None)
-            desde = (f.get("vigencia_desde") or "")[:10]
-            hasta = (f.get("vigencia_hasta") or "")[:10]
-            d0 = datetime.date.fromisoformat(desde) if desde else None
-            d1 = datetime.date.fromisoformat(hasta) if hasta else None
-            for dia in range(1, ndias + 1):
-                fecha = datetime.date(hoy.year, hoy.month, dia)
-                if fecha.weekday() in dias:
-                    if d0 and fecha < d0:
-                        continue
-                    if d1 and fecha > d1:
-                        continue
-                    total += dur
+        try:
+            d = datetime.date.fromisoformat((f.get("fecha") or "")[:10])
+        except Exception:
+            continue
+        if d.year == hoy.year and d.month == hoy.month:
+            total += dur
     return round(total, 1)
 
 

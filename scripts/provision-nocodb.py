@@ -112,15 +112,32 @@ def _uuid():
 # (Servicios, Actividades, Clases, Agenda, Reservas). Es destructivo a
 # propósito y solo corre bajo la bandera --seed-demo; el provisión normal
 # (sin bandera) nunca borra nada.
+# El alumnado de una academia en la costa de Nerja es justo esta mezcla, y por
+# eso la web está en cuatro idiomas: vecinas del pueblo, residentes extranjeros
+# y gente que pasa temporadas. Los nombres van variados a propósito para que las
+# listas de clase se parezcan a las de verdad.
 _ALUMNOS_DEMO = [
+    # España
     ("Lucía Fernández", "lucia.fernandez@example.com", "600100001"),
-    ("Marta Ruiz", "marta.ruiz@example.com", "600100002"),
-    ("Elena Gómez", "elena.gomez@example.com", "600100003"),
-    ("Carmen Díaz", "carmen.diaz@example.com", "600100004"),
-    ("Pablo Serrano", "pablo.serrano@example.com", "600100005"),
-    ("Javier Moreno", "javier.moreno@example.com", "600100006"),
-    ("Ana Torres", "ana.torres@example.com", "600100007"),
-    ("Rosa Navarro", "rosa.navarro@example.com", "600100008"),
+    ("Carmen Díaz Soto", "carmen.diaz@example.com", "600100002"),
+    ("Javier Moreno", "javier.moreno@example.com", "600100003"),
+    ("Nuria Cabrera", "nuria.cabrera@example.com", "600100004"),
+    # Alemania
+    ("Ingrid Baumgartner", "ingrid.baumgartner@example.com", "600100005"),
+    ("Klaus Hoffmann", "klaus.hoffmann@example.com", "600100006"),
+    ("Annelie Schröder", "annelie.schroeder@example.com", "600100007"),
+    # Reino Unido
+    ("Emily Whitaker", "emily.whitaker@example.com", "600100008"),
+    ("Graham Ellis", "graham.ellis@example.com", "600100009"),
+    # Suecia
+    ("Astrid Lindqvist", "astrid.lindqvist@example.com", "600100010"),
+    ("Erik Sjöberg", "erik.sjoberg@example.com", "600100011"),
+    # Países Bajos
+    ("Femke van Dijk", "femke.vandijk@example.com", "600100012"),
+    ("Bram de Vries", "bram.devries@example.com", "600100013"),
+    # Francia
+    ("Sophie Laurent", "sophie.laurent@example.com", "600100014"),
+    ("Mathieu Rousseau", "mathieu.rousseau@example.com", "600100015"),
 ]
 
 
@@ -187,78 +204,266 @@ def _vacia(url, tok, tid):
 
 
 def siembra_demo(url, tok, ids):
-    """Vacía y repuebla el modelo de oferta con un dataset de demostración:
-    dos servicios, una temporada vigente cada uno, clases semanales y ocho
-    alumnos apuntados por clase. DESTRUCTIVO: solo bajo --seed-demo."""
+    """Vacía y repuebla el modelo de oferta con un dataset de prueba.
+
+    Busca dos cosas a la vez. Que LUZCA: una academia con su cartera variada,
+    la semana llena de clases, alumnos con nombre y apellidos y precios que
+    cuadran, de modo que al abrir el panel o la web haya algo que enseñar y no
+    dos filas de relleno. Y que PRUEBE: colados entre lo demás van los casos
+    que suelen romperse —un servicio con DOS temporadas (la web no debe
+    duplicar su tarjeta y ha de quedarse con la vigente), un servicio retirado
+    de la cartera, una temporada caducada, clases canceladas y aplazadas, una
+    clase suelta y filas en la papelera—, que es donde se ve si el modelo
+    aguanta.
+
+    DESTRUCTIVO: vacía las cinco tablas del modelo de oferta. Solo --seed-demo.
+    """
     for t in ("Servicios", "Actividades", "Clases", "Agenda", "Reservas"):
         n = _vacia(url, tok, ids[t])
         print(f"demo: {t} vaciada ({n} filas)")
 
     hoy = datetime.date.today()
-    fin = (hoy.replace(day=1) + datetime.timedelta(days=120)).isoformat()
+    ayer = hoy - datetime.timedelta(days=1)
+    def en(dias):
+        return (hoy + datetime.timedelta(days=dias)).isoformat()
 
-    # Dos servicios con su temporada vigente. (titulo, texto, nivel, dias,
-    # hora, dur, lugar, precio, duracion_txt)
-    demo = [
-        {"titulo": "Hatha yoga", "nivel": "Todos los niveles",
-         "texto": "Práctica pausada de posturas y respiración, apta para empezar "
-                  "y para mantener el hábito.",
-         "dias": ["lun", "mie"], "hora": "19:00", "dur": 75,
-         "lugar": "Nerja", "precio": "12 €", "duracion": "75 min"},
-        {"titulo": "Yoga +60", "nivel": "Suave",
-         "texto": "Movimiento amable pensado para mayores: articulaciones, "
-                  "equilibrio y respiración, sin exigencias.",
-         "dias": ["mar", "jue"], "hora": "11:00", "dur": 60,
-         "lugar": "Maro", "precio": "10 €", "duracion": "60 min"},
+    post = lambda tabla, filas: nc.api(
+        url, tok, "POST", f"/api/v2/tables/{ids[tabla]}/records", filas)
+
+    # --- Servicios: la cartera. Tres vivos y uno retirado. ---
+    servicios = [
+        {"k": "hatha", "titulo": "Hatha yoga", "nivel": "Todos los niveles",
+         "texto": "Práctica pausada de posturas y respiración. Sirve para empezar "
+                  "de cero y para sostener el hábito sin castigarse.",
+         "oferta": True},
+        {"k": "mayores", "titulo": "Yoga para mayores", "nivel": "Suave",
+         "texto": "Movimiento amable para articulaciones, equilibrio y respiración. "
+                  "Se puede hacer entero desde una silla.",
+         "oferta": True},
+        {"k": "mar", "titulo": "Yoga junto al mar", "nivel": "Todos los niveles",
+         "texto": "Sesión de verano al aire libre, a primera hora, cuando la playa "
+                  "todavía está tranquila y el sol no aprieta.",
+         "oferta": True},
+        {"k": "vinyasa", "titulo": "Vinyasa dinámico", "nivel": "Intermedio",
+         "texto": "Secuencias enlazadas con la respiración, a buen ritmo. Para quien "
+                  "ya se maneja con las posturas y busca movimiento continuo.",
+         "oferta": True},
+        {"k": "yin", "titulo": "Yin yoga y descanso", "nivel": "Todos los niveles",
+         "texto": "Posturas largas y sostenidas, con apoyos, para soltar tensión "
+                  "profunda. La clase de final de semana.",
+         "oferta": True},
+        # Retirado de la cartera: NO debe salir en la web, pero conserva su
+        # historial (temporada pasada, clases y reservas siguen ahí).
+        {"k": "embarazo", "titulo": "Yoga para el embarazo", "nivel": "Suave",
+         "texto": "Acompañamiento durante el embarazo, por trimestres.",
+         "oferta": False},
     ]
+    s_uuid = {}
+    for s in servicios:
+        s_uuid[s["k"]] = _uuid()
+        post("Servicios", [{
+            "uuid": s_uuid[s["k"]], "se_sigue_ofertando": s["oferta"],
+            "nivel": s["nivel"], "es_hash": "", "revisado": "",
+            "titulo_es": s["titulo"], "texto_es": s["texto"],
+        }])
+    print(f"demo: {len(servicios)} servicios (1 retirado de la cartera)")
 
-    for d in demo:
-        s_uuid = _uuid()
-        nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Servicios']}/records", [{
-            "uuid": s_uuid, "se_sigue_ofertando": True,
-            "nivel": d["nivel"], "es_hash": "", "revisado": "",
-            "titulo_es": d["titulo"], "texto_es": d["texto"],
-        }])
-        a_uuid = _uuid()
-        nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Actividades']}/records", [{
-            "uuid": a_uuid, "servicio_uuid": s_uuid,
-            "estado": "en_curso", "hasta": fin,
-            "umbral": 4, "interesados": 0, "plazas": 12,
-            "cal_event_type_id": 0, "mostrar_contador": True, "visible": True,
+    # --- Temporadas. Hatha tiene DOS: una caducada y otra vigente. ---
+    temporadas = [
+        # (clave, servicio, estado, hasta, visible, plazas, lugar, precio, dur)
+        ("hatha_vieja", "hatha", "finalizada", en(-40), True, 12, "Nerja", "12 €", "75 min"),
+        ("hatha_actual", "hatha", "en_curso", en(90), True, 12, "Nerja", "12 €", "75 min"),
+        ("mayores_actual", "mayores", "en_curso", en(120), True, 10, "Maro", "10 €", "60 min"),
+        ("vinyasa_actual", "vinyasa", "en_curso", en(90), True, 14, "Nerja", "14 €", "60 min"),
+        ("yin_actual", "yin", "en_curso", en(90), True, 12, "Maro", "12 €", "75 min"),
+        # Propuesta: aún sondeando interés, no debería contar como ofertada.
+        ("mar_verano", "mar", "propuesta", en(60), True, 15, "Playa de Burriana", "14 €", "60 min"),
+        # Del servicio retirado: caducada, para comprobar que el historial queda.
+        ("embarazo_2025", "embarazo", "finalizada", en(-200), True, 8, "Nerja", "15 €", "60 min"),
+    ]
+    a_uuid = {}
+    for (k, serv, estado, hasta, visible, plazas, lugar, precio, dur) in temporadas:
+        a_uuid[k] = _uuid()
+        post("Actividades", [{
+            "uuid": a_uuid[k], "servicio_uuid": s_uuid[serv],
+            "estado": estado, "hasta": hasta,
+            "umbral": 4, "interesados": 0, "plazas": plazas,
+            "cal_event_type_id": 0, "mostrar_contador": True, "visible": visible,
             "franjas_elegibles": False, "franjas": "[]",
-            "precio": d["precio"], "duracion": d["duracion"], "lugar": d["lugar"],
+            "precio": precio, "duracion": dur, "lugar": lugar,
         }])
-        # Clases semanales de la temporada + sus ocurrencias en Agenda, con
-        # ocho alumnos apuntados por sesión (copia ligera en Reservas).
-        for dia in d["dias"]:
-            c_uuid = _uuid()
-            nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Clases']}/records", [{
-                "uuid": c_uuid, "actividad_id": a_uuid,
-                "dia_semana": dia, "hora_inicio": d["hora"],
-                "duracion_min": d["dur"], "lugar": d["lugar"],
-                "color": "", "activa": True,
-            }])
-        # Una ocurrencia de agenda de ejemplo (la próxima aparición del primer día)
-        ocur_uuid = _uuid()
-        nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Agenda']}/records", [{
-            "uuid": ocur_uuid, "actividad_id": a_uuid, "serie_id": _uuid()[:12],
-            "titulo": d["titulo"], "tipo": "recurrente",
-            "fecha": (hoy + datetime.timedelta(days=7)).isoformat(),
-            "hora_inicio": d["hora"], "duracion_min": d["dur"],
-            "dias_semana": ",".join(d["dias"]), "lugar": d["lugar"], "color": "",
-            "visible_web": True, "avisar_alumnos": False,
+    print(f"demo: {len(temporadas)} temporadas (Hatha con 2: una caducada y una vigente)")
+
+    # --- Matriz semanal (Clases) de las temporadas vivas ---
+    clases = [
+        ("hatha_actual", "lun", "19:00", 75, "Nerja"),
+        ("hatha_actual", "mie", "19:00", 75, "Nerja"),
+        ("mayores_actual", "mar", "11:00", 60, "Maro"),
+        ("mayores_actual", "jue", "11:00", 60, "Maro"),
+        ("vinyasa_actual", "mar", "19:30", 60, "Nerja"),
+        ("vinyasa_actual", "jue", "19:30", 60, "Nerja"),
+        ("yin_actual", "vie", "18:00", 75, "Maro"),
+        ("mar_verano", "sab", "09:00", 60, "Playa de Burriana"),
+    ]
+    for (tk, dia, hora, dmin, lugar) in clases:
+        post("Clases", [{
+            "uuid": _uuid(), "actividad_id": a_uuid[tk],
+            "dia_semana": dia, "hora_inicio": hora, "duracion_min": dmin,
+            "lugar": lugar, "color": "", "activa": True,
+        }])
+    print(f"demo: {len(clases)} clases en la semana tipo")
+
+    # --- Agenda: ocurrencias con estados variados ---
+    # Incluye dos el MISMO día a horas compatibles (para ver la holgura de 30
+    # min funcionando) y una clase suelta, que es el caso que se colaba sin hora.
+    # La agenda se materializa desde la matriz, cuatro semanas atrás y cuatro
+    # adelante: así el calendario tiene cuerpo y hay pasado del que sacar
+    # cuántas clases se han celebrado.
+    DIA_WD = {"lun": 0, "mar": 1, "mie": 2, "jue": 3, "vie": 4, "sab": 5, "dom": 6}
+    titulo_de = {t[0]: next(s["titulo"] for s in servicios if s["k"] == t[1])
+                 for t in temporadas}
+    serie = {tk: _uuid()[:12] for tk in a_uuid}
+    filas_agenda = []
+    for (tk, dia, hora, dmin, lugar) in clases:
+        wd = DIA_WD[dia]
+        for delta in range(-28, 29):
+            f = hoy + datetime.timedelta(days=delta)
+            if f.weekday() != wd:
+                continue
+            filas_agenda.append({
+                "uuid": _uuid(), "actividad_id": a_uuid[tk], "serie_id": serie[tk],
+                "titulo": titulo_de[tk], "tipo": "recurrente",
+                "fecha": f.isoformat(), "hora_inicio": hora, "duracion_min": dmin,
+                "dias_semana": "", "lugar": lugar, "color": "",
+                "visible_web": True, "avisar_alumnos": False,
+                "estado": "programada", "motivo": "", "motivo_texto": "",
+            })
+
+    # INCIDENCIAS. No son adorno: son la materia prima de la estadística de
+    # fidelidad —cuánto de lo programado se acabó dando— y del reparto de
+    # motivos. Se siembran repartidas por el pasado, con una proporción
+    # verosímil: la mayoría de las clases salen adelante, pero no todas.
+    #
+    # El motivo distingue de quién fue la baja, que es lo que luego hay que
+    # poder contar por separado: no es lo mismo que Julia cancele por enfermedad
+    # que que se caiga por falta de alumnos.
+    INCIDENCIAS = [
+        # (estado, motivo, texto)
+        ("cancelada", "enfermedad", "Julia con gripe, avisado por WhatsApp"),
+        ("cancelada", "festivo", "Festivo local"),
+        ("cancelada", "sin_alumnos", "Nadie se apuntó, se anula"),
+        ("cancelada", "temporal", "Levante fuerte, no se puede en la playa"),
+        ("cancelada", "aforo_insuficiente", "Solo una alumna, se pasa a particular"),
+        ("aplazada", "festivo", "Puente, se recupera la semana siguiente"),
+        ("aplazada", "obras", "Obras en el local, se mueve al jueves"),
+        ("aplazada", "viaje", "Julia fuera en formación"),
+        ("cancelada", "enfermedad", "Baja de Julia"),
+        ("aplazada", "temporal", "Aviso por lluvia, se traslada a cubierto"),
+    ]
+    pasadas = [f for f in filas_agenda if f["fecha"] < hoy.isoformat()]
+    # Repartidas a lo largo del pasado, no amontonadas, y sin pasarse: se
+    # siembran como mucho en un cuarto de las clases ya dadas, para que la
+    # fidelidad quede en cifras de academia que funciona (en torno al 80-85%)
+    # y no de negocio a la deriva.
+    if pasadas:
+        cupo = max(1, len(pasadas) // 4)
+        incidencias = INCIDENCIAS[:cupo]
+        paso = max(1, len(pasadas) // (len(incidencias) + 1))
+        for i, (estado, motivo, texto) in enumerate(incidencias):
+            pos = (i + 1) * paso
+            if pos < len(pasadas):
+                pasadas[pos].update({"estado": estado, "motivo": motivo,
+                                     "motivo_texto": texto})
+    # Alguna incidencia también en lo que viene: una clase ya cancelada por
+    # adelantado y otra aplazada, que es como se ve en la agenda de verdad.
+    futuras = [f for f in filas_agenda if f["fecha"] > hoy.isoformat()]
+    if len(futuras) > 6:
+        futuras[3].update({"estado": "cancelada", "motivo": "festivo",
+                           "motivo_texto": "Festivo, avisadas las alumnas"})
+        futuras[6].update({"estado": "aplazada", "motivo": "viaje",
+                           "motivo_texto": "Julia en un retiro, se recupera"})
+
+    # Clases SUELTAS (puntuales, sin temporada detrás), que es el caso que se
+    # colaba sin hora. La de las 16:00 cae el mismo día que Hatha (19:00) y
+    # respeta de sobra la holgura de 30 min.
+    for (titulo, dias, hora, dmin, lugar) in [
+        ("Clase particular · Ana Torres", 2, "16:00", 60, "Nerja"),
+        ("Sesión privada · pareja", 6, "10:00", 60, "Nerja"),
+        ("Taller de respiración (puntual)", 12, "17:30", 90, "Nerja"),
+    ]:
+        filas_agenda.append({
+            "uuid": _uuid(), "actividad_id": "", "serie_id": "",
+            "titulo": titulo, "tipo": "puntual", "fecha": en(dias),
+            "hora_inicio": hora, "duracion_min": dmin,
+            "dias_semana": "", "lugar": lugar, "color": "",
+            "visible_web": False, "avisar_alumnos": False,
             "estado": "programada", "motivo": "", "motivo_texto": "",
-        }])
-        # Ocho alumnos apuntados (Reservas). Sin cal_uid real: es demo.
-        filas = [{
-            "cal_uid": _uuid()[:16], "event_type_id": 0,
-            "inicio": (hoy + datetime.timedelta(days=7)).isoformat() + "T" + d["hora"] + ":00Z",
-            "nombre": n, "email": e, "telefono": t,
-            "estado": "accepted", "fecha": datetime.datetime.now().isoformat(),
-        } for (n, e, t) in _ALUMNOS_DEMO]
-        nc.api(url, tok, "POST", f"/api/v2/tables/{ids['Reservas']}/records", filas)
-        print(f"demo: servicio «{d['titulo']}» + temporada + "
-              f"{len(d['dias'])} clases + {len(filas)} alumnos")
+        })
+
+    for i in range(0, len(filas_agenda), 50):
+        post("Agenda", filas_agenda[i:i + 50])
+    n_pas = sum(1 for f in filas_agenda if f["fecha"] < hoy.isoformat())
+    n_can = sum(1 for f in filas_agenda if f["estado"] == "cancelada")
+    n_apl = sum(1 for f in filas_agenda if f["estado"] == "aplazada")
+    n_cel = sum(1 for f in filas_agenda
+                if f["fecha"] < hoy.isoformat() and f["estado"] == "programada")
+    fidelidad = (100 * n_cel / n_pas) if n_pas else 0
+    print(f"demo: {len(filas_agenda)} clases en la agenda "
+          f"({n_pas} pasadas, {n_cel} celebradas, {n_can} canceladas, "
+          f"{n_apl} aplazadas, 3 sueltas)")
+    print(f"demo: fidelidad a lo programado en el pasado: {fidelidad:.0f}%")
+
+    # --- Reservas: alumnado repartido por las clases de las próximas semanas ---
+    # Cada clase tiene su grupo, con solapes (hay quien va a dos cosas) y con
+    # bajas: unas cuantas canceladas POR EL ALUMNO, que en la estadística de
+    # fidelidad cuentan distinto de las que cancela Julia.
+    ahora = datetime.datetime.now().isoformat()
+    reservas = []
+
+    def apunta(alumnos, dias, hora, estado="accepted"):
+        for (n, e, t) in alumnos:
+            reservas.append({
+                "cal_uid": _uuid()[:16], "event_type_id": 0,
+                "inicio": en(dias) + "T" + hora + ":00Z",
+                "nombre": n, "email": e, "telefono": t,
+                "estado": estado, "fecha": ahora,
+            })
+
+    A = _ALUMNOS_DEMO
+    apunta(A[0:9], 2, "19:00")     # Hatha del lunes: grupo grande
+    apunta(A[9:15], 4, "19:00")    # Hatha del miércoles: otro grupo
+    apunta(A[2:8], 3, "11:00")     # Yoga para mayores
+    apunta(A[0:5], 5, "19:30")     # Vinyasa
+    apunta(A[6:12], 6, "18:00")    # Yin
+    # Bajas por parte del alumno.
+    apunta(A[1:3], 2, "19:00", estado="cancelled")
+    apunta(A[10:11], 3, "11:00", estado="cancelled")
+
+    post("Reservas", reservas)
+    n_baja = sum(1 for r in reservas if r["estado"] == "cancelled")
+    print(f"demo: {len(reservas)} reservas de {len(A)} alumnos "
+          f"({n_baja} canceladas por el alumno)")
+
+    # --- Papelera: dos filas borradas lógicamente ---
+    # Para comprobar de un vistazo que lo eliminado NO sale en las vistas ni en
+    # la web, pero sigue estando y se puede restaurar.
+    post("Agenda", [{
+        "uuid": _uuid(), "actividad_id": "", "serie_id": "",
+        "titulo": "Clase borrada por error", "tipo": "puntual",
+        "fecha": en(8), "hora_inicio": "18:00", "duracion_min": 60,
+        "dias_semana": "", "lugar": "Nerja", "color": "",
+        "visible_web": False, "avisar_alumnos": False,
+        "estado": "programada", "motivo": "", "motivo_texto": "",
+        "eliminado": True, "eliminado_fecha": ahora,
+    }])
+    post("Servicios", [{
+        "uuid": _uuid(), "se_sigue_ofertando": False,
+        "nivel": "", "es_hash": "", "revisado": "",
+        "titulo_es": "Servicio de prueba descartado",
+        "texto_es": "Estaba en la papelera cuando se sembró el demo.",
+        "eliminado": True, "eliminado_fecha": ahora,
+    }])
+    print("demo: 2 filas en la papelera (1 clase, 1 servicio)")
 
 
 if __name__ == "__main__":
