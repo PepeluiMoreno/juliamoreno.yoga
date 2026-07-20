@@ -21,6 +21,7 @@ Los identificadores son UUID (uuid4().hex), no slugs. NocoDB mantiene su
 Cada handler recibe `req` y devuelve (codigo, dict), o None si no le
 corresponde la ruta/método.
 """
+import datetime
 import uuid
 
 from .. import agenda as logica
@@ -135,11 +136,74 @@ def _borrar(tabla, body):
         return 502, {"error": f"no se pudo eliminar: {e}"}
 
 
+# --- Ciclo de vida de una actividad ----------------------------------------
+#
+#   propuesta ──(llega al umbral de interesados)──▶ programada
+#   programada ──(Julia pulsa "Ofertar")──▶ prevista ──(llega la fecha)──▶ en_curso
+#                                    └──(si ya empezó)──▶ en_curso
+#
+# Las dos flechas automáticas se resuelven al leer las actividades: así lo que
+# Julia ve al abrir el panel está al día sin depender de que haya corrido una
+# tarea de fondo. La manual es solo una, "Ofertar", porque decidir que algo se
+# ofrece de verdad no puede hacerlo un contador de interesados.
+
+def _interesados_por_servicio():
+    cuenta = {}
+    try:
+        for r in datos.lee("Interesados"):
+            s = (r.get("actividad") or "").strip()
+            if s:
+                cuenta[s] = cuenta.get(s, 0) + 1
+    except Exception:
+        pass
+    return cuenta
+
+
+def _transiciones(filas):
+    """Aplica los cambios de estado que dependen del calendario o del interés.
+
+    Devuelve las filas ya actualizadas en memoria, y persiste solo lo que
+    cambia: no tiene sentido escribir en NocoDB en cada lectura del panel.
+    """
+    hoy = datetime.date.today().isoformat()
+    interesados = _interesados_por_servicio()
+    cambios = []
+    for r in filas:
+        estado = (r.get("estado") or "propuesta").strip()
+        nuevo = None
+
+        if estado == "propuesta":
+            umbral = 0
+            try:
+                umbral = int(r.get("umbral") or 0)
+            except Exception:
+                umbral = 0
+            n = interesados.get((r.get("servicio_uuid") or "").strip(), 0)
+            if umbral > 0 and n >= umbral:
+                nuevo = "programada"
+
+        elif estado == "prevista":
+            desde = str(r.get("desde") or "")[:10]
+            if desde and desde <= hoy:
+                nuevo = "en_curso"
+
+        if nuevo:
+            r["estado"] = nuevo
+            cambios.append({"Id": r.get("Id"), "estado": nuevo})
+
+    if cambios:
+        try:
+            datos.actualiza_varios("Actividades", cambios)
+        except Exception:
+            pass  # si falla, se reintentará en la próxima lectura
+    return filas
+
+
 # --- Actividades / temporadas (programación temporal) ----------------------
 
 def _actividades_lista():
     out = []
-    for r in datos.lee("Actividades"):
+    for r in _transiciones(datos.lee("Actividades")):
         out.append({
             "Id": r.get("Id"), "uuid": r.get("uuid"),
             "servicio_uuid": r.get("servicio_uuid"),
@@ -287,7 +351,7 @@ def _reprograma(rid):
 # guarda en las dos partes: en la actividad, para saber por qué está así; y
 # en cada clase, para que aparezca en la agenda y en la estadística.
 
-_ACCIONES = ("suspender", "reanudar", "cancelar", "trasladar")
+_ACCIONES = ("ofertar", "suspender", "reanudar", "cancelar", "trasladar")
 
 
 def _accion(body):
@@ -308,6 +372,18 @@ def _accion(body):
         return 404, {"error": "actividad no encontrada"}
 
     try:
+        if accion == "ofertar":
+            # Ofertar es decir "esto va adelante". Si la fecha de inicio ya
+            # pasó, arranca en el acto; si es futura, queda prevista y pasará
+            # sola a en curso ese día.
+            desde = str(act.get("desde") or "")[:10]
+            hoy = datetime.date.today().isoformat()
+            nuevo = "en_curso" if (desde and desde <= hoy) else "prevista"
+            datos.actualiza("Actividades", {"Id": body["Id"], "estado": nuevo})
+            dispara_rebuild()
+            return 200, {"ok": True, "accion": accion, "estado": nuevo,
+                         "desde": desde}
+
         if accion == "reanudar":
             # Vuelve a estar en marcha y se rehacen las clases que quedaban.
             datos.actualiza("Actividades", {"Id": body["Id"],

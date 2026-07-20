@@ -39,6 +39,7 @@ h2{font-size:1.3rem;margin:0 0 1rem}
 .badge.en_curso{background:var(--mar);color:#fff}
 .badge.finalizada{background:#eee;color:#888}
 .badge.suspendida{background:#fdf0d8;color:#8a6414}
+.badge.prevista{background:#e4e9f7;color:#3b4a80}
 .badge.confirmada{background:#dcefe0;color:#276b3c}
 label{display:block;font-size:.85rem;font-weight:600;color:var(--gris-hondo);margin:.9rem 0 .3rem}
 input[type=text],input[type=number],input[type=date],input[type=time],textarea,select{
@@ -575,6 +576,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
         <select id="temp-estado">
           <option value="propuesta">Propuesta (sondeando interés)</option>
           <option value="programada">Programada (hay grupo, con fecha)</option>
+          <option value="prevista">Prevista (ofertada, aún no empieza)</option>
           <option value="en_curso">En marcha (celebrándose)</option>
           <option value="finalizada">Finalizada</option>
         </select>
@@ -642,6 +644,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <h3 class="ficha-sub">Acciones sobre esta actividad</h3>
       <p class="ficha-nota" id="temp-motivo-actual"></p>
       <div class="acc-botones">
+        <button type="button" class="btn-primario btn-mini oculto" data-accion="ofertar" id="temp-acc-ofertar">Ofertar</button>
         <button type="button" class="btn-sec btn-mini" data-accion="suspender" id="temp-acc-suspender">Suspender</button>
         <button type="button" class="btn-sec btn-mini oculto" data-accion="reanudar" id="temp-acc-reanudar">Reanudar</button>
         <button type="button" class="btn-sec btn-mini" data-accion="cancelar">Cancelar la actividad</button>
@@ -1004,6 +1007,7 @@ function tempReset(){
   $("#temp-acciones").classList.add("oculto");
   $("#temp-acc-suspender").classList.remove("oculto");
   $("#temp-acc-reanudar").classList.add("oculto");
+  $("#temp-acc-ofertar").classList.add("oculto");
   $("#temp-precio").value=""; $("#temp-duracion").value=""; $("#temp-lugar").value="";
   $("#temp-visible").checked=true; $("#temp-mostrar_contador").checked=true;
   $("#temp-franjas_elegibles").checked=false;
@@ -1018,8 +1022,8 @@ function tempReset(){
 // Los estados se guardan en clave (en_curso) pero se enseñan escritos: el
 // guion bajo es cosa de la base de datos, no algo que Julia tenga que leer.
 const ESTADO_ETQ = {
-  propuesta:"propuesta", programada:"programada", en_curso:"en curso",
-  finalizada:"finalizada", suspendida:"suspendida",
+  propuesta:"propuesta", programada:"programada", prevista:"prevista",
+  en_curso:"en curso", finalizada:"finalizada", suspendida:"suspendida",
 };
 function _estadoEtq(e){ return ESTADO_ETQ[e] || String(e||"").replace(/_/g," "); }
 
@@ -1173,6 +1177,8 @@ function tempEditar(a){
   const suspendida = a.estado==="suspendida";
   $("#temp-acc-reanudar").classList.toggle("oculto", !suspendida);
   $("#temp-acc-suspender").classList.toggle("oculto", suspendida);
+  // Ofertar solo tiene sentido en lo que ya reunió grupo y aún no se ofertó.
+  $("#temp-acc-ofertar").classList.toggle("oculto", a.estado!=="programada");
   $("#temp-motivo-actual").textContent = a.motivo ? `Motivo registrado: ${a.motivo}` : "";
   $("#temp-precio").value=a.precio||""; $("#temp-duracion").value=a.duracion||"";
   $("#temp-lugar").value=a.lugar||"";
@@ -1213,7 +1219,12 @@ async function accionActividad(accion){
   if(!id){ aviso("Guarda antes la actividad.","error"); return; }
 
   let motivo = "", texto = "", publico = false;
-  if(accion !== "reanudar"){
+  if(accion === "ofertar"){
+    if(!await confirmar(
+      "La actividad pasará a ofertarse. Si ya ha llegado su fecha de inicio empieza "
+      + "hoy mismo; si todavía no, queda prevista y arrancará sola ese día.",
+      "Ofertar la actividad")) return;
+  }else if(accion !== "reanudar"){
     const opciones = MOTIVOS_ACC[accion] || MOTIVOS_ACC.cancelar;
     const sel = await dialogoMotivo(accion, opciones);
     if(!sel) return;
@@ -1230,7 +1241,10 @@ async function accionActividad(accion){
     const d = await r.json();
     if(d.ok){
       let msg = {suspender:"Actividad suspendida.", cancelar:"Actividad cancelada.",
-                 reanudar:"Actividad reanudada."}[accion] || "Hecho.";
+                 reanudar:"Actividad reanudada.",
+                 ofertar: d.estado==="en_curso" ? "Actividad ofertada: ya está en curso."
+                        : "Actividad ofertada: queda prevista y empezará sola el "+(d.desde||"día de inicio")+"."
+                }[accion] || "Hecho.";
       if(d.clases !== undefined) msg += ` Afecta a ${d.clases} clases pendientes.`;
       if(d.reprogramado) msg += ` Se programaron ${d.reprogramado.creadas} clases.`;
       aviso(msg,"ok");
