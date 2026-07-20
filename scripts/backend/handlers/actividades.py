@@ -23,12 +23,14 @@ corresponde la ruta/método.
 """
 import uuid
 
+from .. import agenda as logica
 from .. import datos
 from ..util import limpio, valido_texto
 from ..web import dispara_rebuild
 
 RUTA_SERVICIOS = "/admin/api/servicios"
 RUTA_ACTIVIDADES = "/admin/api/actividades"
+RUTA_ACCION = "/admin/api/actividades/accion"
 
 
 def _nuevo_uuid():
@@ -142,7 +144,8 @@ def _actividades_lista():
             "Id": r.get("Id"), "uuid": r.get("uuid"),
             "servicio_uuid": r.get("servicio_uuid"),
             "estado": r.get("estado"), "hasta": r.get("hasta"),
-            "periodo": r.get("periodo"),
+            "desde": r.get("desde"), "horario": r.get("horario"),
+            "motivo": r.get("motivo"), "periodo": r.get("periodo"),
             "umbral": r.get("umbral"), "plazas": r.get("plazas"),
             "franjas": r.get("franjas"), "franjas_elegibles": r.get("franjas_elegibles"),
             "visible": r.get("visible"), "mostrar_contador": r.get("mostrar_contador"),
@@ -170,6 +173,8 @@ def _actividades_handle(req):
             "servicio_uuid": servicio_uuid,
             "estado": limpio(body.get("estado"), 20) or "propuesta",
             "periodo": limpio(body.get("periodo"), 80),
+            "desde": limpio(body.get("desde"), 10),
+            "horario": limpio(body.get("horario"), 4000),
             "franjas": limpio(body.get("franjas"), 500),
             "interesados": 0,
         }
@@ -190,8 +195,21 @@ def _actividades_handle(req):
         fila["hasta"] = limpio(body.get("hasta"), 10)
         try:
             datos.guarda("Actividades", fila)
+            resultado = {"ok": True, "uuid": fila["uuid"]}
+            # Con calendario y fechas ya se pueden echar las clases al
+            # calendario: crear la actividad y tener que proyectarla aparte
+            # sería dejarla a medias.
+            if fila.get("horario"):
+                try:
+                    logica.sincroniza_matriz(fila)
+                    nuevas = logica.proyecta_actividad(fila, _titulo_de(fila))
+                    for i in range(0, len(nuevas), 50):
+                        datos.guarda_varios("Agenda", nuevas[i:i + 50])
+                    resultado["clases_creadas"] = len(nuevas)
+                except Exception as e:
+                    resultado["aviso"] = f"la actividad se creó, pero no se pudieron proyectar las clases: {e}"
             dispara_rebuild()
-            return 200, {"ok": True, "uuid": fila["uuid"]}
+            return 200, resultado
         except Exception as e:
             return 502, {"error": f"no se pudo crear: {e}"}
 
@@ -201,9 +219,11 @@ def _actividades_handle(req):
             return 422, {"error": "falta Id"}
         fila = {"Id": body["Id"]}
         for c in ("servicio_uuid", "estado", "periodo", "franjas", "precio",
-                  "duracion", "lugar", "hasta"):
+                  "duracion", "lugar", "hasta", "desde", "motivo"):
             if c in body:
                 fila[c] = limpio(body[c], 500)
+        if "horario" in body:
+            fila["horario"] = limpio(body["horario"], 4000)
         for c in ("umbral", "plazas"):
             if c in body and body[c] not in (None, ""):
                 try:
@@ -213,10 +233,17 @@ def _actividades_handle(req):
         for c in ("visible", "mostrar_contador", "franjas_elegibles"):
             if c in body:
                 fila[c] = bool(body[c])
+        # Tocar el calendario o las fechas obliga a rehacer lo que queda por
+        # dar: de nada sirve guardar "los martes a las 19" si la agenda sigue
+        # con los lunes. Se reprograma solo lo futuro; lo impartido es historia.
+        reprograma = any(c in body for c in ("horario", "desde", "hasta"))
         try:
             datos.actualiza("Actividades", fila)
+            resultado = {"ok": True}
+            if reprograma:
+                resultado.update(_reprograma(body["Id"]))
             dispara_rebuild()
-            return 200, {"ok": True}
+            return 200, resultado
         except Exception as e:
             return 502, {"error": f"no se pudo guardar: {e}"}
 
@@ -226,7 +253,99 @@ def _actividades_handle(req):
     return None
 
 
+def _actividad_por_id(rid):
+    for a in datos.lee("Actividades"):
+        if str(a.get("Id")) == str(rid):
+            return a
+    return None
+
+
+def _titulo_de(actividad):
+    """El nombre que se ve en la agenda es el del servicio."""
+    serv = datos.servicios_por_uuid().get(actividad.get("servicio_uuid") or "", {})
+    return serv.get("titulo_es") or "(clase)"
+
+
+def _reprograma(rid):
+    """Rehace la matriz y las clases futuras de una actividad."""
+    act = _actividad_por_id(rid)
+    if not act:
+        return {}
+    try:
+        logica.sincroniza_matriz(act)
+        borradas, creadas = logica.reprograma_actividad(act, _titulo_de(act))
+        return {"reprogramado": {"borradas": borradas, "creadas": creadas}}
+    except Exception as e:
+        return {"aviso_reprogramacion": f"no se pudieron rehacer las clases: {e}"}
+
+
+# --- Acciones sobre una actividad entera -----------------------------------
+#
+# Suspender, reanudar, cancelar o trasladar se deciden sobre la actividad,
+# pero quien lo acusa es cada una de sus clases pendientes. El motivo se
+# guarda en las dos partes: en la actividad, para saber por qué está así; y
+# en cada clase, para que aparezca en la agenda y en la estadística.
+
+_ACCIONES = ("suspender", "reanudar", "cancelar", "trasladar")
+
+
+def _accion(body):
+    accion = (body.get("accion") or "").strip()
+    if accion not in _ACCIONES:
+        return 422, {"error": "acción no reconocida"}
+    if not body.get("Id"):
+        return 422, {"error": "falta Id"}
+    motivo = limpio(body.get("motivo"), 100)
+    motivo_texto = limpio(body.get("motivo_texto"), 1000)
+    if accion in ("suspender", "cancelar", "trasladar") and not motivo:
+        return 422, {"error": "hay que indicar el motivo"}
+
+    act = _actividad_por_id(body["Id"])
+    if not act:
+        return 404, {"error": "actividad no encontrada"}
+
+    try:
+        if accion == "reanudar":
+            # Vuelve a estar en marcha y se rehacen las clases que quedaban.
+            datos.actualiza("Actividades", {"Id": body["Id"],
+                                            "estado": "en_curso", "motivo": ""})
+            act["estado"] = "en_curso"
+            borradas, creadas = logica.reprograma_actividad(act, _titulo_de(act))
+            dispara_rebuild()
+            return 200, {"ok": True, "accion": accion,
+                         "reprogramado": {"borradas": borradas, "creadas": creadas}}
+
+        if accion == "trasladar":
+            # Trasladar es cambiar el calendario: lo hace el PATCH normal con
+            # el horario nuevo. Aquí solo se deja constancia del porqué en las
+            # clases que se van a rehacer.
+            n = logica.aplica_a_futuras(act.get("uuid") or "", {
+                "motivo": motivo, "motivo_texto": motivo_texto})
+            dispara_rebuild()
+            return 200, {"ok": True, "accion": accion, "clases": n}
+
+        estado_act = "suspendida" if accion == "suspender" else "finalizada"
+        estado_clase = "aplazada" if accion == "suspender" else "cancelada"
+        datos.actualiza("Actividades", {
+            "Id": body["Id"], "estado": estado_act,
+            "motivo": (motivo + (" · " + motivo_texto if motivo_texto else "")),
+        })
+        n = logica.aplica_a_futuras(act.get("uuid") or "", {
+            "estado": estado_clase, "motivo": motivo,
+            "motivo_texto": motivo_texto,
+            "avisar_alumnos": bool(body.get("avisar_alumnos")),
+        })
+        dispara_rebuild()
+        return 200, {"ok": True, "accion": accion, "clases": n}
+    except Exception as e:
+        return 502, {"error": f"no se pudo completar la acción: {e}"}
+
+
 def handle(req):
+    if req.path == RUTA_ACCION and req.metodo == "POST":
+        if not req.usuario:
+            return 401, {"error": "no autenticado"}
+        return _accion(req.body or {})
     if req.path == RUTA_SERVICIOS:
         if not req.usuario:
             return 401, {"error": "no autenticado"}

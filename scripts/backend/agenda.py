@@ -15,6 +15,7 @@ o transforman esas ocurrencias:
 """
 import calendar
 import datetime
+import json
 import uuid
 
 from . import datos
@@ -237,3 +238,154 @@ def fila_agenda(body, con_id):
     if "avisar_alumnos" in body:
         fila["avisar_alumnos"] = bool(body["avisar_alumnos"])
     return fila
+
+
+# --- Proyección de una actividad concreta ----------------------------------
+#
+# Una actividad tiene su propio calendario semanal y una extensión temporal
+# (desde/hasta). De ahí salen sus clases: una ocurrencia por cada día que
+# encaje, entre las dos fechas. Si el calendario o las fechas cambian, hay que
+# rehacer lo que aún no se ha dado, y solo eso: lo ya impartido es historia y
+# no se toca.
+
+def horario_de(actividad):
+    """Lista de franjas semanales de una actividad, desde su campo `horario`
+    (JSON). Devuelve [] si está vacío o mal formado: sin horario no hay nada
+    que proyectar, que es distinto de fallar."""
+    try:
+        franjas = json.loads(actividad.get("horario") or "[]")
+    except Exception:
+        return []
+    if not isinstance(franjas, list):
+        return []
+    limpias = []
+    for f in franjas:
+        if not isinstance(f, dict):
+            continue
+        dia = (f.get("dia") or "").strip()
+        hora = (f.get("hora") or "").strip()
+        if DIA_NUM.get(dia) is None or not hora:
+            continue
+        limpias.append({
+            "dia": dia, "hora": hora,
+            "duracion_min": int(f.get("duracion_min") or 60),
+            "lugar": (f.get("lugar") or "").strip(),
+        })
+    return limpias
+
+
+def _rango(actividad, desde_min=None):
+    """(inicio, fin) de la actividad como fechas. `desde_min` recorta el
+    principio, que es como se reprograma solo lo que queda por delante."""
+    def _f(v):
+        try:
+            return datetime.date.fromisoformat(str(v or "")[:10])
+        except Exception:
+            return None
+    ini = _f(actividad.get("desde")) or datetime.date.today()
+    fin = _f(actividad.get("hasta"))
+    if desde_min and ini < desde_min:
+        ini = desde_min
+    return ini, fin
+
+
+def clases_de(actividad_uuid, agenda=None):
+    """Ocurrencias de una actividad, de la agenda."""
+    filas = agenda if agenda is not None else datos.lee("Agenda")
+    return [r for r in filas
+            if (r.get("actividad_id") or "") == actividad_uuid]
+
+
+def proyecta_actividad(actividad, titulo, desde_min=None):
+    """Genera las ocurrencias de una actividad entre sus fechas. Devuelve la
+    lista de filas nuevas (no las guarda)."""
+    franjas = horario_de(actividad)
+    ini, fin = _rango(actividad, desde_min)
+    if not franjas or not fin or fin < ini:
+        return []
+    serie = _nueva_serie()
+    nuevas = []
+    for f in franjas:
+        wd = DIA_NUM.get(f["dia"])
+        dia = ini
+        while dia <= fin:
+            if dia.weekday() == wd:
+                nuevas.append(_ocurrencia({
+                    "titulo": titulo,
+                    "actividad_id": actividad.get("uuid") or "",
+                    "hora_inicio": f["hora"],
+                    "duracion_min": f["duracion_min"],
+                    "lugar": f["lugar"] or actividad.get("lugar") or "",
+                    "color": "",
+                }, dia, serie, visible=bool(actividad.get("visible"))))
+            dia += datetime.timedelta(days=1)
+    return nuevas
+
+
+def reprograma_actividad(actividad, titulo, desde=None):
+    """Rehace las clases de una actividad que aún no se han celebrado.
+
+    Borra las ocurrencias futuras y las vuelve a generar con el calendario y
+    las fechas actuales. Lo ya pasado no se toca. Devuelve (borradas, creadas).
+    """
+    hoy = desde or datetime.date.today()
+    uuid_act = actividad.get("uuid") or ""
+    futuras = [r for r in clases_de(uuid_act)
+               if str(r.get("fecha") or "")[:10] >= hoy.isoformat()]
+    if futuras:
+        datos.borra_varios("Agenda", [r["Id"] for r in futuras if r.get("Id")],
+                           definitivo=True)
+    nuevas = proyecta_actividad(actividad, titulo, desde_min=hoy)
+    for i in range(0, len(nuevas), 50):
+        datos.guarda_varios("Agenda", nuevas[i:i + 50])
+    return len(futuras), len(nuevas)
+
+
+def sincroniza_matriz(actividad):
+    """Vuelca el calendario semanal de la actividad a la tabla Clases.
+
+    La matriz sigue siendo la que leen el calendario del panel y el alta de
+    clases en Cal.diy, así que las dos representaciones tienen que decir lo
+    mismo: se borran las filas de esta actividad y se escriben las de su
+    horario. Que el horario viva en la actividad y no suelto en Clases es lo
+    que permite reprogramar sabiendo a qué actividad pertenece cada franja.
+    """
+    uuid_act = actividad.get("uuid") or ""
+    try:
+        viejas = [c for c in datos.lee("Clases")
+                  if (c.get("actividad_id") or "") == uuid_act]
+        if viejas:
+            datos.borra_varios("Clases", [c["Id"] for c in viejas if c.get("Id")],
+                               definitivo=True)
+        filas = [{
+            "uuid": uuid.uuid4().hex,
+            "actividad_id": uuid_act,
+            "dia_semana": f["dia"], "hora_inicio": f["hora"],
+            "duracion_min": f["duracion_min"],
+            "lugar": f["lugar"] or actividad.get("lugar") or "",
+            "color": "", "activa": True,
+        } for f in horario_de(actividad)]
+        if filas:
+            datos.guarda_varios("Clases", filas)
+        return len(filas)
+    except Exception:
+        return 0
+
+
+def aplica_a_futuras(actividad_uuid, cambios, desde=None):
+    """Aplica un cambio a las clases de una actividad que quedan por celebrar.
+
+    Se usa para suspender, cancelar o trasladar la actividad entera: la orden
+    la da Julia sobre la actividad, pero quien la sufre es cada una de sus
+    clases. Las ya dadas se quedan como están. Devuelve cuántas se tocaron.
+    """
+    hoy = (desde or datetime.date.today()).isoformat()
+    pendientes = [r for r in clases_de(actividad_uuid)
+                  if str(r.get("fecha") or "")[:10] >= hoy
+                  and (r.get("estado") or "") != "cancelada"]
+    if not pendientes:
+        return 0
+    filas = [dict(cambios, Id=r["Id"]) for r in pendientes if r.get("Id")]
+    for i in range(0, len(filas), 50):
+        datos.actualiza_varios("Agenda", filas[i:i + 50])
+    return len(filas)

@@ -59,6 +59,18 @@ TABLAS = {
         # "Campaña de verano" o simplemente "Otoño". La fecha de vigencia
         # sigue siendo `hasta`; esto es la etiqueta legible.
         col("periodo"),
+        # Extensión temporal de la actividad. `hasta` ya existía como fecha de
+        # vigencia; `desde` es cuándo arranca. Entre las dos se proyectan las
+        # clases, así que cambiarlas reprograma lo que quede por celebrar.
+        col("desde"),
+        # Calendario semanal propio, en JSON: [{"dia":"lun","hora":"19:00",
+        # "duracion_min":75,"lugar":"Nerja"}, ...]. Es la semana tipo de ESTA
+        # actividad; la tabla Clases guarda lo mismo desglosado en filas para
+        # que la agenda y Cal.diy sigan leyéndolo como hasta ahora.
+        col("horario", "LongText"),
+        # Suspender no es cancelar: la actividad para un tiempo y se puede
+        # reanudar. Se guarda el motivo porque hay que poder explicarlo.
+        col("motivo", "LongText"),
         col("umbral", "Number"), col("interesados", "Number"),
         col("plazas", "Number"), col("cal_event_type_id", "Number"),
         col("mostrar_contador", "Checkbox"), col("visible", "Checkbox"),
