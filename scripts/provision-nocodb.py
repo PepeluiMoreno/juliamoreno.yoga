@@ -40,6 +40,11 @@ TABLAS = {
     "Servicios": [
         col("uuid"), col("se_sigue_ofertando", "Checkbox"),
         col("foto", "URL"), col("nivel"),
+        # Tarifa tipo por hora de sesión: el precio de referencia del
+        # servicio. Cada programación puede fijar luego su precio concreto
+        # (Actividades.precio); esta sirve de base y para calcular lo
+        # facturado a partir de las horas impartidas.
+        col("tarifa_hora", "Number"),
         col("titulo_es", "LongText"), col("texto_es", "LongText"),
         col("titulo_en", "LongText"), col("texto_en", "LongText"),
         col("titulo_fr", "LongText"), col("texto_fr", "LongText"),
@@ -49,6 +54,11 @@ TABLAS = {
     "Actividades": [
         col("uuid"), col("servicio_uuid"),
         col("estado"), col("hasta"),
+        # Cómo llama Julia al tramo de tiempo en que se da esta actividad.
+        # Texto libre a propósito: unas veces es "Temporada 2026/27", otras
+        # "Campaña de verano" o simplemente "Otoño". La fecha de vigencia
+        # sigue siendo `hasta`; esto es la etiqueta legible.
+        col("periodo"),
         col("umbral", "Number"), col("interesados", "Number"),
         col("plazas", "Number"), col("cal_event_type_id", "Number"),
         col("mostrar_contador", "Checkbox"), col("visible", "Checkbox"),
@@ -232,29 +242,29 @@ def siembra_demo(url, tok, ids):
 
     # --- Servicios: la cartera. Tres vivos y uno retirado. ---
     servicios = [
-        {"k": "hatha", "titulo": "Hatha yoga", "nivel": "Todos los niveles",
+        {"k": "hatha", "titulo": "Hatha yoga", "nivel": "Todos los niveles", "tarifa": 12,
          "texto": "Práctica pausada de posturas y respiración. Sirve para empezar "
                   "de cero y para sostener el hábito sin castigarse.",
          "oferta": True},
-        {"k": "mayores", "titulo": "Yoga para mayores", "nivel": "Suave",
+        {"k": "mayores", "titulo": "Yoga para mayores", "nivel": "Suave", "tarifa": 10,
          "texto": "Movimiento amable para articulaciones, equilibrio y respiración. "
                   "Se puede hacer entero desde una silla.",
          "oferta": True},
-        {"k": "mar", "titulo": "Yoga junto al mar", "nivel": "Todos los niveles",
+        {"k": "mar", "titulo": "Yoga junto al mar", "nivel": "Todos los niveles", "tarifa": 14,
          "texto": "Sesión de verano al aire libre, a primera hora, cuando la playa "
                   "todavía está tranquila y el sol no aprieta.",
          "oferta": True},
-        {"k": "vinyasa", "titulo": "Vinyasa dinámico", "nivel": "Intermedio",
+        {"k": "vinyasa", "titulo": "Vinyasa dinámico", "nivel": "Intermedio", "tarifa": 14,
          "texto": "Secuencias enlazadas con la respiración, a buen ritmo. Para quien "
                   "ya se maneja con las posturas y busca movimiento continuo.",
          "oferta": True},
-        {"k": "yin", "titulo": "Yin yoga y descanso", "nivel": "Todos los niveles",
+        {"k": "yin", "titulo": "Yin yoga y descanso", "nivel": "Todos los niveles", "tarifa": 12,
          "texto": "Posturas largas y sostenidas, con apoyos, para soltar tensión "
                   "profunda. La clase de final de semana.",
          "oferta": True},
         # Retirado de la cartera: NO debe salir en la web, pero conserva su
         # historial (temporada pasada, clases y reservas siguen ahí).
-        {"k": "embarazo", "titulo": "Yoga para el embarazo", "nivel": "Suave",
+        {"k": "embarazo", "titulo": "Yoga para el embarazo", "nivel": "Suave", "tarifa": 15,
          "texto": "Acompañamiento durante el embarazo, por trimestres.",
          "oferta": False},
     ]
@@ -263,30 +273,32 @@ def siembra_demo(url, tok, ids):
         s_uuid[s["k"]] = _uuid()
         post("Servicios", [{
             "uuid": s_uuid[s["k"]], "se_sigue_ofertando": s["oferta"],
-            "nivel": s["nivel"], "es_hash": "", "revisado": "",
+            "nivel": s["nivel"], "tarifa_hora": s["tarifa"],
+            "es_hash": "", "revisado": "",
             "titulo_es": s["titulo"], "texto_es": s["texto"],
         }])
     print(f"demo: {len(servicios)} servicios (1 retirado de la cartera)")
 
     # --- Temporadas. Hatha tiene DOS: una caducada y otra vigente. ---
+    # El `periodo` es texto libre a propósito: así llama Julia a cada tramo.
     temporadas = [
-        # (clave, servicio, estado, hasta, visible, plazas, lugar, precio, dur)
-        ("hatha_vieja", "hatha", "finalizada", en(-40), True, 12, "Nerja", "12 €", "75 min"),
-        ("hatha_actual", "hatha", "en_curso", en(90), True, 12, "Nerja", "12 €", "75 min"),
-        ("mayores_actual", "mayores", "en_curso", en(120), True, 10, "Maro", "10 €", "60 min"),
-        ("vinyasa_actual", "vinyasa", "en_curso", en(90), True, 14, "Nerja", "14 €", "60 min"),
-        ("yin_actual", "yin", "en_curso", en(90), True, 12, "Maro", "12 €", "75 min"),
+        # (clave, servicio, periodo, estado, hasta, visible, plazas, lugar, precio, dur)
+        ("hatha_vieja", "hatha", "Temporada 2025/26", "finalizada", en(-40), True, 12, "Nerja", "12 €", "75 min"),
+        ("hatha_actual", "hatha", "Temporada 2026/27", "en_curso", en(90), True, 12, "Nerja", "12 €", "75 min"),
+        ("mayores_actual", "mayores", "Curso 2026/27", "en_curso", en(120), True, 10, "Maro", "10 €", "60 min"),
+        ("vinyasa_actual", "vinyasa", "Otoño", "en_curso", en(90), True, 14, "Nerja", "14 €", "60 min"),
+        ("yin_actual", "yin", "Otoño", "en_curso", en(90), True, 12, "Maro", "12 €", "75 min"),
         # Propuesta: aún sondeando interés, no debería contar como ofertada.
-        ("mar_verano", "mar", "propuesta", en(60), True, 15, "Playa de Burriana", "14 €", "60 min"),
+        ("mar_verano", "mar", "Campaña de verano", "propuesta", en(60), True, 15, "Playa de Burriana", "14 €", "60 min"),
         # Del servicio retirado: caducada, para comprobar que el historial queda.
-        ("embarazo_2025", "embarazo", "finalizada", en(-200), True, 8, "Nerja", "15 €", "60 min"),
+        ("embarazo_2025", "embarazo", "Ciclo 2025", "finalizada", en(-200), True, 8, "Nerja", "15 €", "60 min"),
     ]
     a_uuid = {}
-    for (k, serv, estado, hasta, visible, plazas, lugar, precio, dur) in temporadas:
+    for (k, serv, periodo, estado, hasta, visible, plazas, lugar, precio, dur) in temporadas:
         a_uuid[k] = _uuid()
         post("Actividades", [{
             "uuid": a_uuid[k], "servicio_uuid": s_uuid[serv],
-            "estado": estado, "hasta": hasta,
+            "periodo": periodo, "estado": estado, "hasta": hasta,
             "umbral": 4, "interesados": 0, "plazas": plazas,
             "cal_event_type_id": 0, "mostrar_contador": True, "visible": visible,
             "franjas_elegibles": False, "franjas": "[]",

@@ -312,7 +312,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       <a href="#" class="menu-item activa" data-vista="panel">Panel de control</a>
       <a href="#" class="menu-item" data-vista="agenda">Agenda</a>
       <a href="#" class="menu-item" data-vista="sesiones">Sesiones</a>
-      <a href="#" class="menu-item" data-vista="actividades">Actividades</a>
+      <a href="#" class="menu-item" data-vista="servicios">Servicios</a>
+      <a href="#" class="menu-item" data-vista="actividades">Programación</a>
       <a href="#" class="menu-item" data-vista="tarifas">Tarifas</a>
       <a href="#" class="menu-item" data-vista="papelera">Papelera</a>
       <a href="#" class="menu-item" data-vista="estados">Estado</a>
@@ -352,17 +353,16 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     <div id="sesLista"></div>
   </section>
 
-  <section class="vista oculto" id="vista-actividades">
-  <h1>Servicios y temporadas</h1>
+  <!-- ================= Servicios (la cartera) ================= -->
+  <section class="vista oculto" id="vista-servicios">
+  <h1>Servicios</h1>
   <p style="color:var(--gris);margin:-.4rem 0 1.2rem;font-size:.95rem">
-    Un <b>servicio</b> es lo que enseñas (Hatha yoga): su nombre, su descripción y su
-    foto, que no cambian de un año a otro. Una <b>temporada</b> es ese servicio
-    programado en unas fechas concretas, con su horario, sus plazas y su precio.
-    Un servicio puede tener varias temporadas a lo largo del tiempo; retirarlo de la
-    cartera no borra nada de lo que ya se dio.
+    Lo que enseñas, al margen de cuándo lo des: el nombre, la descripción, el nivel
+    del alumnado y la tarifa por hora de sesión. Un servicio no caduca; para dejar de
+    ofrecerlo basta con quitarlo de la cartera, y su historial se conserva entero.
+    Cuándo se da cada uno se decide en <b>Programación</b>.
   </p>
 
-  <!-- ---------- Servicios (la cartera) ---------- -->
   <div class="tarjeta">
     <h2 id="form-titulo">Nuevo servicio</h2>
     <input type="hidden" id="edit-id">
@@ -384,7 +384,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 
     <div class="fila">
       <div>
-        <label for="nivel">Nivel</label>
+        <label for="nivel">Nivel del alumnado</label>
         <select id="nivel">
           <option value="">Sin especificar (no se mostrará)</option>
           <option value="Iniciación">Iniciación</option>
@@ -392,6 +392,10 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
           <option value="Intermedio">Intermedio</option>
           <option value="Avanzado">Avanzado</option>
         </select>
+      </div>
+      <div>
+        <label for="tarifa_hora">Tarifa por hora de sesión (€)</label>
+        <input type="number" id="tarifa_hora" min="0" step="0.5" placeholder="Ej. 12">
       </div>
     </div>
 
@@ -411,21 +415,40 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   </div>
 
   <div class="tarjeta">
-    <h2>Servicios</h2>
+    <h2>Cartera de servicios</h2>
     <ul class="lista-act" id="lista"></ul>
   </div>
 
-  <!-- ---------- Temporadas del servicio seleccionado ---------- -->
+  <div class="pie">Panel de gestión · <a href="/">volver a la web</a></div>
+  </section>
+
+  <!-- ============ Programación de Actividades ============ -->
+  <section class="vista oculto" id="vista-actividades">
+  <h1>Programación de Actividades</h1>
+  <p style="color:var(--gris);margin:-.4rem 0 1.2rem;font-size:.95rem">
+    Cuándo se da cada servicio. Elige uno de la lista y programa los periodos en que
+    se imparte —una campaña de verano, la temporada de otoño— con sus fechas, plazas
+    y precio. Un mismo servicio puede programarse tantas veces como haga falta.
+  </p>
+
+  <div class="tarjeta">
+    <label for="prog-servicio">Servicio a programar</label>
+    <select id="prog-servicio"><option value="">Elige un servicio…</option></select>
+  </div>
+
   <div class="tarjeta oculto" id="temporadas-tarjeta">
-    <h2>Temporadas de <span id="temp-servicio-nombre"></span></h2>
+    <h2>Programación de <span id="temp-servicio-nombre"></span></h2>
     <p style="color:var(--gris);margin:-.4rem 0 1rem;font-size:.92rem">
-      Cada temporada es una programación con sus fechas, su horario y sus plazas.
+      Cada línea es un periodo con sus fechas, su horario y sus plazas.
     </p>
     <ul class="lista-act" id="temp-lista"></ul>
 
-    <h3 id="temp-form-titulo" style="margin-top:1.4rem">Nueva temporada</h3>
+    <h3 id="temp-form-titulo" style="margin-top:1.4rem">Nuevo periodo</h3>
     <input type="hidden" id="temp-edit-id">
     <input type="hidden" id="temp-servicio-uuid">
+    <label for="temp-periodo">Denominación del periodo en el que se desarrolla</label>
+    <input type="text" id="temp-periodo" maxlength="80"
+           placeholder="Ej. Campaña de verano · Otoño 2026 · Temporada 2026/27">
     <div class="fila">
       <div>
         <label for="temp-estado">Estado</label>
@@ -465,7 +488,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
       </div>
     </div>
 
-    <label class="check" style="margin-top:1.1rem"><input type="checkbox" id="temp-franjas_elegibles"> Esta temporada tiene franjas horarias a elegir</label>
+    <label class="check" style="margin-top:1.1rem"><input type="checkbox" id="temp-franjas_elegibles"> Este periodo tiene franjas horarias a elegir</label>
     <div id="franjas-wrap" class="oculto">
       <label>Franjas horarias propuestas</label>
       <div class="franjas-grid" id="franjas-grid"></div>
@@ -477,7 +500,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     </div>
 
     <div class="botones">
-      <button class="btn-primario" id="temp-btn-guardar">Crear temporada</button>
+      <button class="btn-primario" id="temp-btn-guardar">Crear periodo</button>
       <button class="btn-sec oculto" id="temp-btn-cancelar">Cancelar edición</button>
     </div>
   </div>
@@ -745,7 +768,8 @@ function marcarFranjas(str){
 function resetForm(){
   $("#edit-id").value=""; $("#titulo_es").value=""; $("#texto_es").value="";
   mostrarFoto(""); $("#foto-estado").textContent="";
-  $("#nivel").value=""; $("#se_sigue_ofertando").checked=true;
+  $("#nivel").value=""; $("#tarifa_hora").value="";
+  $("#se_sigue_ofertando").checked=true;
   $("#form-titulo").textContent="Nuevo servicio";
   $("#btn-guardar").textContent="Crear servicio";
   $("#btn-cancelar").classList.add("oculto");
@@ -762,17 +786,20 @@ async function cargar(){
     SERVICIOS = d.servicios || [];
     const lista = $("#lista");
     if(!SERVICIOS.length){ lista.innerHTML="<li>No hay servicios todavía.</li>"; return; }
-    lista.innerHTML = SERVICIOS.map(s=>`
+    lista.innerHTML = SERVICIOS.map(s=>{
+      const tarifa = (s.tarifa_hora!==null && s.tarifa_hora!==undefined && s.tarifa_hora!=="")
+        ? `${s.tarifa_hora} €/h` : "sin tarifa";
+      return `
       <li>
         <div class="act-info">
           <span class="act-titulo">${s.titulo_es||"(sin nombre)"}</span>
           ${s.se_sigue_ofertando?'':'<span class="badge finalizada">fuera de cartera</span>'}
-          <div class="act-meta">${s.nivel||"sin nivel"}</div>
+          <div class="act-meta">${s.nivel||"sin nivel"} · ${tarifa}</div>
         </div>
-        <button class="btn-mini" onclick='verTemporadas(${JSON.stringify(s.uuid)})'>Temporadas</button>
         <button class="btn-mini" onclick='editar(${JSON.stringify(s)})'>Editar</button>
         <button class="btn-mini" onclick='borrarServicio(${JSON.stringify(s)})'>Eliminar</button>
-      </li>`).join("");
+      </li>`;}).join("");
+    opcionesServicioProg();
   }catch(e){ aviso("Error de conexión al cargar.","error"); }
 }
 
@@ -780,6 +807,7 @@ function editar(s){
   $("#edit-id").value=s.Id; $("#titulo_es").value=s.titulo_es||"";
   $("#texto_es").value=s.texto_es||""; mostrarFoto(s.foto||"");
   $("#foto-estado").textContent=""; $("#nivel").value=s.nivel||"";
+  $("#tarifa_hora").value = (s.tarifa_hora??"")===null ? "" : (s.tarifa_hora??"");
   $("#se_sigue_ofertando").checked = s.se_sigue_ofertando!==false;
   $("#form-titulo").textContent="Editar: "+(s.titulo_es||"");
   $("#btn-guardar").textContent="Guardar cambios";
@@ -795,6 +823,7 @@ $("#btn-guardar").onclick = async ()=>{
   const datos = {
     titulo_es:titulo, texto_es:$("#texto_es").value.trim(),
     foto:$("#foto").value.trim(), nivel:$("#nivel").value,
+    tarifa_hora: $("#tarifa_hora").value.trim(),
     se_sigue_ofertando: $("#se_sigue_ofertando").checked,
   };
   const editId = $("#edit-id").value;
@@ -816,6 +845,7 @@ $("#btn-guardar").onclick = async ()=>{
 
 function tempReset(){
   $("#temp-edit-id").value="";
+  $("#temp-periodo").value="";
   $("#temp-estado").value="propuesta";
   $("#temp-umbral").value=""; $("#temp-plazas").value=""; $("#temp-hasta").value="";
   $("#temp-precio").value=""; $("#temp-duracion").value=""; $("#temp-lugar").value="";
@@ -823,10 +853,33 @@ function tempReset(){
   $("#temp-franjas_elegibles").checked=false;
   $("#franjas-wrap").classList.add("oculto");
   marcarFranjas("");
-  $("#temp-form-titulo").textContent="Nueva temporada";
-  $("#temp-btn-guardar").textContent="Crear temporada";
+  $("#temp-form-titulo").textContent="Nuevo periodo";
+  $("#temp-btn-guardar").textContent="Crear periodo";
   $("#temp-btn-cancelar").classList.add("oculto");
 }
+
+// La vista de Programación empieza eligiendo a qué servicio se le programan
+// periodos. Se rellena con la cartera ya cargada, sin volver a pedirla.
+function opcionesServicioProg(){
+  const sel = $("#prog-servicio");
+  if(!sel) return;
+  const previo = sel.value;
+  sel.innerHTML = '<option value="">Elige un servicio…</option>'
+    + SERVICIOS.map(s=>`<option value="${s.uuid}">${_escL(s.titulo_es||"(sin nombre)")}`
+                        + `${s.se_sigue_ofertando?"":" · fuera de cartera"}</option>`).join("");
+  sel.value = previo;
+}
+
+async function cargarProgramacion(){
+  if(!SERVICIOS.length){ await cargar(); }
+  opcionesServicioProg();
+}
+
+$("#prog-servicio").addEventListener("change", e=>{
+  const uuid = e.target.value;
+  if(uuid) verTemporadas(uuid);
+  else $("#temporadas-tarjeta").classList.add("oculto");
+});
 
 async function verTemporadas(servicioUuid){
   const serv = SERVICIOS.find(s=>s.uuid===servicioUuid);
@@ -835,24 +888,23 @@ async function verTemporadas(servicioUuid){
   $("#temporadas-tarjeta").classList.remove("oculto");
   tempReset();
   await tempCargar();
-  $("#temporadas-tarjeta").scrollIntoView({behavior:"smooth", block:"start"});
 }
 
 async function tempCargar(){
   const servicioUuid = $("#temp-servicio-uuid").value;
   try{
     const r = await fetch(API_TEMPORADAS, {credentials:"include"});
-    if(!r.ok){ aviso("No se pudieron cargar las temporadas.","error"); return; }
+    if(!r.ok){ aviso("No se pudo cargar la programación.","error"); return; }
     const d = await r.json();
     const mias = (d.actividades||[]).filter(a=>a.servicio_uuid===servicioUuid);
     const lista = $("#temp-lista");
-    if(!mias.length){ lista.innerHTML="<li>Este servicio no tiene temporadas todavía.</li>"; return; }
+    if(!mias.length){ lista.innerHTML="<li>Este servicio no tiene periodos programados todavía.</li>"; return; }
     lista.innerHTML = mias.map(a=>`
       <li>
         <div class="act-info">
-          <span class="act-titulo">${a.hasta ? "Hasta "+a.hasta.slice(0,10) : "Sin fecha de fin"}</span>
+          <span class="act-titulo">${_escL(a.periodo||"(periodo sin nombre)")}</span>
           <span class="badge ${a.estado||'propuesta'}">${a.estado||'propuesta'}</span>
-          <div class="act-meta">Plazas: ${a.plazas??'—'} · Umbral: ${a.umbral??'—'} · ${a.lugar||'sin lugar'}${a.visible?'':' · <b>oculta</b>'}</div>
+          <div class="act-meta">${a.hasta ? "hasta "+String(a.hasta).slice(0,10) : "sin fecha de fin"} · Plazas: ${a.plazas??'—'} · ${a.lugar||'sin lugar'}${a.visible?'':' · <b>oculta</b>'}</div>
         </div>
         <button class="btn-mini" onclick='tempEditar(${JSON.stringify(a)})'>Editar</button>
         <button class="btn-mini" onclick='borrarTemporada(${JSON.stringify(a)})'>Eliminar</button>
@@ -862,6 +914,7 @@ async function tempCargar(){
 
 function tempEditar(a){
   $("#temp-edit-id").value=a.Id;
+  $("#temp-periodo").value=a.periodo||"";
   $("#temp-estado").value=a.estado||"propuesta";
   $("#temp-umbral").value=a.umbral??""; $("#temp-plazas").value=a.plazas??"";
   $("#temp-hasta").value=(a.hasta||"").slice(0,10);
@@ -872,7 +925,7 @@ function tempEditar(a){
   $("#temp-franjas_elegibles").checked=!!a.franjas_elegibles;
   $("#franjas-wrap").classList.toggle("oculto", !a.franjas_elegibles);
   marcarFranjas(a.franjas);
-  $("#temp-form-titulo").textContent="Editar temporada";
+  $("#temp-form-titulo").textContent="Editar periodo";
   $("#temp-btn-guardar").textContent="Guardar cambios";
   $("#temp-btn-cancelar").classList.remove("oculto");
 }
@@ -885,6 +938,7 @@ $("#temp-btn-guardar").onclick = async ()=>{
   const elegible=$("#temp-franjas_elegibles").checked;
   const datos = {
     servicio_uuid: servicioUuid,
+    periodo:$("#temp-periodo").value.trim(),
     estado:$("#temp-estado").value,
     franjas: elegible ? franjasSeleccionadas().join(",") : "",
     franjas_elegibles: elegible,
@@ -903,7 +957,7 @@ $("#temp-btn-guardar").onclick = async ()=>{
     const r = await fetch(API_TEMPORADAS,{method:metodo,credentials:"include",
       headers:{"Content-Type":"application/json"},body:JSON.stringify(datos)});
     const d = await r.json();
-    if(d.ok){ aviso(editId?"Temporada guardada.":"Temporada creada.","ok"); tempReset(); tempCargar(); }
+    if(d.ok){ aviso(editId?"Periodo guardado.":"Periodo creado.","ok"); tempReset(); tempCargar(); }
     else aviso(d.error||"No se pudo guardar.","error");
   }catch(e){ aviso("Error de conexión al guardar.","error"); }
   finally{ $("#temp-btn-guardar").disabled=false; }
@@ -930,7 +984,7 @@ function borrarServicio(s){
 }
 
 function borrarTemporada(a){
-  const nombre = a.hasta ? "temporada hasta "+String(a.hasta).slice(0,10) : "temporada sin fecha";
+  const nombre = a.periodo || (a.hasta ? "periodo hasta "+String(a.hasta).slice(0,10) : "periodo sin nombre");
   _borrarFila(API_TEMPORADAS, "Actividades", a, nombre, ()=>{ tempReset(); tempCargar(); });
 }
 
@@ -2794,7 +2848,8 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     if(vista==="panel") cargarDash();
     if(vista==="sesiones") cargarSesiones();
     if(vista==="tarifas") cargarTarifas();
-    if(vista==="actividades") cargar();
+    if(vista==="servicios") cargar();
+    if(vista==="actividades") cargarProgramacion();
     if(vista==="papelera") cargarPapelera();
     if(vista==="agenda"){
       // Precargar los nombres de actividad: la ficha del menú los muestra

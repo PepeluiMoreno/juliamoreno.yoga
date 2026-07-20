@@ -1,16 +1,19 @@
 """
-backend.handlers.actividades — rutas de servicios y sus temporadas.
+backend.handlers.actividades — rutas de servicios y de su programación.
 
 Modelo (ver docs/funcionalidades/actividades-clases-agenda.md):
-  - SERVICIO: lo que Julia ofrece, atemporal ("Hatha yoga"). Identidad
-    (título, texto, foto, nivel) y si se sigue ofertando (la cartera).
-  - ACTIVIDAD (temporada): una programación del servicio en una extensión
-    temporal ("Hatha, sep-dic 2026"). Cuelga de un servicio (servicio_uuid)
-    y lleva lo temporal (estado, hasta, franjas, aforo, enlace a Cal.diy).
+  - SERVICIO: lo que Julia ofrece, atemporal ("Hatha yoga"). Nombre,
+    descripción, nivel del alumnado, tarifa tipo por hora de sesión, y si
+    se sigue ofertando (la cartera).
+  - ACTIVIDAD: la PROGRAMACIÓN de un servicio en un tramo de tiempo. Cuelga
+    de él por servicio_uuid y lleva lo temporal: el `periodo` —cómo llama
+    Julia a ese tramo: "Campaña de verano", "Otoño", "Temporada 2026/27"—,
+    la vigencia (`hasta`), estado, franjas, aforo, precio y el enlace a
+    Cal.diy.
 
 Dos rutas, cada una con su CRUD:
-  /admin/api/servicios     GET/POST/PATCH   identidad + cartera
-  /admin/api/actividades   GET/POST/PATCH   programación temporal
+  /admin/api/servicios     GET/POST/PATCH/DELETE   la cartera
+  /admin/api/actividades   GET/POST/PATCH/DELETE   la programación
 
 Los identificadores son UUID (uuid4().hex), no slugs. NocoDB mantiene su
 `Id` numérico, que es el que viaja en los PATCH.
@@ -42,6 +45,7 @@ def _servicios_lista():
             "se_sigue_ofertando": r.get("se_sigue_ofertando"),
             "titulo_es": r.get("titulo_es"), "texto_es": r.get("texto_es"),
             "foto": r.get("foto"), "nivel": r.get("nivel"),
+            "tarifa_hora": r.get("tarifa_hora"),
         })
     return out
 
@@ -67,6 +71,11 @@ def _servicios_handle(req):
             "se_sigue_ofertando": bool(body.get("se_sigue_ofertando", True)),
             "es_hash": "",
         }
+        if body.get("tarifa_hora") not in (None, ""):
+            try:
+                fila["tarifa_hora"] = float(body["tarifa_hora"])
+            except Exception:
+                pass
         try:
             datos.guarda("Servicios", fila)
             dispara_rebuild()
@@ -84,6 +93,12 @@ def _servicios_handle(req):
                 fila[c] = limpio(body[c], 2000)
         if "se_sigue_ofertando" in body:
             fila["se_sigue_ofertando"] = bool(body["se_sigue_ofertando"])
+        if "tarifa_hora" in body:
+            try:
+                fila["tarifa_hora"] = (float(body["tarifa_hora"])
+                                       if body["tarifa_hora"] not in (None, "") else None)
+            except Exception:
+                pass
         # Al cambiar el texto ES, vaciar es_hash para forzar re-traducción.
         if "titulo_es" in fila or "texto_es" in fila:
             fila["es_hash"] = ""
@@ -127,6 +142,7 @@ def _actividades_lista():
             "Id": r.get("Id"), "uuid": r.get("uuid"),
             "servicio_uuid": r.get("servicio_uuid"),
             "estado": r.get("estado"), "hasta": r.get("hasta"),
+            "periodo": r.get("periodo"),
             "umbral": r.get("umbral"), "plazas": r.get("plazas"),
             "franjas": r.get("franjas"), "franjas_elegibles": r.get("franjas_elegibles"),
             "visible": r.get("visible"), "mostrar_contador": r.get("mostrar_contador"),
@@ -153,6 +169,7 @@ def _actividades_handle(req):
             "uuid": _nuevo_uuid(),
             "servicio_uuid": servicio_uuid,
             "estado": limpio(body.get("estado"), 20) or "propuesta",
+            "periodo": limpio(body.get("periodo"), 80),
             "franjas": limpio(body.get("franjas"), 500),
             "interesados": 0,
         }
@@ -183,8 +200,8 @@ def _actividades_handle(req):
         if not body.get("Id"):
             return 422, {"error": "falta Id"}
         fila = {"Id": body["Id"]}
-        for c in ("servicio_uuid", "estado", "franjas", "precio", "duracion",
-                  "lugar", "hasta"):
+        for c in ("servicio_uuid", "estado", "periodo", "franjas", "precio",
+                  "duracion", "lugar", "hasta"):
             if c in body:
                 fila[c] = limpio(body[c], 500)
         for c in ("umbral", "plazas"):
