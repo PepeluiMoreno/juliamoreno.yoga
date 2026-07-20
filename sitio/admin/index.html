@@ -297,7 +297,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 /* --- Programación: carrusel de actividades + ficha de edición --- */
 .filtros{display:flex;flex-wrap:wrap;gap:.2rem 1rem;margin:0 0 .6rem;padding:.5rem .7rem;
   background:#fff;border:1px solid var(--linea);border-radius:10px}
-.filtros .check{margin:0;font-size:.84rem;gap:.35rem}
+.filtros .check{margin:0;font-size:.85rem;gap:.35rem}
 .prog-carrusel-caja{margin:0 0 1.1rem}
 .prog-carrusel{display:flex;gap:.8rem;overflow-x:auto;padding:.2rem .2rem .8rem;scroll-snap-type:x proximity}
 .prog-tarj{flex:0 0 250px;min-height:172px;scroll-snap-align:start;background:#fff;
@@ -309,14 +309,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
    no un dato más de la lista de abajo. */
 .prog-tarj-estado{display:flex;justify-content:flex-end;margin-bottom:.5rem}
 .prog-tarj-serv{font-weight:600;font-size:1rem;color:var(--tinta);line-height:1.3}
-.prog-tarj-per{font-size:.88rem;color:var(--mar);margin:.2rem 0 .55rem}
-.prog-tarj-meta{font-size:.8rem;color:var(--gris);line-height:1.55;margin-top:auto}
+.prog-tarj-per{font-size:.9rem;color:var(--mar);margin:.2rem 0 .55rem}
+.prog-tarj-meta{font-size:.82rem;color:var(--gris);line-height:1.55;margin-top:auto}
 .prog-tarj-lugar{padding-top:0;overflow:hidden}
 .lug-foto{height:82px;margin:0 -1rem .6rem;background-size:cover;background-position:center;
   border-radius:12px 12px 0 0;background-color:var(--cielo-claro)}
 .lug-foto-vacia{display:flex;align-items:center;justify-content:center;
-  font-size:.76rem;color:var(--gris)}
-.lug-mapa{display:inline-block;margin-top:.5rem;font-size:.76rem;color:var(--mar);
+  font-size:.82rem;color:var(--gris)}
+.lug-mapa{display:inline-block;margin-top:.5rem;font-size:.82rem;color:var(--mar);
   text-decoration:underline}
 .franja-corta{flex:0 0 128px}
 /* Ficha a dos columnas: aprovecha el ancho en vez de dejar media pantalla
@@ -327,7 +327,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .hor-linea{display:flex;flex-wrap:wrap;gap:.4rem;align-items:flex-end;margin-bottom:.4rem;
   background:var(--cielo-claro);border-radius:8px;padding:.45rem .55rem}
 .hor-linea .campo{margin:0}
-.hor-linea label{font-size:.7rem;margin-bottom:.15rem}
+.hor-linea label{font-size:.85rem;margin-bottom:.2rem}
 .hor-dias{flex:1 1 150px}
 .hor-temp{flex:0 0 104px}
 .hor-hora{flex:0 0 92px}
@@ -354,12 +354,12 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 }
 
 .ficha-sub{margin:1.6rem 0 .2rem;font-size:.98rem;font-weight:600;color:var(--tinta)}
-.ficha-nota{font-size:.84rem;color:var(--gris);line-height:1.5;margin:.2rem 0 .7rem}
+.ficha-nota{font-size:.85rem;color:var(--gris);line-height:1.5;margin:.2rem 0 .7rem}
 /* Calendario semanal: una línea por franja, con el ancho que pide cada dato */
 .franja-linea{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;margin-bottom:.5rem;
   background:var(--cielo-claro);border-radius:8px;padding:.55rem .7rem}
 .franja-linea .campo{margin:0}
-.franja-linea label{font-size:.74rem}
+.franja-linea label{font-size:.85rem}
 .franja-dia{flex:0 0 132px}
 .franja-hora{flex:0 0 116px}
 .franja-dur{flex:0 0 92px}
@@ -378,28 +378,28 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .sem-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem;margin-top:.7rem}
 .sem-dia{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:.55rem .5rem;min-height:88px}
 .sem-dia.hoy{border-color:var(--mar);box-shadow:0 0 0 2px var(--cielo-claro)}
-.sem-dia-cab{font-size:.76rem;font-weight:600;color:var(--gris-hondo);text-transform:capitalize;margin-bottom:.45rem}
+.sem-dia-cab{font-size:.82rem;font-weight:600;color:var(--gris-hondo);text-transform:capitalize;margin-bottom:.45rem}
 .sem-dia.hoy .sem-dia-cab{color:var(--mar)}
 .sem-clase{border-left:3px solid var(--mar);padding:.25rem .4rem;margin-bottom:.4rem;background:var(--cielo-claro);border-radius:0 6px 6px 0}
 .sem-clase.cancelada{border-left-color:#b4433c;background:#fbeceb;opacity:.75}
 .sem-clase.aplazada{border-left-color:#b8860b;background:#fdf6e3}
 .sem-clase.pasada{opacity:.6}
-.sem-hora{font-size:.75rem;font-weight:600;color:var(--tinta)}
-.sem-nom{font-size:.75rem;color:var(--gris-hondo);line-height:1.25;margin:.1rem 0}
-.sem-ocup{font-size:.7rem;color:var(--gris)}
+.sem-hora{font-size:.82rem;font-weight:600;color:var(--tinta)}
+.sem-nom{font-size:.82rem;color:var(--gris-hondo);line-height:1.25;margin:.1rem 0}
+.sem-ocup{font-size:.8rem;color:var(--gris)}
 /* Barra de aforo: lo lleno en color, el resto en hueco */
 .sem-aforo{height:5px;background:#e6eef2;border-radius:99px;margin-top:.22rem;overflow:hidden}
 .sem-aforo-fill{height:100%;border-radius:99px;background:var(--mar)}
 .sem-aforo-fill.medio{background:#c9a227}
 .sem-aforo-fill.lleno{background:#2e7d5b}
-.sem-vacio{font-size:.74rem;color:var(--gris);padding:.2rem 0}
+.sem-vacio{font-size:.82rem;color:var(--gris);padding:.2rem 0}
 
 /* --- Tabla de actividades con su cumplimiento --- */
-.act-tabla{width:100%;border-collapse:collapse;margin-top:.6rem;font-size:.86rem;background:#fff;border:1px solid var(--linea);border-radius:10px;overflow:hidden}
-.act-tabla th{text-align:left;font-weight:600;color:var(--gris-hondo);font-size:.78rem;padding:.5rem .7rem;background:var(--cielo-claro);white-space:nowrap}
+.act-tabla{width:100%;border-collapse:collapse;margin-top:.6rem;font-size:.88rem;background:#fff;border:1px solid var(--linea);border-radius:10px;overflow:hidden}
+.act-tabla th{text-align:left;font-weight:600;color:var(--gris-hondo);font-size:.82rem;padding:.5rem .7rem;background:var(--cielo-claro);white-space:nowrap}
 .act-tabla td{padding:.5rem .7rem;border-top:1px solid var(--linea);color:var(--tinta)}
 .act-tabla td.num{text-align:right;white-space:nowrap}
-.act-tabla .sub{color:var(--gris);font-size:.78rem}
+.act-tabla .sub{color:var(--gris);font-size:.82rem}
 .mini-barra{height:5px;width:70px;background:#e6eef2;border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:.4rem}
 .mini-barra-fill{height:100%;background:var(--mar);border-radius:99px}
 
@@ -407,8 +407,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .cx-caja{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:.9rem 1rem;margin-top:.6rem}
 .cx-cifras{display:flex;flex-wrap:wrap;gap:1.4rem;margin-bottom:.7rem}
 .cx-cifra b{display:block;font-family:'Marcellus',serif;font-size:1.5rem;color:var(--mar);font-weight:400;line-height:1.1}
-.cx-cifra span{font-size:.76rem;color:var(--gris);text-transform:uppercase;letter-spacing:.04em}
-.cx-motivo{display:grid;grid-template-columns:130px 1fr 54px;align-items:center;gap:.6rem;margin-top:.35rem;font-size:.82rem}
+.cx-cifra span{font-size:.8rem;color:var(--gris);text-transform:uppercase;letter-spacing:.04em}
+.cx-motivo{display:grid;grid-template-columns:150px 1fr 60px;align-items:center;gap:.6rem;margin-top:.35rem;font-size:.85rem}
 .cx-motivo-barra{height:7px;background:#e6eef2;border-radius:99px;overflow:hidden}
 .cx-motivo-fill{height:100%;background:#b4433c;border-radius:99px}
 @media(max-width:860px){
@@ -796,7 +796,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
           <img id="lug-foto-prev" alt="" style="max-width:100%;border-radius:8px;border:1px solid var(--linea)">
           <button type="button" class="btn-mini" id="lug-foto-quitar" style="margin-top:.4rem">Quitar foto</button>
         </div>
-        <p id="lug-foto-estado" style="font-size:.8rem;color:var(--gris);margin-top:.3rem"></p>
+        <p id="lug-foto-estado" style="font-size:.82rem;color:var(--gris);margin-top:.3rem"></p>
 
         <h3 class="ficha-sub" style="margin-top:1.2rem">Horario del local</h3>
         <label class="check" style="margin:.2rem 0 .6rem">

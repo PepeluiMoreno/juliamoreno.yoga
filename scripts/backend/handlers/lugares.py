@@ -75,7 +75,8 @@ def _valida_disponibilidad(crudo):
 
 def _campos(body, fila):
     for c in ("nombre_es", "nombre_en", "nombre_fr", "nombre_de",
-              "direccion", "como_llegar", "notas"):
+              "direccion", "como_llegar", "notas",
+              "foto", "contacto_nombre", "contacto_telefono"):
         if c in body:
             fila[c] = limpio(body[c], 500)
     for c in ("lat", "lon"):
