@@ -394,12 +394,26 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   .sem-grid{grid-template-columns:repeat(2,1fr)}
   .act-tabla{display:block;overflow-x:auto}
 }
+/* Menú de móvil: mismo patrón que la web pública, checkbox + label, sin JS.
+   El checkbox va antes del layout para poder alcanzar el aside con ~. */
+.menu-check{display:none}
+.menu-btn{display:none;cursor:pointer;padding:4px;margin-right:.7rem}
+.menu-btn span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;
+  margin:5px 0;transition:transform .25s,opacity .25s}
 @media(max-width:700px){
+  .menu-btn{display:block}
   .layout{flex-direction:column}
-  .menu-lateral{width:auto;border-right:none;border-bottom:1px solid var(--linea);padding:.5rem 0}
-  .menu-lateral nav{flex-direction:row;overflow-x:auto}
-  .menu-item{border-left:none;border-bottom:3px solid transparent;white-space:nowrap}
-  .menu-item.activa{border-left:none;border-bottom-color:var(--mar)}
+  /* Plegado por defecto; se despliega al marcar el checkbox. */
+  .menu-lateral{width:auto;border-right:none;border-bottom:1px solid var(--linea);
+    padding:0;display:none}
+  .menu-check:checked ~ .layout .menu-lateral{display:block;padding:.4rem 0}
+  .menu-lateral nav{flex-direction:column}
+  .menu-item{border-left:3px solid transparent;padding:.65rem 1.2rem}
+  .menu-item.activa{border-left-color:var(--mar)}
+  /* La hamburguesa se vuelve aspa al abrir. */
+  .menu-check:checked ~ header .menu-btn span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .menu-check:checked ~ header .menu-btn span:nth-child(2){opacity:0}
+  .menu-check:checked ~ header .menu-btn span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 }
 
 .pie{text-align:center;font-size:.8rem;color:var(--gris);padding:1.5rem}
@@ -408,7 +422,11 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 </head>
 <body>
+<!-- El checkbox gobierna el menú en móvil sin JavaScript, igual que en la web
+     pública: vive antes del layout para poder alcanzar al aside con ~ -->
+<input type="checkbox" id="menu-abierto" class="menu-check" aria-hidden="true">
 <header>
+  <label for="menu-abierto" class="menu-btn" aria-label="Menú"><span></span><span></span><span></span></label>
   <a href="/" class="marca">Julia Moreno · Yoga <span class="marca-etq">(Gestión)</span></a>
   <span class="usuario" id="usuario"></span>
 </header>
@@ -3423,6 +3441,9 @@ document.querySelectorAll(".menu-item").forEach(item=>{
     item.classList.add("activa");
     document.querySelectorAll(".vista").forEach(v=>v.classList.add("oculto"));
     document.getElementById("vista-"+vista).classList.remove("oculto");
+    // En móvil el menú tapa el contenido: al elegir vista, se cierra.
+    const mc = document.getElementById("menu-abierto");
+    if(mc) mc.checked = false;
     if(vista==="panel") cargarDash();
     if(vista==="sesiones") cargarSesiones();
     if(vista==="tarifas") cargarTarifas();
