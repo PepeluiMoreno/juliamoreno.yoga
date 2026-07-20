@@ -290,16 +290,20 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dash-barra-fill{height:100%;background:var(--mar);border-radius:99px}
 /* --- Programación: carrusel de actividades + ficha de edición --- */
 .prog-carrusel-caja{margin:0 0 1.1rem}
-.prog-carrusel{display:flex;gap:.7rem;overflow-x:auto;padding:.2rem .2rem .7rem;scroll-snap-type:x proximity}
-.prog-tarj{flex:0 0 208px;scroll-snap-align:start;background:#fff;border:1px solid var(--linea);
-  border-radius:10px;padding:.7rem .8rem;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.prog-carrusel{display:flex;gap:.8rem;overflow-x:auto;padding:.2rem .2rem .8rem;scroll-snap-type:x proximity}
+.prog-tarj{flex:0 0 250px;min-height:172px;scroll-snap-align:start;background:#fff;
+  border:1px solid var(--linea);border-radius:12px;padding:.85rem 1rem;cursor:pointer;
+  text-align:left;font:inherit;color:inherit;display:flex;flex-direction:column}
 .prog-tarj:hover{border-color:var(--mar)}
 .prog-tarj.activa{border-color:var(--mar);box-shadow:0 0 0 2px var(--cielo-claro)}
-.prog-tarj-serv{font-weight:600;font-size:.9rem;color:var(--tinta);line-height:1.25}
-.prog-tarj-per{font-size:.82rem;color:var(--mar);margin:.15rem 0 .3rem}
-.prog-tarj-meta{font-size:.76rem;color:var(--gris);line-height:1.4}
-.prog-tarj-nueva{border-style:dashed;display:flex;align-items:center;justify-content:center;
-  color:var(--mar);font-weight:600;font-size:.88rem;min-height:92px}
+/* El estado va solo, arriba y a la derecha: es una etiqueta de la tarjeta,
+   no un dato más de la lista de abajo. */
+.prog-tarj-estado{display:flex;justify-content:flex-end;margin-bottom:.5rem}
+.prog-tarj-serv{font-weight:600;font-size:1rem;color:var(--tinta);line-height:1.3}
+.prog-tarj-per{font-size:.88rem;color:var(--mar);margin:.2rem 0 .55rem}
+.prog-tarj-meta{font-size:.8rem;color:var(--gris);line-height:1.55;margin-top:auto}
+.prog-tarj-nueva{border-style:dashed;align-items:center;justify-content:center;
+  color:var(--mar);font-weight:600;font-size:.92rem}
 .prog-ficha-cab{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.4rem}
 .prog-ficha-cab h2{margin:0}
 
@@ -977,18 +981,20 @@ function _nombreServicio(uuid){
 function pintaCarrusel(){
   const cont = $("#prog-carrusel");
   const tarjetas = ACTIVIDADES.map((a,i)=>{
-    const meta = [
-      a.hasta ? "hasta "+String(a.hasta).slice(0,10) : "sin fecha de fin",
+    const estado = a.estado||"propuesta";
+    // Cada dato en su línea: leídas en vertical se comparan de un vistazo
+    // entre tarjetas, que es para lo que sirve el carrusel.
+    const lineas = [
+      a.hasta ? "Hasta "+String(a.hasta).slice(0,10) : "Sin fecha de fin",
       a.plazas ? a.plazas+" plazas" : null,
       a.lugar || null,
-    ].filter(Boolean).join(" · ");
+      a.visible ? null : "No visible en la web",
+    ].filter(Boolean);
     return `<button type="button" class="prog-tarj" data-i="${i}">
+      <div class="prog-tarj-estado"><span class="badge ${estado}">${estado}</span></div>
       <div class="prog-tarj-serv">${_escL(_nombreServicio(a.servicio_uuid))}</div>
       <div class="prog-tarj-per">${_escL(a.periodo||"(sin periodo)")}</div>
-      <div class="prog-tarj-meta">
-        <span class="badge ${a.estado||'propuesta'}">${a.estado||'propuesta'}</span><br>
-        ${_escL(meta)}${a.visible?"":" · oculta"}
-      </div>
+      <div class="prog-tarj-meta">${lineas.map(l=>_escL(l)).join("<br>")}</div>
     </button>`;
   }).join("");
   cont.innerHTML = tarjetas
