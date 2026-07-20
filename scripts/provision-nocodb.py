@@ -303,7 +303,7 @@ def siembra_demo(url, tok, ids):
          "dir": "Calle Almirante Ferrándiz 12, 29780 Nerja (Málaga)",
          "lat": 36.7452, "lon": -3.8756,
          "llegar": "A dos minutos del Balcón de Europa. Portal azul, primera planta.",
-         "foto": "/assets/img/estudio-nerja.jpg",
+         "foto": "",   # se sube desde el panel
          "contacto": "", "tel": "",
          # En invierno tarde larga; en verano se corta a mediodía por el calor.
          "disp": ([{"temporada": "invierno", "tipo": "laborable", "dia": d,
@@ -316,7 +316,7 @@ def siembra_demo(url, tok, ids):
          "dir": "Plaza de las Maravillas s/n, 29787 Maro (Málaga)",
          "lat": 36.7614, "lon": -3.8237,
          "llegar": "Junto a la iglesia. Aparcamiento en la plaza.",
-         "foto": "/assets/img/local-maro.jpg",
+         "foto": "",   # se sube desde el panel
          "contacto": "Antonio Ruiz (conserje)", "tel": "952 52 00 00",
          # Es municipal: entre semana cierra a las 21:30 y en festivo solo
          # abre por la mañana, si hay quien abra.
@@ -330,7 +330,7 @@ def siembra_demo(url, tok, ids):
          "dir": "Paseo marítimo de Burriana, 29780 Nerja (Málaga)",
          "lat": 36.7419, "lon": -3.8672,
          "llegar": "Al final del paseo, junto al chiringuito. Se practica en la arena.",
-         "foto": "/assets/img/playa-burriana.jpg",
+         "foto": "",   # se sube desde el panel
          "contacto": "Chiringuito Ayo", "tel": "952 52 22 89",
          # Solo en verano y a primera hora: después ni hay sitio ni se puede
          # estar. En invierno el local sencillamente no sirve.
