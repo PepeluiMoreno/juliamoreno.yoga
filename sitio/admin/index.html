@@ -327,6 +327,14 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .lug-mini-vacia{display:flex;align-items:center;justify-content:center;
   font-size:.75rem;color:var(--gris);text-align:center;line-height:1.2}
 .lug-datos{flex:1 1 auto;min-width:0;font-size:.82rem;color:var(--gris);line-height:1.5}
+/* Miniatura y mapa de la FICHA. Sin estas reglas la imagen se pinta a tamaño
+   natural y se come la pantalla, que es lo que pasó al reescribir este bloque
+   y llevarme por delante los estilos que ya estaban. */
+.lug-foto-prev{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;
+  border-radius:10px;border:1px solid var(--linea)}
+.lug-mapa-prev{display:block;width:100%;height:140px;border:1px solid var(--linea);
+  border-radius:10px;margin-top:.7rem}
+.lug-mapa-prev.oculto{display:none}
 .lug-mapa{display:inline-block;margin-top:.35rem;font-size:.82rem;color:var(--mar);
   text-decoration:underline}
 .franja-corta{flex:0 0 128px}
@@ -340,6 +348,7 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   align-items:end;margin-bottom:.45rem;background:var(--cielo-claro);
   border-radius:8px;padding:.5rem .6rem}
 .hor-linea .hor-dias{grid-column:1/3}
+.hor-linea .hor-temp,.hor-linea .hor-hora{min-width:0}
 .hor-linea .franja-quitar{grid-row:1;grid-column:3;align-self:end}
 .hor-linea .campo{margin:0}
 .hor-linea label{font-size:.85rem;margin-bottom:.2rem}
