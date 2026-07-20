@@ -385,6 +385,20 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   .campo-num,.campo-fecha,.campo-corto,.campo-medio,.campo-ancho{flex:1 1 100%;max-width:none}
 }
 
+/* Icono de ayuda: la explicación de cada estado no tiene que repetirse en
+   todas las opciones del desplegable, donde estorba cada vez que se abre.
+   Aquí está a mano cuando hace falta y calla el resto del tiempo. */
+.ayuda{display:inline-flex;align-items:center;justify-content:center;width:15px;
+  height:15px;margin-left:.35rem;border-radius:50%;background:var(--cielo-claro);
+  color:var(--mar);font-size:.7rem;font-weight:700;font-style:normal;cursor:help;
+  vertical-align:middle;position:relative}
+.ayuda:hover,.ayuda:focus{background:var(--mar);color:#fff;outline:none}
+.ayuda::after{content:attr(data-hint);position:absolute;left:50%;bottom:calc(100% + 8px);
+  transform:translateX(-50%);width:250px;padding:.55rem .7rem;border-radius:8px;
+  background:var(--tinta);color:#fff;font-size:.78rem;font-weight:400;line-height:1.45;
+  text-align:left;opacity:0;visibility:hidden;transition:opacity .12s;z-index:50;
+  pointer-events:none;box-shadow:0 6px 18px rgba(21,63,84,.25)}
+.ayuda:hover::after,.ayuda:focus::after{opacity:1;visibility:visible}
 .ficha-sub{margin:1.6rem 0 .2rem;font-size:.98rem;font-weight:600;color:var(--tinta)}
 .ficha-nota{font-size:.85rem;color:var(--gris);line-height:1.5;margin:.2rem 0 .7rem}
 /* Calendario semanal: una línea por franja, con el ancho que pide cada dato */
@@ -664,12 +678,15 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 
     <div class="campos">
       <div class="campo campo-medio">
-        <label for="temp-estado">Estado</label>
+        <label for="temp-estado">Estado
+          <span class="ayuda" tabindex="0" role="note" aria-label="Qué significa cada estado"
+                data-hint="Propuesta: sondeando interés · Programada: hay grupo y fecha · Prevista: ofertada, aún no empieza · En marcha: celebrándose · Finalizada: ya terminó">i</span>
+        </label>
         <select id="temp-estado">
-          <option value="propuesta">Propuesta (sondeando interés)</option>
-          <option value="programada">Programada (hay grupo, con fecha)</option>
-          <option value="prevista">Prevista (ofertada, aún no empieza)</option>
-          <option value="en_curso">En marcha (celebrándose)</option>
+          <option value="propuesta">Propuesta</option>
+          <option value="programada">Programada</option>
+          <option value="prevista">Prevista</option>
+          <option value="en_curso">En marcha</option>
           <option value="finalizada">Finalizada</option>
         </select>
       </div>
