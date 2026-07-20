@@ -451,7 +451,30 @@ def siembra_demo(url, tok, ids):
     apunta(A[1:3], 2, "19:00", estado="cancelled")
     apunta(A[10:11], 3, "11:00", estado="cancelled")
 
-    post("Reservas", reservas)
+    # Alumnado en clases YA DADAS: sin esto no habría nada facturado que
+    # enseñar, porque solo se factura lo impartido. Se recorren las clases
+    # pasadas REALES de la agenda —no fechas calculadas a ojo, que caerían en
+    # días donde no hay clase— y se les apunta un grupo, rotando la lista para
+    # que no vaya siempre la misma gente.
+    dadas = sorted([f for f in filas_agenda
+                    if f["fecha"] < hoy.isoformat()
+                    and f["estado"] == "programada"],
+                   key=lambda f: f["fecha"])
+    for i, c in enumerate(dadas):
+        corte = 4 + (i % 5)                    # entre 4 y 8 alumnos
+        grupo = (A * 2)[i % len(A): i % len(A) + corte]
+        for (n, e, t) in grupo:
+            reservas.append({
+                "cal_uid": _uuid()[:16], "event_type_id": 0,
+                "inicio": c["fecha"] + "T" + c["hora_inicio"] + ":00Z",
+                "nombre": n, "email": e, "telefono": t,
+                "estado": "accepted", "fecha": ahora,
+            })
+
+    # En lotes: NocoDB rechaza sin más una inserción de cientos de filas de
+    # una tacada, y lo hace en silencio (no da error, simplemente no guarda).
+    for i in range(0, len(reservas), 50):
+        post("Reservas", reservas[i:i + 50])
     n_baja = sum(1 for r in reservas if r["estado"] == "cancelled")
     print(f"demo: {len(reservas)} reservas de {len(A)} alumnos "
           f"({n_baja} canceladas por el alumno)")

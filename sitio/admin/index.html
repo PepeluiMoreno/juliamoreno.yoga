@@ -288,6 +288,50 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dash-prep-n{font-size:.82rem;color:var(--gris)}
 .dash-barra{height:6px;background:var(--cielo-claro);border-radius:99px;margin-top:.4rem;overflow:hidden}
 .dash-barra-fill{height:100%;background:var(--mar);border-radius:99px}
+.dash-tit{margin:1.8rem 0 .2rem;font-size:1.05rem;font-weight:600;color:var(--tinta)}
+.dash-tit-nota{font-weight:400;font-size:.82rem;color:var(--gris)}
+
+/* --- La semana en curso: una columna por día, las clases dentro --- */
+.sem-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:.5rem;margin-top:.7rem}
+.sem-dia{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:.55rem .5rem;min-height:88px}
+.sem-dia.hoy{border-color:var(--mar);box-shadow:0 0 0 2px var(--cielo-claro)}
+.sem-dia-cab{font-size:.76rem;font-weight:600;color:var(--gris-hondo);text-transform:capitalize;margin-bottom:.45rem}
+.sem-dia.hoy .sem-dia-cab{color:var(--mar)}
+.sem-clase{border-left:3px solid var(--mar);padding:.25rem .4rem;margin-bottom:.4rem;background:var(--cielo-claro);border-radius:0 6px 6px 0}
+.sem-clase.cancelada{border-left-color:#b4433c;background:#fbeceb;opacity:.75}
+.sem-clase.aplazada{border-left-color:#b8860b;background:#fdf6e3}
+.sem-clase.pasada{opacity:.6}
+.sem-hora{font-size:.75rem;font-weight:600;color:var(--tinta)}
+.sem-nom{font-size:.75rem;color:var(--gris-hondo);line-height:1.25;margin:.1rem 0}
+.sem-ocup{font-size:.7rem;color:var(--gris)}
+/* Barra de aforo: lo lleno en color, el resto en hueco */
+.sem-aforo{height:5px;background:#e6eef2;border-radius:99px;margin-top:.22rem;overflow:hidden}
+.sem-aforo-fill{height:100%;border-radius:99px;background:var(--mar)}
+.sem-aforo-fill.medio{background:#c9a227}
+.sem-aforo-fill.lleno{background:#2e7d5b}
+.sem-vacio{font-size:.74rem;color:var(--gris);padding:.2rem 0}
+
+/* --- Tabla de actividades con su cumplimiento --- */
+.act-tabla{width:100%;border-collapse:collapse;margin-top:.6rem;font-size:.86rem;background:#fff;border:1px solid var(--linea);border-radius:10px;overflow:hidden}
+.act-tabla th{text-align:left;font-weight:600;color:var(--gris-hondo);font-size:.78rem;padding:.5rem .7rem;background:var(--cielo-claro);white-space:nowrap}
+.act-tabla td{padding:.5rem .7rem;border-top:1px solid var(--linea);color:var(--tinta)}
+.act-tabla td.num{text-align:right;white-space:nowrap}
+.act-tabla .sub{color:var(--gris);font-size:.78rem}
+.mini-barra{height:5px;width:70px;background:#e6eef2;border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:.4rem}
+.mini-barra-fill{height:100%;background:var(--mar);border-radius:99px}
+
+/* --- Cancelaciones: fidelidad y reparto por motivo --- */
+.cx-caja{background:#fff;border:1px solid var(--linea);border-radius:10px;padding:.9rem 1rem;margin-top:.6rem}
+.cx-cifras{display:flex;flex-wrap:wrap;gap:1.4rem;margin-bottom:.7rem}
+.cx-cifra b{display:block;font-family:'Marcellus',serif;font-size:1.5rem;color:var(--mar);font-weight:400;line-height:1.1}
+.cx-cifra span{font-size:.76rem;color:var(--gris);text-transform:uppercase;letter-spacing:.04em}
+.cx-motivo{display:grid;grid-template-columns:130px 1fr 54px;align-items:center;gap:.6rem;margin-top:.35rem;font-size:.82rem}
+.cx-motivo-barra{height:7px;background:#e6eef2;border-radius:99px;overflow:hidden}
+.cx-motivo-fill{height:100%;background:#b4433c;border-radius:99px}
+@media(max-width:860px){
+  .sem-grid{grid-template-columns:repeat(2,1fr)}
+  .act-tabla{display:block;overflow-x:auto}
+}
 @media(max-width:700px){
   .layout{flex-direction:column}
   .menu-lateral{width:auto;border-right:none;border-bottom:1px solid var(--linea);padding:.5rem 0}
@@ -325,10 +369,21 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   <section class="vista" id="vista-panel">
     <h1>Panel de control</h1>
     <div class="dash-contadores" id="dashContadores"></div>
-    <h2 style="margin-top:1.5rem;font-size:1.1rem">Actividades ofertadas</h2>
-    <div class="dash-prep" id="dashOfertadas"></div>
-    <h2 style="margin-top:1.5rem;font-size:1.1rem">Actividades en preparación</h2>
+
+    <h2 class="dash-tit">Esta semana</h2>
+    <div id="dashSemana"></div>
+
+    <h2 class="dash-tit">Cartera de servicios</h2>
+    <div class="dash-prep" id="dashCartera"></div>
+
+    <h2 class="dash-tit">Actividades en curso</h2>
+    <div id="dashEnCurso"></div>
+
+    <h2 class="dash-tit">Actividades en preparación</h2>
     <div class="dash-prep" id="dashPrep"></div>
+
+    <h2 class="dash-tit">Cumplimiento de la programación <span id="dashEjercicio" class="dash-tit-nota"></span></h2>
+    <div id="dashCancel"></div>
   </section>
 
   <section class="vista oculto" id="vista-sesiones">
@@ -991,13 +1046,131 @@ function borrarTemporada(a){
 
 // --- Dashboard (panel de control) ---
 const API_RESUMEN = "https://api.juliamoreno.yoga/admin/api/resumen";
+// --- Piezas del Panel de control ---
+const DIAS_SEM = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"];
+
+// La semana en curso, un día por columna. Cada clase lleva su barra de aforo:
+// el color dice de un vistazo si está vacía, a medias o llena, que es lo que
+// Julia mira para saber dónde hace falta empujar.
+function pintaSemana(clases, hoyISO){
+  const cont = $("#dashSemana");
+  if(!clases.length){
+    cont.innerHTML = '<p style="color:var(--gris)">No hay clases programadas esta semana.</p>';
+    return;
+  }
+  const porDia = [[],[],[],[],[],[],[]];
+  clases.forEach(c=>{ porDia[c.dia_semana].push(c); });
+  cont.innerHTML = `<div class="sem-grid">` + porDia.map((lista, i)=>{
+    const esHoy = lista.length ? lista[0].hoy : false;
+    const fecha = lista.length ? lista[0].fecha : "";
+    const cab = `${DIAS_SEM[i]}${fecha?` ${Number(fecha.slice(8,10))}`:""}`;
+    const cuerpo = lista.length ? lista.map(c=>{
+      const plazas = c.plazas, ocup = c.ocupadas||0;
+      let barra = "";
+      if(plazas){
+        const pct = Math.min(100, Math.round(ocup/plazas*100));
+        const clase = pct>=100 ? "lleno" : (pct>=60 ? "medio" : "");
+        barra = `<div class="sem-aforo"><div class="sem-aforo-fill ${clase}" style="width:${pct}%"></div></div>`;
+      }
+      const est = c.estado!=="programada" ? c.estado : (c.pasada?"pasada":"");
+      const nota = c.estado==="cancelada" ? ` · ${_escL(c.motivo||"cancelada")}`
+                 : (c.estado==="aplazada" ? " · aplazada" : "");
+      return `<div class="sem-clase ${est}">
+        <div class="sem-hora">${_escL(c.hora)}</div>
+        <div class="sem-nom">${_escL(c.titulo)}${nota}</div>
+        <div class="sem-ocup">${plazas?`${ocup}/${plazas} plazas`:`${ocup} apuntados`}</div>
+        ${barra}
+      </div>`;
+    }).join("") : '<div class="sem-vacio">—</div>';
+    return `<div class="sem-dia ${esHoy?"hoy":""}">
+      <div class="sem-dia-cab">${cab}</div>${cuerpo}</div>`;
+  }).join("") + `</div>`;
+}
+
+function pintaCartera(cartera){
+  $("#dashCartera").innerHTML = cartera.length ? cartera.map(s=>{
+    const meta = [s.nivel, s.tarifa_hora?`${s.tarifa_hora} €/h`:null,
+                  `${s.programaciones} programación${s.programaciones===1?"":"es"}`]
+                 .filter(Boolean).join(" · ");
+    return `<div class="dash-prep-card">
+      <div class="dash-prep-tit">${_escL(s.titulo)}</div>
+      <div class="dash-prep-n">${_escL(meta)}</div>
+    </div>`;
+  }).join("") : '<p style="color:var(--gris)">No hay servicios en la cartera.</p>';
+}
+
+// Cada actividad con su cumplimiento: cuántas clases se han dado de las que
+// tocaban, las reservas y lo facturado. Es el "cómo va esto" de un vistazo.
+function pintaActividades(acts){
+  const cont = $("#dashEnCurso");
+  if(!acts.length){
+    cont.innerHTML = '<p style="color:var(--gris)">No hay actividades en marcha ahora mismo.</p>';
+    return;
+  }
+  cont.innerHTML = `<table class="act-tabla">
+    <thead><tr>
+      <th>Actividad</th><th>Periodo</th>
+      <th class="num">Clases</th><th>Cumplimiento</th>
+      <th class="num">Reservas</th><th class="num">Facturado</th>
+    </tr></thead><tbody>` + acts.map(a=>{
+      const pct = a.cumplimiento;
+      const barra = pct===null||pct===undefined ? '<span class="sub">sin clases aún</span>'
+        : `<span class="mini-barra"><span class="mini-barra-fill" style="width:${pct}%"></span></span>${pct}%`;
+      return `<tr>
+        <td>${_escL(a.titulo)}<div class="sub">${_escL(a.lugar||"")}</div></td>
+        <td>${_escL(a.periodo||"—")}</td>
+        <td class="num">${a.celebradas}/${a.pasadas}<div class="sub">de ${a.programadas}</div></td>
+        <td>${barra}</td>
+        <td class="num">${a.reservas}</td>
+        <td class="num">${a.facturado ? a.facturado.toFixed(0)+" €" : "—"}</td>
+      </tr>`;
+    }).join("") + `</tbody></table>`;
+}
+
+function pintaPreparacion(prep){
+  $("#dashPrep").innerHTML = prep.length ? prep.map(p=>`
+    <div class="dash-prep-card">
+      <div class="dash-prep-tit">${_escL(p.titulo)}</div>
+      <div class="dash-prep-n">${_escL(p.periodo||"sin periodo")} · ${p.reservas} reservas</div>
+    </div>`).join("")
+    : '<p style="color:var(--gris)">No hay actividades en preparación.</p>';
+}
+
+// Cuánto de lo programado se cumple, y por qué se cae lo que se cae. Las
+// bajas de Julia (clases enteras) van separadas de las de los alumnos
+// (reservas sueltas): no son lo mismo ni se arreglan igual.
+function pintaCancelaciones(cx){
+  $("#dashEjercicio").textContent = cx.desde ? `· desde ${cx.desde}` : "";
+  if(!cx.programadas){
+    $("#dashCancel").innerHTML = '<p style="color:var(--gris)">Aún no hay clases en este ejercicio.</p>';
+    return;
+  }
+  const motivos = (cx.por_motivo||[]).map(m=>`
+    <div class="cx-motivo">
+      <span>${_escL(m.motivo)}</span>
+      <span class="cx-motivo-barra"><span class="cx-motivo-fill" style="width:${m.pct}%"></span></span>
+      <span class="sub">${m.n} · ${m.pct}%</span>
+    </div>`).join("");
+  $("#dashCancel").innerHTML = `<div class="cx-caja">
+    <div class="cx-cifras">
+      <div class="cx-cifra"><b>${cx.fidelidad??"—"}%</b><span>se impartió</span></div>
+      <div class="cx-cifra"><b>${cx.programadas}</b><span>programadas</span></div>
+      <div class="cx-cifra"><b>${cx.canceladas}</b><span>canceladas</span></div>
+      <div class="cx-cifra"><b>${cx.aplazadas}</b><span>aplazadas</span></div>
+      <div class="cx-cifra"><b>${cx.bajas_alumno}</b><span>bajas de alumno</span></div>
+    </div>
+    ${motivos ? `<div class="sub" style="margin-top:.4rem;color:var(--gris);font-size:.8rem">Por qué se cayeron</div>${motivos}`
+              : '<div class="sub" style="color:var(--gris)">Ninguna incidencia todavía.</div>'}
+  </div>`;
+}
+
 async function cargarDash(){
   // Nada de fallar en silencio: si el resumen no carga, el panel se
   // quedaba vacío sin explicar por qué y parecía que no hay actividades.
   const _fallo = (txt)=>{
-    $("#dashOfertadas").innerHTML =
-      `<p style="color:#8a2b26">${txt}</p>`;
-    $("#dashPrep").innerHTML = "";
+    $("#dashSemana").innerHTML = `<p style="color:#8a2b26">${txt}</p>`;
+    ["#dashCartera","#dashEnCurso","#dashPrep","#dashCancel"]
+      .forEach(s=>{ $(s).innerHTML = ""; });
   };
   try{
     const r = await fetch(API_RESUMEN, {credentials:"include"});
@@ -1011,34 +1184,20 @@ async function cargarDash(){
     if(d.error){ _fallo(d.error); return; }
     const tt = d.totales || {};
     const cont = [
-      ["Ofertadas", tt.ofertadas],
-      ["Programadas", tt.programadas],
+      ["Servicios", tt.servicios_ofertados],
+      ["En curso", tt.ofertadas],
       ["En preparación", tt.en_preparacion],
       ["Horas/mes", tt.horas_mes],
       ["Interesados", tt.total_interesados],
     ];
     $("#dashContadores").innerHTML = cont.map(([l,n])=>
       `<div class="dash-card"><div class="dash-num">${n??0}</div><div class="dash-lbl">${l}</div></div>`).join("");
-    // Actividades ofertadas (en curso)
-    const of = d.ofertadas || [];
-    $("#dashOfertadas").innerHTML = of.length ? of.map(o=>{
-      const meta = [o.duracion, o.lugar, o.nivel].filter(Boolean).join(" · ");
-      return `<div class="dash-prep-card">
-        <div class="dash-prep-tit">${o.titulo}</div>
-        <div class="dash-prep-n">${meta||"&nbsp;"}</div>
-      </div>`;
-    }).join("") : '<p style="color:var(--gris)">No hay actividades en marcha ahora mismo.</p>';
-    // Actividades en preparación
-    const prep = d.preparacion || [];
-    $("#dashPrep").innerHTML = prep.length ? prep.map(p=>{
-      const pct = p.umbral>0 ? Math.min(100, Math.round(p.interesados/p.umbral*100)) : 0;
-      const meta = p.umbral>0 ? `${p.interesados} / ${p.umbral} interesados` : `${p.interesados} interesados`;
-      return `<div class="dash-prep-card">
-        <div class="dash-prep-tit">${p.titulo}</div>
-        <div class="dash-prep-n">${meta}</div>
-        ${p.umbral>0?`<div class="dash-barra"><div class="dash-barra-fill" style="width:${pct}%"></div></div>`:''}
-      </div>`;
-    }).join("") : '<p style="color:var(--gris)">No hay actividades en preparación.</p>';
+
+    pintaSemana(d.semana||[], d.hoy);
+    pintaCartera(d.cartera||[]);
+    pintaActividades(d.en_curso||[]);
+    pintaPreparacion(d.preparacion||[]);
+    pintaCancelaciones(d.cancelaciones||{});
   }catch(e){ _fallo("Error de conexión al cargar el resumen."); }
 }
 
