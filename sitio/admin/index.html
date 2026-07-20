@@ -295,6 +295,9 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 .dash-barra{height:6px;background:var(--cielo-claro);border-radius:99px;margin-top:.4rem;overflow:hidden}
 .dash-barra-fill{height:100%;background:var(--mar);border-radius:99px}
 /* --- Programación: carrusel de actividades + ficha de edición --- */
+.filtros{display:flex;flex-wrap:wrap;gap:.2rem 1rem;margin:0 0 .6rem;padding:.5rem .7rem;
+  background:#fff;border:1px solid var(--linea);border-radius:10px}
+.filtros .check{margin:0;font-size:.84rem;gap:.35rem}
 .prog-carrusel-caja{margin:0 0 1.1rem}
 .prog-carrusel{display:flex;gap:.8rem;overflow-x:auto;padding:.2rem .2rem .8rem;scroll-snap-type:x proximity}
 .prog-tarj{flex:0 0 250px;min-height:172px;scroll-snap-align:start;background:#fff;
@@ -477,8 +480,21 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     Cuándo se da cada uno se decide en <b>Programación</b>.
   </p>
 
+  <!-- Carrusel de la cartera -->
+  <div class="filtros" id="serv-filtros">
+    <label class="check"><input type="checkbox" value="" checked> Todos</label>
+    <label class="check"><input type="checkbox" value="cartera"> En cartera</label>
+    <label class="check"><input type="checkbox" value="fuera"> Fuera de cartera</label>
+  </div>
+  <div class="prog-carrusel-caja">
+    <div class="prog-carrusel" id="serv-carrusel"></div>
+  </div>
+
   <div class="tarjeta">
-    <h2 id="form-titulo">Nuevo servicio</h2>
+    <div class="prog-ficha-cab">
+      <h2 id="form-titulo">Nuevo servicio</h2>
+      <button class="btn-sec btn-mini oculto" id="btn-cancelar">Dejar de editar</button>
+    </div>
     <input type="hidden" id="edit-id">
     <label for="titulo_es">Nombre del servicio</label>
     <input type="text" id="titulo_es" placeholder="Ej. Hatha yoga" maxlength="200">
@@ -496,8 +512,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
     </div>
     <p id="foto-estado" style="font-size:.82rem;color:var(--gris);margin-top:.3rem"></p>
 
-    <div class="fila">
-      <div>
+    <div class="campos">
+      <div class="campo campo-medio">
         <label for="nivel">Nivel del alumnado</label>
         <select id="nivel">
           <option value="">Sin especificar (no se mostrará)</option>
@@ -507,9 +523,9 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
           <option value="Avanzado">Avanzado</option>
         </select>
       </div>
-      <div>
-        <label for="tarifa_hora">Tarifa por hora de sesión (€)</label>
-        <input type="number" id="tarifa_hora" min="0" step="0.5" placeholder="Ej. 12">
+      <div class="campo campo-corto">
+        <label for="tarifa_hora">Tarifa (€/hora)</label>
+        <input type="number" id="tarifa_hora" min="0" step="0.5" placeholder="12">
       </div>
     </div>
 
@@ -524,13 +540,8 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
 
     <div class="botones">
       <button class="btn-primario" id="btn-guardar">Crear servicio</button>
-      <button class="btn-sec oculto" id="btn-cancelar">Cancelar edición</button>
+      <button class="btn-sec btn-mini oculto" id="btn-borrar">Eliminar este servicio</button>
     </div>
-  </div>
-
-  <div class="tarjeta">
-    <h2>Cartera de servicios</h2>
-    <ul class="lista-act" id="lista"></ul>
   </div>
 
   <div class="pie">Panel de gestión · <a href="/">volver a la web</a></div>
@@ -546,6 +557,15 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
   </p>
 
   <!-- Carrusel de las actividades ya programadas -->
+  <div class="filtros" id="prog-filtros">
+    <label class="check"><input type="checkbox" value="" checked> Todas</label>
+    <label class="check"><input type="checkbox" value="propuesta"> Propuestas</label>
+    <label class="check"><input type="checkbox" value="programada"> Programadas</label>
+    <label class="check"><input type="checkbox" value="prevista"> Previstas</label>
+    <label class="check"><input type="checkbox" value="en_curso"> En curso</label>
+    <label class="check"><input type="checkbox" value="suspendida"> Suspendidas</label>
+    <label class="check"><input type="checkbox" value="finalizada"> Finalizadas</label>
+  </div>
   <div class="prog-carrusel-caja">
     <div class="prog-carrusel" id="prog-carrusel"></div>
   </div>
@@ -921,10 +941,80 @@ function resetForm(){
   $("#form-titulo").textContent="Nuevo servicio";
   $("#btn-guardar").textContent="Crear servicio";
   $("#btn-cancelar").classList.add("oculto");
+  $("#btn-borrar").classList.add("oculto");
+  document.querySelectorAll("#serv-carrusel .prog-tarj").forEach(t=>t.classList.remove("activa"));
 }
 
 // Servicios cargados, para saber el nombre del que se está mirando.
 let SERVICIOS = [];
+
+// --- Filtros de los carruseles ---
+// Grupo de casillas con un "Todos" que manda: marcarlo desmarca los demás, y
+// marcar cualquier otro lo suelta. Sin ninguna marcada se vuelve a Todos, que
+// es lo que se espera al ir desmarcando.
+function montaFiltro(sel, alCambiar){
+  const cont = document.querySelector(sel);
+  if(!cont) return;
+  const cajas = [...cont.querySelectorAll("input[type=checkbox]")];
+  const todos = cajas.find(c=>c.value==="");
+  cajas.forEach(c=>c.addEventListener("change", ()=>{
+    if(c === todos){
+      if(c.checked) cajas.forEach(o=>{ if(o!==todos) o.checked=false; });
+      else c.checked = true;              // Todos no se puede desmarcar solo
+    }else{
+      if(c.checked) todos.checked = false;
+      if(!cajas.some(o=>o!==todos && o.checked)) todos.checked = true;
+    }
+    alCambiar();
+  }));
+}
+
+function filtroActivo(sel){
+  const cont = document.querySelector(sel);
+  if(!cont) return [];
+  const marcados = [...cont.querySelectorAll("input[type=checkbox]:checked")]
+    .map(c=>c.value).filter(Boolean);
+  return marcados;   // vacío = todos
+}
+
+// --- Carrusel de servicios ---
+function pintaCarruselServicios(){
+  const cont = $("#serv-carrusel");
+  const filtro = filtroActivo("#serv-filtros");
+  const lista = SERVICIOS.filter(s=>{
+    if(!filtro.length) return true;
+    const dentro = !!s.se_sigue_ofertando;
+    return (dentro && filtro.includes("cartera")) || (!dentro && filtro.includes("fuera"));
+  });
+  const tarjetas = lista.map(s=>{
+    const i = SERVICIOS.indexOf(s);
+    const tarifa = (s.tarifa_hora!==null && s.tarifa_hora!==undefined && s.tarifa_hora!=="")
+      ? `${s.tarifa_hora} €/hora` : "Sin tarifa";
+    const lineas = [s.nivel || "Sin nivel", tarifa,
+                    s.se_sigue_ofertando ? null : "Fuera de cartera"].filter(Boolean);
+    return `<button type="button" class="prog-tarj" data-i="${i}">
+      <div class="prog-tarj-estado">
+        <span class="badge ${s.se_sigue_ofertando?"en_curso":"finalizada"}">
+          ${s.se_sigue_ofertando?"en cartera":"retirado"}</span>
+      </div>
+      <div class="prog-tarj-serv">${_escL(s.titulo_es||"(sin nombre)")}</div>
+      <div class="prog-tarj-meta">${lineas.map(l=>_escL(l)).join("<br>")}</div>
+    </button>`;
+  }).join("");
+  cont.innerHTML = (tarjetas || '<div class="franja-vacia">Ningún servicio con ese filtro.</div>')
+    + `<button type="button" class="prog-tarj prog-tarj-nueva" data-nuevo="1">+ Nuevo servicio</button>`;
+  cont.querySelectorAll(".prog-tarj").forEach(t=>{
+    t.addEventListener("click", ()=>{
+      if(t.dataset.nuevo){ resetForm(); return; }
+      editar(SERVICIOS[Number(t.dataset.i)]);
+      cont.querySelectorAll(".prog-tarj").forEach(x=>x.classList.remove("activa"));
+      t.classList.add("activa");
+    });
+  });
+}
+
+montaFiltro("#serv-filtros", ()=>pintaCarruselServicios());
+montaFiltro("#prog-filtros", ()=>pintaCarrusel());
 
 async function cargar(){
   try{
@@ -932,21 +1022,7 @@ async function cargar(){
     if(!r.ok){ aviso("No se pudieron cargar los servicios (¿sesión caducada?).","error"); return; }
     const d = await r.json();
     SERVICIOS = d.servicios || [];
-    const lista = $("#lista");
-    if(!SERVICIOS.length){ lista.innerHTML="<li>No hay servicios todavía.</li>"; return; }
-    lista.innerHTML = SERVICIOS.map(s=>{
-      const tarifa = (s.tarifa_hora!==null && s.tarifa_hora!==undefined && s.tarifa_hora!=="")
-        ? `${s.tarifa_hora} €/h` : "sin tarifa";
-      return `
-      <li>
-        <div class="act-info">
-          <span class="act-titulo">${s.titulo_es||"(sin nombre)"}</span>
-          ${s.se_sigue_ofertando?'':'<span class="badge finalizada">fuera de cartera</span>'}
-          <div class="act-meta">${s.nivel||"sin nivel"} · ${tarifa}</div>
-        </div>
-        <button class="btn-mini" onclick='editar(${JSON.stringify(s)})'>Editar</button>
-        <button class="btn-mini" onclick='borrarServicio(${JSON.stringify(s)})'>Eliminar</button>
-      </li>`;}).join("");
+    pintaCarruselServicios();
     opcionesServicioProg();
   }catch(e){ aviso("Error de conexión al cargar.","error"); }
 }
@@ -957,13 +1033,16 @@ function editar(s){
   $("#foto-estado").textContent=""; $("#nivel").value=s.nivel||"";
   $("#tarifa_hora").value = (s.tarifa_hora??"")===null ? "" : (s.tarifa_hora??"");
   $("#se_sigue_ofertando").checked = s.se_sigue_ofertando!==false;
-  $("#form-titulo").textContent="Editar: "+(s.titulo_es||"");
+  $("#form-titulo").textContent=s.titulo_es||"(sin nombre)";
   $("#btn-guardar").textContent="Guardar cambios";
   $("#btn-cancelar").classList.remove("oculto");
-  window.scrollTo({top:0,behavior:"smooth"});
+  $("#btn-borrar").classList.remove("oculto");
+  SERVICIO_EDIT = s;
 }
 
+let SERVICIO_EDIT = null;
 $("#btn-cancelar").onclick = resetForm;
+$("#btn-borrar").onclick = ()=>{ if(SERVICIO_EDIT) borrarServicio(SERVICIO_EDIT); };
 
 $("#btn-guardar").onclick = async ()=>{
   const titulo = $("#titulo_es").value.trim();
@@ -1106,7 +1185,11 @@ function _nombreServicio(uuid){
 
 function pintaCarrusel(){
   const cont = $("#prog-carrusel");
-  const tarjetas = ACTIVIDADES.map((a,i)=>{
+  const filtro = filtroActivo("#prog-filtros");
+  const visibles = ACTIVIDADES.filter(a=>
+    !filtro.length || filtro.includes(a.estado||"propuesta"));
+  const tarjetas = visibles.map(a=>{
+    const i = ACTIVIDADES.indexOf(a);
     const estado = a.estado||"propuesta";
     // Cada dato en su línea: leídas en vertical se comparan de un vistazo
     // entre tarjetas, que es para lo que sirve el carrusel.
@@ -1123,7 +1206,7 @@ function pintaCarrusel(){
       <div class="prog-tarj-meta">${lineas.map(l=>_escL(l)).join("<br>")}</div>
     </button>`;
   }).join("");
-  cont.innerHTML = tarjetas
+  cont.innerHTML = (tarjetas || '<div class="franja-vacia">Ninguna actividad con ese filtro.</div>')
     + `<button type="button" class="prog-tarj prog-tarj-nueva" data-nueva="1">+ Nueva actividad</button>`;
   cont.querySelectorAll(".prog-tarj").forEach(t=>{
     t.addEventListener("click", ()=>{
@@ -1367,7 +1450,7 @@ async function _borrarFila(api, tabla, fila, nombre, alTerminar){
 
 function borrarServicio(s){
   _borrarFila(API, "Servicios", s, s.titulo_es||"(sin nombre)",
-              ()=>{ resetForm(); cargar(); });
+              ()=>{ SERVICIO_EDIT=null; resetForm(); cargar(); });
 }
 
 function borrarTemporada(a){
