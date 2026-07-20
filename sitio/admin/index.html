@@ -799,12 +799,16 @@ button{font-family:inherit;font-size:.95rem;font-weight:600;padding:.65rem 1.3re
         <p id="lug-foto-estado" style="font-size:.8rem;color:var(--gris);margin-top:.3rem"></p>
 
         <h3 class="ficha-sub" style="margin-top:1.2rem">Horario del local</h3>
-        <p class="ficha-nota">
-          Cuándo se puede usar. Vacío = sin restricción. No se podrán programar
-          clases fuera de estas horas.
-        </p>
-        <div id="lug-horario"></div>
-        <button type="button" class="btn-mini" id="lug-add-franja" style="margin-top:.5rem">+ Añadir horario</button>
+        <label class="check" style="margin:.2rem 0 .6rem">
+          <input type="checkbox" id="lug-sin-limite"> Sin limitación de horario
+        </label>
+        <div id="lug-horario-wrap">
+          <p class="ficha-nota">
+            Cuándo se puede usar. No se podrán programar clases fuera de estas horas.
+          </p>
+          <div id="lug-horario"></div>
+          <button type="button" class="btn-mini" id="lug-add-franja" style="margin-top:.5rem">+ Añadir horario</button>
+        </div>
       </div>
     </div>
 
@@ -1190,7 +1194,15 @@ function lugHorarioLinea(f){
 }
 
 function _lugVacio(){
-  return '<div class="franja-vacia">Sin horario: se puede usar a cualquier hora.</div>';
+  return '<div class="franja-vacia">Añade al menos un horario, o marca «sin limitación».</div>';
+}
+
+// "Sin limitación" es el caso más común, y hasta ahora había que deducirlo de
+// una lista vacía. Marcarlo esconde el horario y equivale a no guardar ninguna
+// franja; desmarcarlo lo devuelve para poder escribirlo.
+function lugSinLimite(sin){
+  $("#lug-sin-limite").checked = !!sin;
+  $("#lug-horario-wrap").classList.toggle("oculto", !!sin);
 }
 
 // De las franjas guardadas (una por día) a las líneas que se editan (una por
@@ -1243,6 +1255,15 @@ function leeLugHorario(){
   return fuera;
 }
 
+$("#lug-sin-limite").addEventListener("change", e=>{
+  const sin = e.target.checked;
+  $("#lug-horario-wrap").classList.toggle("oculto", sin);
+  // Al desmarcarlo se ofrece una línea de partida, para no dejar un hueco mudo.
+  if(!sin && !document.querySelector("#lug-horario .hor-linea")){
+    pintaLugHorario([{tipo:"laborable", desde:"09:00", hasta:"21:00"}]);
+  }
+});
+
 $("#lug-add-franja").addEventListener("click", ()=>{
   const cont = $("#lug-horario");
   if(cont.querySelector(".franja-vacia")) cont.innerHTML = "";
@@ -1292,6 +1313,7 @@ function lugReset(){
   $("#lug-contacto").value=""; $("#lug-tel").value="";
   $("#lug-visible").checked = true;
   pintaLugHorario([]);
+  lugSinLimite(true);        // lo normal es que un sitio no tenga restricción
   $("#lug-form-titulo").textContent="Nuevo lugar";
   $("#lug-btn-guardar").textContent="Crear lugar";
   $("#lug-btn-cancelar").classList.add("oculto");
@@ -1313,7 +1335,9 @@ function lugEditar(l){
   $("#lug-tel").value=l.contacto_telefono||"";
   $("#lug-visible").checked = l.visible!==false;
   let fr=[]; try{ fr=JSON.parse(l.disponibilidad||"[]"); }catch(e){ fr=[]; }
-  pintaLugHorario(Array.isArray(fr)?fr:[]);
+  fr = Array.isArray(fr) ? fr : [];
+  pintaLugHorario(fr);
+  lugSinLimite(!fr.length);
   $("#lug-form-titulo").textContent=l.nombre_es||"(sin nombre)";
   $("#lug-btn-guardar").textContent="Guardar cambios";
   $("#lug-btn-cancelar").classList.remove("oculto");
@@ -1350,7 +1374,7 @@ $("#lug-btn-guardar").onclick = async ()=>{
     contacto_telefono: $("#lug-tel").value.trim(),
     aforo: $("#lug-aforo").value,
     visible: $("#lug-visible").checked,
-    disponibilidad: JSON.stringify(leeLugHorario()),
+    disponibilidad: JSON.stringify($("#lug-sin-limite").checked ? [] : leeLugHorario()),
   };
   const editId = $("#lug-edit-id").value;
   if(editId) datos.Id = parseInt(editId);
